@@ -1,0 +1,16 @@
+{
+  "name": "battleships",
+  "version": "0.0.0",
+  "author": "Marc Morant",
+  "license": "MIT",
+  "description": "A 2-player battleship game for the web.",
+  "engines": {
+    "node": "22.20.0",
+    "pnpm": "10.18.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
