@@ -8,20 +8,23 @@
 		"start": "node dist/index.js",
 		"dev": "tsx watch src/index.ts",
 		"build": "pnpm build:clean && pnpm tsc --build && echo '{\"module\": \"commonjs\"}' >> dist/package.json",
-        "build:clean": "rm -rf dist/",
+		"build:clean": "rm -rf dist/",
 		"lint": "eslint .",
 		"format": "prettier --write ."
 	},
 	"dependencies": {
 		"cors": "^2.8.5",
 		"dotenv": "^17.2.3",
-		"express": "^5.1.0"
+		"express": "^5.1.0",
+		"pg": "^8.16.3",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@eslint/js": "catalog:",
 		"@types/cors": "^2.8.19",
 		"@types/express": "^5.0.3",
 		"@types/node": "catalog:",
+		"@types/pg": "^8.15.5",
 		"eslint": "catalog:",
 		"globals": "catalog:",
 		"prettier": "catalog:",

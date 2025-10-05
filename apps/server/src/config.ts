@@ -3,6 +3,7 @@ import 'dotenv/config';
 interface Config {
 	allowedOrigins: string[];
 	port: number;
+	databaseConnectionString: string;
 }
 
 function initConfig(): Config {
@@ -16,9 +17,15 @@ function initConfig(): Config {
 		throw new Error('PORT environment variable is not set');
 	}
 
+	const databaseConnectionString = process.env.DATABASE_CONNECTION_STRING;
+	if (!databaseConnectionString) {
+		throw new Error('DATABASE_CONNECTION_STRING environment variable is not set');
+	}
+
 	return {
 		allowedOrigins: allowedOrigins.split(','),
 		port: parseInt(port, 10),
+		databaseConnectionString,
 	};
 }
 

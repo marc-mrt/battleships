@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: battleships-postgres
+    environment:
+      POSTGRES_DB: battleships
+      POSTGRES_USER: battleships
+      POSTGRES_PASSWORD: super-password
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
