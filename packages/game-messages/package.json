@@ -1,0 +1,9 @@
+{
+  "name": "game-messages",
+  "version": "0.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "dependencies": {
+    "zod": "catalog:"
+  }
+}

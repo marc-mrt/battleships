@@ -1,9 +1,12 @@
 import express, { Application } from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
 import { config } from './config';
 import * as HealthcheckController from './controllers/healthcheck';
 import * as SessionController from './controllers/session';
 import { errorHandler } from './middlwares/error';
+import { setupWebSocketServer } from './controllers/websocket';
 
 function run() {
 	try {
@@ -18,10 +21,16 @@ function run() {
 
 		app.get('/healthcheck', HealthcheckController.healthcheck);
 		app.post('/sessions', SessionController.createSession);
+		app.post('/sessions/:sessionId/join', SessionController.joinSession);
 
 		app.use(errorHandler);
 
-		app.listen(config.port, () => {
+		const server = createServer(app);
+		const wss = new WebSocketServer({ server });
+
+		setupWebSocketServer(wss);
+
+		server.listen(config.port, () => {
 			console.log(`Server is running on http://localhost:${config.port}`);
 		});
 	} catch (e) {

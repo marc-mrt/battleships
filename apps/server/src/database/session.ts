@@ -1,4 +1,4 @@
-import { Session } from '../models/session';
+import { Session, SessionStatus } from '../models/session';
 import { query } from './db';
 import { z } from 'zod';
 import { generateMapperToDomainModel } from './mapper';
@@ -29,6 +29,38 @@ export async function createSession(payload: CreateSessionPayload): Promise<Sess
 	return mapToSession(result.rows[0]);
 }
 
+interface JoinSessionPayload {
+	sessionId: string;
+	friend: { playerId: string };
+}
+
+export async function assignFriendToSession(payload: JoinSessionPayload): Promise<Session> {
+	const {
+		sessionId,
+		friend: { playerId },
+	} = payload;
+
+	const result = await query(
+		`
+		WITH updated_session AS (
+			UPDATE sessions SET friend_id = $2 WHERE id = $1 RETURNING *
+		)
+		SELECT
+			s.*,
+			o.id AS owner_id,
+			o.username AS owner_username,
+			f.id AS friend_id,
+			f.username AS friend_username
+		FROM updated_session s
+					 JOIN players o ON s.owner_id = o.id
+					 JOIN players f ON s.friend_id = f.id
+	`,
+		[sessionId, playerId],
+	);
+
+	return mapToSession(result.rows[0]);
+}
+
 const SessionDatabaseSchema = z.object({
 	id: z.string(),
 	owner_id: z.string(),
@@ -37,16 +69,21 @@ const SessionDatabaseSchema = z.object({
 	friend_username: z.string().optional().nullable(),
 });
 
-const mapper = (parsed: z.infer<typeof SessionDatabaseSchema>): Session => ({
-	id: parsed.id,
-	owner: {
-		id: parsed.owner_id,
-		username: parsed.owner_username,
-	},
-	friend:
-		parsed.friend_id && parsed.friend_username
-			? { id: parsed.friend_id, username: parsed.friend_username }
-			: null,
-});
+function mapper(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
+	const status: SessionStatus = parsed.friend_id ? 'all_players_joined' : 'waiting_for_friend';
+
+	return {
+		id: parsed.id,
+		status,
+		owner: {
+			id: parsed.owner_id,
+			username: parsed.owner_username,
+		},
+		friend:
+			parsed.friend_id && parsed.friend_username
+				? { id: parsed.friend_id, username: parsed.friend_username }
+				: null,
+	};
+}
 
 const mapToSession = generateMapperToDomainModel(SessionDatabaseSchema, mapper);
