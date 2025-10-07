@@ -49,20 +49,43 @@
     }
 </script>
 
-<form on:submit|preventDefault={mode === 'create' ? handleCreateSession : handleJoinSession}>
-    <div class="form-group">
-        <label for="username">How do you want to be called?</label>
-        <input
-                id="username"
-                type="text"
-                bind:value={username}
-                placeholder="John Doe"
-                disabled={loading}
-        />
-    </div>
+<header>
+    <h1>Battleships</h1>
+</header>
+<main>
+    <form id="init-session" on:submit|preventDefault={mode === 'create' ? handleCreateSession : handleJoinSession}>
+        <div class="form-group">
+            <label for="username">How do you want to be called?</label>
+            <input
+                    id="username"
+                    type="text"
+                    bind:value={username}
+                    placeholder="John Doe"
+                    disabled={loading}
+            />
+        </div>
 
+        {#if mode === 'join'}
+            <div class="form-group">
+                <label for="sessionId">Type in the session id your friend shared:</label>
+                <input
+                        id="sessionId"
+                        type="text"
+                        bind:value={sessionId}
+                        placeholder="7feba3dd-4da6-4bed-8374-301ae6d3abae"
+                        disabled={loading}
+                />
+            </div>
+        {/if}
+
+        {#if error}
+            <p class="error">{error}</p>
+        {/if}
+    </form>
+</main>
+<footer>
     {#if mode === 'create'}
-        <button type="submit" disabled={loading}>
+        <button type="submit" form="init-session" disabled={loading}>
             {loading ? 'Creating...' : 'Create Session'}
         </button>
         <button class="alternative" on:click|preventDefault={() => mode = 'join'}>Want to join a friend instead?
@@ -70,26 +93,12 @@
     {/if}
 
     {#if mode === 'join'}
-        <div class="form-group">
-            <label for="sessionId">Type in the session id your friend shared:</label>
-            <input
-                    id="sessionId"
-                    type="text"
-                    bind:value={sessionId}
-                    placeholder="7feba3dd-4da6-4bed-8374-301ae6d3abae"
-                    disabled={loading}
-            />
-        </div>
-
-        <button type="submit" disabled={loading}>
+        <button type="submit" form="init-session" disabled={loading}>
             {loading ? 'Joining...' : 'Join Session'}
         </button>
     {/if}
 
-    {#if error}
-        <p class="error">{error}</p>
-    {/if}
-</form>
+</footer>
 
 <style>
     form {
@@ -97,7 +106,6 @@
         margin: 0 auto;
         padding: 2rem;
         border-radius: 8px;
-        background: rgba(255, 255, 255, 0.05);
     }
 
     .form-group {
@@ -110,45 +118,12 @@
         font-weight: 500;
     }
 
-    input {
-        width: 100%;
-        padding: 0.5rem;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 4px;
-        background: rgba(0, 0, 0, 0.2);
-        color: inherit;
-        font-size: 1rem;
-    }
-
-    input:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
     button {
         width: 100%;
-        padding: 0.75rem;
-        border: none;
-        border-radius: 4px;
-        background: #646cff;
-        color: white;
-        font-size: 1rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background 200ms;
-    }
-
-    button:hover:not(:disabled) {
-        background: #535bf2;
-    }
-
-    button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
     }
 
     .error {
-        color: #ff3e00;
+        color: var(--color-text-error);
         margin: 0.5rem 0;
         font-size: 0.9rem;
     }
@@ -156,13 +131,12 @@
     button.alternative {
         background: none;
         border: none;
-        color: gray;
+        color: var(--color-text-subtle);
         font-style: italic;
         transition: all 200ms ease;
     }
 
     button.alternative:hover:not(:disabled) {
-        background: none;
-        color: black;
+        text-decoration: underline;
     }
 </style>
