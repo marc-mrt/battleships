@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import * as SessionService from '../services/session';
+import * as GameService from '../services/game';
 import { BadRequestError } from './errors';
 
 const CreateSessionRequestBody = z.object({
@@ -14,7 +14,7 @@ export async function createSession(request: Request, response: Response) {
 	}
 
 	const { username } = result.data;
-	const session = await SessionService.createSession({ username });
+	const session = await GameService.createSession({ username });
 	return response.status(201).send(session);
 }
 
@@ -30,6 +30,6 @@ export async function joinSession(request: Request, response: Response) {
 
 	const { sessionId } = request.params;
 	const { username } = result.data;
-	const session = await SessionService.joinSession({ sessionId, username });
+	const session = await GameService.joinSession({ sessionId, username });
 	return response.status(200).send(session);
 }

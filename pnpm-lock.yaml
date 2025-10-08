@@ -12,6 +12,9 @@ catalogs:
     '@types/node':
       specifier: 22.18.8
       version: 22.18.8
+    '@types/ramda':
+      specifier: 0.31.1
+      version: 0.31.1
     eslint:
       specifier: 9.37.0
       version: 9.37.0
@@ -21,6 +24,9 @@ catalogs:
     prettier:
       specifier: 3.4.2
       version: 3.4.2
+    ramda:
+      specifier: 0.31.3
+      version: 0.31.3
     typescript:
       specifier: 5.9.3
       version: 5.9.3
@@ -40,8 +46,11 @@ importers:
       game-messages:
         specifier: 'workspace:'
         version: link:../../packages/game-messages
+      game-rules:
+        specifier: 'workspace:'
+        version: link:../../packages/game-rules
       ramda:
-        specifier: ^0.31.3
+        specifier: 'catalog:'
         version: 0.31.3
     devDependencies:
       '@eslint/compat':
@@ -60,7 +69,7 @@ importers:
         specifier: 'catalog:'
         version: 22.18.8
       '@types/ramda':
-        specifier: ^0.31.1
+        specifier: 'catalog:'
         version: 0.31.1
       eslint:
         specifier: 'catalog:'
@@ -107,9 +116,15 @@ importers:
       game-messages:
         specifier: 'workspace:'
         version: link:../../packages/game-messages
+      game-rules:
+        specifier: 'workspace:'
+        version: link:../../packages/game-rules
       pg:
         specifier: ^8.16.3
         version: 8.16.3
+      ramda:
+        specifier: 'catalog:'
+        version: 0.31.3
       ws:
         specifier: ^8.18.0
         version: 8.18.3
@@ -132,6 +147,9 @@ importers:
       '@types/pg':
         specifier: ^8.15.5
         version: 8.15.5
+      '@types/ramda':
+        specifier: 'catalog:'
+        version: 0.31.1
       '@types/ws':
         specifier: ^8.5.13
         version: 8.18.1
@@ -159,6 +177,8 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.1.11
+
+  packages/game-rules: {}
 
 packages:
 
