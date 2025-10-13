@@ -7,6 +7,9 @@
 	import GameBoard from './lib/GameSession/GameBoard.svelte';
 	import { gameStore } from './lib/services/game-store.svelte';
 
+	const urlParams = new URLSearchParams(window.location.search);
+	const querySharedSlug = urlParams.has('s') ? urlParams.get('s') : null;
+
 	let initializing: boolean = $state(true);
 	let status: SessionStatus | null = $state(null);
 
@@ -45,5 +48,5 @@
 		Unknown status: {status}
 	{/if}
 {:else}
-	<CreateOrJoinSession />
+	<CreateOrJoinSession sharedSlug={querySharedSlug} />
 {/if}

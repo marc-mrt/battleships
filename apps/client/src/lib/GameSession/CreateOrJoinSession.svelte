@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { gameStore } from '../services/game-store.svelte.js';
 
-	let mode: 'create' | 'join' = 'create';
+	export let sharedSlug: string | null = null;
+
+	let mode: 'create' | 'join' = sharedSlug ? 'join' : 'create';
 	let username = '';
-	let slug = '';
+	let slug = sharedSlug ?? '';
 	let loading = false;
 	let error = '';
 
@@ -71,7 +73,13 @@
 		{#if mode === 'join'}
 			<div class="form-group">
 				<label for="slug">Type in the code your friend shared:</label>
-				<input id="slug" type="text" bind:value={slug} placeholder="s_XXXXXX" disabled={loading} />
+				<input
+					id="slug"
+					type="text"
+					bind:value={slug}
+					placeholder="s_XXXXXX"
+					disabled={Boolean(sharedSlug) || loading}
+				/>
 			</div>
 		{/if}
 
