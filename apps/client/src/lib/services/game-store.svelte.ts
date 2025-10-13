@@ -13,7 +13,7 @@ import { getWebsocketManager } from './websocket-manager.svelte';
 
 export interface Store {
 	session: {
-		id: string;
+		slug: string;
 		status: SessionStatus;
 	};
 	player: {
@@ -39,11 +39,11 @@ class GameStoreSvelte {
 		const { username } = payload;
 
 		const session = await API.createSession({ username });
-		await this.webSocket.connect(session.owner.id);
+		await this.webSocket.connect();
 
 		this.store.set({
 			session: {
-				id: session.id,
+				slug: session.slug,
 				status: session.status,
 			},
 			player: {
@@ -54,21 +54,21 @@ class GameStoreSvelte {
 		});
 	}
 
-	public async joinSession(payload: { username: string; sessionId: string }) {
-		const { username, sessionId } = payload;
+	public async joinSession(payload: { username: string; slug: string }) {
+		const { username, slug } = payload;
 
-		const session = await API.joinSession({ username, sessionId });
+		const session = await API.joinSession({ username, slug });
 		const player = session.friend;
 
 		if (!player) {
 			throw new Error('Failed to find player in session');
 		}
 
-		await this.webSocket.connect(player.id);
+		await this.webSocket.connect();
 
 		this.store.set({
 			session: {
-				id: session.id,
+				slug: session.slug,
 				status: session.status,
 			},
 			player: {
@@ -79,6 +79,32 @@ class GameStoreSvelte {
 				id: session.owner.id,
 				username: session.owner.username,
 			},
+		});
+	}
+
+	public async attemptReconnect() {
+		const session = await API.getSession();
+		if (session == null) {
+			return;
+		}
+
+		await this.webSocket.connect();
+
+		this.store.set({
+			session: {
+				slug: session.slug,
+				status: session.status,
+			},
+			player: {
+				id: session.owner.id,
+				username: session.owner.username,
+			},
+			opponent: session.friend
+				? {
+						id: session.friend.id,
+						username: session.friend.username,
+					}
+				: null,
 		});
 	}
 

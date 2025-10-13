@@ -6,7 +6,6 @@ type MessageHandler<T = ServerMessage> = (message: T) => void;
 type ConnectionStatusHandler = (connected: boolean) => void;
 
 export class WebsocketManagerSvelte {
-	private playerId: string | null = null; // @TODO: Refactor to session cookie
 	private ws: WebSocket | null = null;
 	private reconnectAttempts = 0;
 	private maxReconnectAttempts = 5;
@@ -19,11 +18,10 @@ export class WebsocketManagerSvelte {
 
 	constructor() {}
 
-	connect(playerId: string): Promise<void> {
+	connect(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			try {
-				this.playerId = playerId;
-				this.ws = API.establishSessionConnection({ playerId });
+				this.ws = API.establishSessionConnection();
 
 				this.ws.onopen = () => {
 					this.connected = true;
@@ -65,7 +63,7 @@ export class WebsocketManagerSvelte {
 
 			setTimeout(() => {
 				console.log(`Reconnecting... Attempt ${this.reconnectAttempts}`);
-				this.connect(this.playerId!).catch(() => {});
+				this.connect().catch(() => {});
 			}, this.reconnectDelay * this.reconnectAttempts);
 		} else {
 			console.error('Max reconnection attempts reached');

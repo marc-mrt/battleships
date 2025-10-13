@@ -9,19 +9,21 @@ import {
 import { InternalServerError } from './errors';
 import * as GameService from '../services/game';
 import type { PlayerId } from '../models/player.ts';
+import { parseSessionCookie } from '../middlwares/cookies.ts';
 
 const connections = new Map<PlayerId, WebSocket>();
 
 export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
 	webSocketServer.on('connection', (webSocket: WebSocket, request: IncomingMessage) => {
-		const url: URL = new URL(request.url || '', `http://${request.headers.host}`);
-		const playerId: string | null = url.searchParams.get('playerId');
+		const session = parseSessionCookie(request.headers.cookie);
 
-		if (!playerId) {
-			webSocket.close(1008, 'Player ID is required');
+		if (!session) {
+			console.log('WebSocket connection rejected: No session cookie');
+			webSocket.close(1008, 'No session cookie');
 			return;
 		}
 
+		const { playerId } = session;
 		connections.set(playerId, webSocket);
 
 		webSocket.on('message', async (data: Buffer) => {

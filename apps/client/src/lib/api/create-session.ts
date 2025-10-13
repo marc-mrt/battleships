@@ -8,6 +8,7 @@ interface CreateSessionRequestPayload {
 export async function createSession(payload: CreateSessionRequestPayload): Promise<Session> {
 	const response = await fetch(`${API_BASE_URL}/sessions`, {
 		method: 'POST',
+		credentials: 'include',
 		headers: {
 			'Content-Type': 'application/json',
 		},

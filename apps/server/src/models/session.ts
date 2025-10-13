@@ -4,6 +4,7 @@ export type SessionStatus = 'waiting_for_friend' | 'waiting_for_boat_placements'
 
 interface SessionBase {
 	id: string;
+	slug: string;
 	status: SessionStatus;
 	owner: Player;
 	friend: Player | null;

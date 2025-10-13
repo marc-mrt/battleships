@@ -9,8 +9,9 @@ CREATE TABLE IF NOT EXISTS sessions
 (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     created_at TIMESTAMP        DEFAULT CURRENT_TIMESTAMP,
-    owner_id   UUID UNIQUE NOT NULL REFERENCES players (id) ON DELETE CASCADE,
-    friend_id  UUID UNIQUE REFERENCES players (id) ON DELETE SET NULL
+    slug       VARCHAR(8) UNIQUE NOT NULL,
+    owner_id   UUID UNIQUE       NOT NULL REFERENCES players (id) ON DELETE CASCADE,
+    friend_id  UUID UNIQUE       REFERENCES players (id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_sessions_owner ON sessions (owner_id);

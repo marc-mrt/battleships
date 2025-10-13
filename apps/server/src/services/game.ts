@@ -18,16 +18,16 @@ export async function createSession(payload: CreateSessionPayload): Promise<Sess
 }
 
 interface JoinSessionPayload {
-	sessionId: string;
+	slug: string;
 	username: string;
 }
 
 export async function joinSession(payload: JoinSessionPayload): Promise<Session> {
-	const { sessionId, username } = payload;
+	const { slug, username } = payload;
 
 	const player: Player = await createPlayer({ username });
 	const session: Session = await SessionDB.assignFriendToSession({
-		sessionId,
+		slug,
 		friend: { playerId: player.id },
 	});
 

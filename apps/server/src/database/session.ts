@@ -1,3 +1,4 @@
+import * as crypto from 'node:crypto';
 import type { Session } from '../models/session';
 import { query } from './db';
 import { z } from 'zod';
@@ -7,15 +8,21 @@ interface CreateSessionPayload {
 	owner: { playerId: string };
 }
 
+function generateSlug(prefix = 's') {
+	const id = crypto.randomBytes(3).toString('hex');
+	return `${prefix}_${id}`;
+}
+
 export async function createSession(payload: CreateSessionPayload): Promise<Session> {
 	const { playerId } = payload.owner;
+	const slug = generateSlug();
 
 	const result = await query(
 		`
 			WITH new_session AS (
 			INSERT
-			INTO sessions (owner_id)
-			VALUES ($1)
+			INTO sessions (slug, owner_id)
+			VALUES ($1, $2)
 				RETURNING *
 				)
 			SELECT s.*,
@@ -24,20 +31,20 @@ export async function createSession(payload: CreateSessionPayload): Promise<Sess
 			FROM new_session s
 						 JOIN players o ON s.owner_id = o.id
 		`,
-		[playerId],
+		[slug, playerId],
 	);
 
 	return mapToSession(result.rows[0]);
 }
 
 interface JoinSessionPayload {
-	sessionId: string;
+	slug: string;
 	friend: { playerId: string };
 }
 
 export async function assignFriendToSession(payload: JoinSessionPayload): Promise<Session> {
 	const {
-		sessionId,
+		slug,
 		friend: { playerId },
 	} = payload;
 
@@ -46,7 +53,7 @@ export async function assignFriendToSession(payload: JoinSessionPayload): Promis
 			WITH updated_session AS (
 			UPDATE sessions
 			SET friend_id = $2
-			WHERE id = $1 RETURNING *
+			WHERE slug = $1 RETURNING *
 			)
 			SELECT s.*,
 						 o.id       AS owner_id,
@@ -57,7 +64,7 @@ export async function assignFriendToSession(payload: JoinSessionPayload): Promis
 						 JOIN players o ON s.owner_id = o.id
 						 JOIN players f ON s.friend_id = f.id
 		`,
-		[sessionId, playerId],
+		[slug, playerId],
 	);
 
 	return mapToSession(result.rows[0]);
@@ -107,6 +114,7 @@ const BoatPlacementDatabaseSchema = z.object({
 
 const SessionDatabaseSchema = z.object({
 	id: z.string(),
+	slug: z.string(),
 	owner_id: z.string(),
 	owner_username: z.string(),
 	owner_boat_placements: z.array(BoatPlacementDatabaseSchema).optional().nullable(),
@@ -119,6 +127,7 @@ function mapper(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
 	if (parsed.friend_id == null || parsed.friend_username == null) {
 		return {
 			id: parsed.id,
+			slug: parsed.slug,
 			status: 'waiting_for_friend',
 			owner: {
 				id: parsed.owner_id,
@@ -129,6 +138,7 @@ function mapper(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
 	} else {
 		return {
 			id: parsed.id,
+			slug: parsed.slug,
 			status:
 				parsed.owner_boat_placements == null || parsed.friend_boat_placements == null
 					? 'waiting_for_boat_placements'

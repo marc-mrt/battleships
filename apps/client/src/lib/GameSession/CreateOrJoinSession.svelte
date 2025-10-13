@@ -3,7 +3,7 @@
 
 	let mode: 'create' | 'join' = 'create';
 	let username = '';
-	let sessionId = '';
+	let slug = '';
 	let loading = false;
 	let error = '';
 
@@ -31,8 +31,8 @@
 			return;
 		}
 
-		if (!sessionId.trim()) {
-			error = 'Session ID is required';
+		if (!slug.trim()) {
+			error = 'Session Slug is required';
 			return;
 		}
 
@@ -40,7 +40,7 @@
 		error = '';
 
 		try {
-			await gameStore.joinSession({ username, sessionId });
+			await gameStore.joinSession({ username, slug });
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to join session';
 		} finally {
@@ -70,14 +70,8 @@
 
 		{#if mode === 'join'}
 			<div class="form-group">
-				<label for="sessionId">Type in the session id your friend shared:</label>
-				<input
-					id="sessionId"
-					type="text"
-					bind:value={sessionId}
-					placeholder="7feba3dd-4da6-4bed-8374-301ae6d3abae"
-					disabled={loading}
-				/>
+				<label for="slug">Type in the code your friend shared:</label>
+				<input id="slug" type="text" bind:value={slug} placeholder="s_XXXXXX" disabled={loading} />
 			</div>
 		{/if}
 

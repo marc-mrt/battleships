@@ -7,6 +7,7 @@ import * as HealthcheckController from './controllers/healthcheck';
 import * as SessionController from './controllers/session';
 import { errorHandler } from './middlwares/error';
 import { setupWebSocketServer } from './controllers/websocket';
+import cookieParser from 'cookie-parser';
 
 function run() {
 	try {
@@ -15,13 +16,16 @@ function run() {
 		app.use(
 			cors({
 				origin: config.allowedOrigins,
+				credentials: true,
 			}),
 		);
 		app.use(express.json());
+		app.use(cookieParser());
 
 		app.get('/healthcheck', HealthcheckController.healthcheck);
+		app.get('/sessions', SessionController.getCurrentSession);
 		app.post('/sessions', SessionController.createSession);
-		app.post('/sessions/:sessionId/join', SessionController.joinSession);
+		app.post('/sessions/:slug/join', SessionController.joinSession);
 
 		app.use(errorHandler);
 

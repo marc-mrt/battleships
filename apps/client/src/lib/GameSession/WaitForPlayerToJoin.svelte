@@ -4,12 +4,12 @@
 	import { gameStore } from '../services/game-store.svelte';
 
 	let player: Player | null = $state(null);
-	let sessionId: string | null = $state(null);
+	let slug: string | null = $state(null);
 
 	const unsubscribe = gameStore.store.subscribe((store) => {
 		if (store != null) {
 			player = store.player;
-			sessionId = store.session.id;
+			slug = store.session.slug;
 		}
 	});
 
@@ -25,7 +25,7 @@
 	<div>Waiting for a friend...</div>
 </main>
 <footer>
-	<p class="subtle">{sessionId}</p>
+	<p class="subtle">{slug}</p>
 </footer>
 
 <style>
