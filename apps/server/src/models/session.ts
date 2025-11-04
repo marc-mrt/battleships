@@ -1,28 +1,54 @@
+import { type Boat } from './boat';
 import { type Player } from './player';
+import { type Shot } from './shot';
 
-export type SessionStatus = 'waiting_for_friend' | 'waiting_for_boat_placements' | 'ready_to_play';
+export type SessionStatus =
+	| 'waiting_for_friend'
+	| 'waiting_for_boat_placements'
+	| 'ready_to_start'
+	| 'in_game'
+	| 'game_over';
 
 interface SessionBase {
 	id: string;
 	slug: string;
 	status: SessionStatus;
 	owner: Player;
-	friend: Player | null;
 }
 
-interface SessionCreated extends SessionBase {
+export interface SessionCreated extends SessionBase {
 	status: 'waiting_for_friend';
-	friend: null;
 }
 
-interface SessionWaitingForBoats extends SessionBase {
+export interface SessionWaitingForBoats extends SessionBase {
 	status: 'waiting_for_boat_placements';
 	friend: Player;
 }
 
-interface SessionReadyToPlay extends SessionBase {
-	status: 'ready_to_play';
+export interface SessionReadyToStart extends SessionBase {
+	status: 'ready_to_start';
 	friend: Player;
 }
 
-export type Session = SessionCreated | SessionWaitingForBoats | SessionReadyToPlay;
+export interface SessionInGame extends SessionBase {
+	status: 'in_game';
+	ownerBoats: Boat[];
+	friend: Player;
+	friendBoats: Boat[];
+	currentTurn: Pick<Player, 'id'>;
+	shots: Shot[];
+}
+
+export interface SessionGameOver extends SessionBase {
+	status: 'game_over';
+	friend: Player;
+	currentTurn: null;
+	winner: Pick<Player, 'id'>;
+}
+
+export type Session =
+	| SessionCreated
+	| SessionWaitingForBoats
+	| SessionReadyToStart
+	| SessionInGame
+	| SessionGameOver;

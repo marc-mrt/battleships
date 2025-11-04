@@ -1,6 +1,10 @@
 import type { Player } from './player';
 
-export type SessionStatus = 'waiting_for_friend' | 'waiting_for_boat_placements' | 'ready_to_play';
+export type SessionStatus =
+	| 'waiting_for_friend'
+	| 'waiting_for_boat_placements'
+	| 'in_game'
+	| 'game_over';
 
 export interface Session {
 	slug: string;

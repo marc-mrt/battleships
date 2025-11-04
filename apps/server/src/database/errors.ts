@@ -1,4 +1,4 @@
-import { HttpError, InternalServerError } from '../controllers/errors';
+import { HttpError, InternalServerError, NotFoundError } from '../controllers/errors';
 
 export abstract class DatabaseError extends Error {
 	public inner: Error | undefined;
@@ -20,5 +20,11 @@ export class UnexpectedDatabaseError extends DatabaseError {
 export class InvalidQueryPayloadError extends DatabaseError {
 	toHttpError(): HttpError {
 		return new InternalServerError(this.message);
+	}
+}
+
+export class RecordNotFoundError extends DatabaseError {
+	toHttpError(): HttpError {
+		return new NotFoundError(this.message);
 	}
 }

@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "game-rules": "workspace:"
   }
 }

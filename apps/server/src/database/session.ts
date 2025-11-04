@@ -1,8 +1,11 @@
 import * as crypto from 'node:crypto';
-import type { Session } from '../models/session';
+import type { Session, SessionInGame, SessionWaitingForBoats } from '../models/session';
 import { query } from './db';
 import { z } from 'zod';
 import { generateMapperToDomainModel } from './mapper';
+import { BoatDatabaseSchema, mapToBoat } from './boat';
+import { mapToShot, ShotDatabaseSchema } from './shot.ts';
+import { RecordNotFoundError, UnexpectedDatabaseError } from './errors.ts';
 
 interface CreateSessionPayload {
 	owner: { playerId: string };
@@ -42,7 +45,9 @@ interface JoinSessionPayload {
 	friend: { playerId: string };
 }
 
-export async function assignFriendToSession(payload: JoinSessionPayload): Promise<Session> {
+export async function assignFriendToSession(
+	payload: JoinSessionPayload,
+): Promise<SessionWaitingForBoats> {
 	const {
 		slug,
 		friend: { playerId },
@@ -67,7 +72,69 @@ export async function assignFriendToSession(payload: JoinSessionPayload): Promis
 		[slug, playerId],
 	);
 
-	return mapToSession(result.rows[0]);
+	const session: Session = mapToSession(result.rows[0]);
+	if (session.status !== 'waiting_for_boat_placements') {
+		throw new UnexpectedDatabaseError(
+			`Session is in unexpected '${session.status}' status: ${slug}`,
+		);
+	}
+	return session;
+}
+
+interface SetCurrentTurnPayload {
+	sessionId: string;
+	playerId: string;
+}
+
+export async function setCurrentTurn(payload: SetCurrentTurnPayload): Promise<SessionInGame> {
+	const { sessionId, playerId } = payload;
+
+	const result = await query(
+		`
+			WITH updated_session AS (
+			UPDATE sessions
+			SET current_turn_id = $1
+			WHERE id = $2 RETURNING *
+			)
+			SELECT s.*,
+						 owner_player.id                        AS owner_id,
+						 owner_player.username                  AS owner_username,
+						 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
+																								b.length,
+																								'orientation', b.orientation, 'sunk', b.sunk))
+							FROM boats b
+							WHERE owner_player.id = b.player_id)  AS owner_boats,
+						 friend_player.id                       AS friend_id,
+						 friend_player.username                 AS friend_username,
+						 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
+																								b.length,
+																								'orientation', b.orientation, 'sunk', b.sunk))
+							FROM boats b
+							WHERE friend_player.id = b.player_id) AS friend_boats,
+						 (SELECT json_agg(json_build_object('id', shots.id, 'shooter_id', shots.shooter_id, 'target_id',
+																								shots.target_id,
+																								'x', shots.x, 'y', shots.y, 'hit', shots.hit))
+							FROM shots
+							WHERE shots.session_id = s.id)        AS shots
+			FROM updated_session s
+						 JOIN players owner_player ON s.owner_id = owner_player.id
+						 LEFT JOIN players friend_player ON s.friend_id = friend_player.id;
+		`,
+		[playerId, sessionId],
+	);
+
+	if (result.rows.length === 0) {
+		throw new RecordNotFoundError(`Session not found: ${sessionId}`);
+	}
+
+	const session: Session = mapToSession(result.rows[0]);
+	if (session.status !== 'in_game') {
+		throw new UnexpectedDatabaseError(
+			`Session is in unexpected '${session.status}' status: ${sessionId}`,
+		);
+	}
+
+	return session;
 }
 
 export async function getSessionByPlayerId(playerId: string): Promise<Session | null> {
@@ -78,16 +145,21 @@ export async function getSessionByPlayerId(playerId: string): Promise<Session | 
 						 owner_player.username                  AS owner_username,
 						 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
 																								b.length,
-																								'orientation', b.orientation))
-							FROM boat_placements b
-							WHERE owner_player.id = b.player_id)  AS owner_boat_placements,
+																								'orientation', b.orientation, 'sunk', b.sunk))
+							FROM boats b
+							WHERE owner_player.id = b.player_id)  AS owner_boats,
 						 friend_player.id                       AS friend_id,
 						 friend_player.username                 AS friend_username,
 						 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
 																								b.length,
-																								'orientation', b.orientation))
-							FROM boat_placements b
-							WHERE friend_player.id = b.player_id) AS friend_boat_placements
+																								'orientation', b.orientation, 'sunk', b.sunk))
+							FROM boats b
+							WHERE friend_player.id = b.player_id) AS friend_boats,
+						 (SELECT json_agg(json_build_object('id', shots.id, 'shooter_id', shots.shooter_id, 'target_id',
+																								shots.target_id,
+																								'x', shots.x, 'y', shots.y, 'hit', shots.hit))
+							FROM shots
+							WHERE shots.session_id = s.id)        AS shots
 			FROM sessions s
 						 JOIN players owner_player ON s.owner_id = owner_player.id
 						 LEFT JOIN players friend_player ON s.friend_id = friend_player.id
@@ -104,23 +176,18 @@ export async function getSessionByPlayerId(playerId: string): Promise<Session | 
 	return mapToSession(result.rows[0]);
 }
 
-const BoatPlacementDatabaseSchema = z.object({
-	id: z.string(),
-	start_x: z.number(),
-	start_y: z.number(),
-	length: z.number(),
-	orientation: z.enum(['horizontal', 'vertical']),
-});
-
 const SessionDatabaseSchema = z.object({
 	id: z.string(),
 	slug: z.string(),
 	owner_id: z.string(),
 	owner_username: z.string(),
-	owner_boat_placements: z.array(BoatPlacementDatabaseSchema).optional().nullable(),
+	owner_boats: z.array(BoatDatabaseSchema).optional().nullable(),
 	friend_id: z.string().optional().nullable(),
 	friend_username: z.string().optional().nullable(),
-	friend_boat_placements: z.array(BoatPlacementDatabaseSchema).optional().nullable(),
+	friend_boats: z.array(BoatDatabaseSchema).optional().nullable(),
+	current_turn_id: z.string().optional().nullable(),
+	winner_id: z.string().optional().nullable(),
+	shots: z.array(ShotDatabaseSchema).optional().nullable(),
 });
 
 function mapper(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
@@ -133,21 +200,43 @@ function mapper(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
 				id: parsed.owner_id,
 				username: parsed.owner_username,
 			},
-			friend: null,
 		};
-	} else {
+	} else if (parsed.owner_boats == null || parsed.friend_boats == null) {
 		return {
 			id: parsed.id,
 			slug: parsed.slug,
-			status:
-				parsed.owner_boat_placements == null || parsed.friend_boat_placements == null
-					? 'waiting_for_boat_placements'
-					: 'ready_to_play',
+			status: 'waiting_for_boat_placements',
 			owner: {
 				id: parsed.owner_id,
 				username: parsed.owner_username,
 			},
 			friend: { id: parsed.friend_id, username: parsed.friend_username },
+		};
+	} else if (parsed.current_turn_id == null) {
+		return {
+			id: parsed.id,
+			slug: parsed.slug,
+			status: 'ready_to_start',
+			owner: {
+				id: parsed.owner_id,
+				username: parsed.owner_username,
+			},
+			friend: { id: parsed.friend_id, username: parsed.friend_username },
+		};
+	} else {
+		return {
+			id: parsed.id,
+			slug: parsed.slug,
+			status: 'in_game',
+			owner: {
+				id: parsed.owner_id,
+				username: parsed.owner_username,
+			},
+			ownerBoats: parsed.owner_boats?.map(mapToBoat) ?? [],
+			friend: { id: parsed.friend_id, username: parsed.friend_username },
+			friendBoats: parsed.friend_boats?.map(mapToBoat) ?? [],
+			currentTurn: { id: parsed.current_turn_id },
+			shots: parsed.shots?.map(mapToShot) ?? [],
 		};
 	}
 }

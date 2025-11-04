@@ -6,7 +6,7 @@
 	import BoatStock from './components/BoatStock.svelte';
 	import BoatGrid from './components/BoatGrid.svelte';
 	import BoatActions from './components/BoatActions.svelte';
-	import type { PlayerPlacedBoatsMessage } from 'game-messages';
+	import type { PlaceBoatsMessage } from 'game-messages';
 	import { gameStore } from '../services/game-store.svelte';
 
 	let player: Player | null = $state(null);
@@ -50,8 +50,8 @@
 	function sendBoatPlacements() {
 		if (gridManager.boats.length === 0) return;
 
-		const message: PlayerPlacedBoatsMessage = {
-			type: 'player-placed-boats',
+		const message: PlaceBoatsMessage = {
+			type: 'place_boats',
 			data: { boats: gridManager.boats },
 		};
 		gameStore.sendAction(message);

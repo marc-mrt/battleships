@@ -4,7 +4,7 @@ import * as API from '../api';
 import {
 	type ClientMessage,
 	type FriendJoinedMessage,
-	type ReadyToPlayMessage,
+	type GameStartedMessage,
 	type ServerMessage,
 } from 'game-messages';
 import type { SessionStatus } from '../models/session';
@@ -110,10 +110,10 @@ class GameStoreSvelte {
 
 	private handleIncomingMessage(message: ServerMessage): void {
 		switch (message.type) {
-			case 'friend-joined':
+			case 'friend_joined':
 				return this.handleFriendJoinedMessage(message);
-			case 'ready-to-play':
-				return this.handleReadyToPlayMessage(message);
+			case 'game_started':
+				return this.handleGameStarted(message);
 			default:
 				break;
 		}
@@ -136,10 +136,10 @@ class GameStoreSvelte {
 		});
 	}
 
-	private handleReadyToPlayMessage(message: ReadyToPlayMessage): void {
+	private handleGameStarted(message: GameStartedMessage): void {
 		this.store.update((state): Store | null => {
 			if (state == null) {
-				console.warn('Received ready-to-play message before player store was initialized');
+				console.warn('Received game-started message before player store was initialized');
 				return null;
 			}
 

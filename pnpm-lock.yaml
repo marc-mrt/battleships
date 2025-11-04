@@ -180,6 +180,9 @@ importers:
 
   packages/game-messages:
     dependencies:
+      game-rules:
+        specifier: 'workspace:'
+        version: link:../game-rules
       zod:
         specifier: 'catalog:'
         version: 4.1.11

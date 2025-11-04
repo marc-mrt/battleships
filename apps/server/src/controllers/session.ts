@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import * as GameService from '../services/game';
+import * as SessionService from '../services/session.ts';
 import { BadRequestError } from './errors';
 import { parseSessionCookie, setSessionCookie } from '../middlwares/cookies.ts';
 import { getSessionByPlayerId } from '../database/session.ts';
+import { SessionWaitingForBoats } from '../models/session.ts';
 
 const CreateSessionRequestBody = z.object({
 	username: z.string(),
@@ -16,7 +17,7 @@ export async function createSession(request: Request, response: Response) {
 	}
 
 	const { username } = result.data;
-	const session = await GameService.createSession({ username });
+	const session = await SessionService.createSession({ username });
 
 	setSessionCookie(response, {
 		sessionId: session.id,
@@ -38,11 +39,11 @@ export async function joinSession(request: Request, response: Response) {
 
 	const { slug } = request.params;
 	const { username } = result.data;
-	const session = await GameService.joinSession({ slug, username });
+	const session: SessionWaitingForBoats = await SessionService.joinSession({ slug, username });
 
 	setSessionCookie(response, {
 		sessionId: session.id,
-		playerId: session.friend!.id,
+		playerId: session.friend.id,
 	});
 
 	return response.status(200).send(session);

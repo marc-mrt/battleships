@@ -42,7 +42,7 @@
 		<WaitForPlayerToJoin />
 	{:else if status === 'waiting_for_boat_placements'}
 		<PlaceBoats />
-	{:else if status === 'ready_to_play'}
+	{:else if status === 'in_game'}
 		<GameBoard />
 	{:else}
 		Unknown status: {status}

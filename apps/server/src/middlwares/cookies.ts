@@ -26,6 +26,9 @@ export function parseSessionCookie(cookieHeader: string | undefined): SessionCoo
 	);
 
 	try {
+		const cookie: string | undefined = cookies[COOKIE_NAME];
+		if (!cookie) return null;
+
 		const json: unknown = JSON.parse(cookies[COOKIE_NAME]);
 		return SessionCookieSchema.parse(json);
 	} catch (e) {

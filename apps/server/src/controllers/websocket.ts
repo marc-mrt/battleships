@@ -1,16 +1,19 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import { IncomingMessage } from 'node:http';
 import {
-	ClientMessage,
+	type ClientMessage,
 	ClientMessageSchema,
 	type FriendJoinedMessage,
-	ReadyToPlayMessage,
+	type GameStartedMessage,
+	type ServerMessage,
+	type YourTurnMessage,
 } from 'game-messages';
 import { InternalServerError } from './errors';
-import * as GameService from '../services/game';
-import type { PlayerId } from '../models/player.ts';
+import * as SessionService from '../services/session.ts';
+
 import { parseSessionCookie } from '../middlwares/cookies.ts';
 
+type PlayerId = string;
 const connections = new Map<PlayerId, WebSocket>();
 
 export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
@@ -36,7 +39,7 @@ export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
 					return;
 				}
 
-				const message = parsed.data;
+				const message: ClientMessage = parsed.data;
 				await handleIncomingClientMessage(playerId, message);
 			} catch (error) {
 				console.error('Error handling WebSocket message:', error);
@@ -59,41 +62,51 @@ async function handleIncomingClientMessage(
 	message: ClientMessage,
 ): Promise<void> {
 	switch (message.type) {
-		case 'player-placed-boats':
-			await GameService.saveBoatPlacements({
+		case 'place_boats':
+			await SessionService.saveBoats({
 				playerId,
 				...message.data,
 			});
 			break;
+		case 'fire_shot': {
+			await SessionService.handleShotFired({ playerId, ...message.data });
+			break;
+		}
 		default:
-			console.error(`Unknown message type: ${message.type}`);
+			console.error(`Unknown message type: ${(message as { type: string }).type}`);
 	}
+}
+
+function getConnectionForPlayer(playerId: string): WebSocket {
+	const webSocket: WebSocket | undefined = connections.get(playerId);
+	if (webSocket == null) {
+		throw new InternalServerError(`Connection for player '${playerId}' not found`);
+	}
+	return webSocket;
+}
+
+function sendMessageToPlayer(playerId: string, message: ServerMessage): void {
+	const webSocket = getConnectionForPlayer(playerId);
+	webSocket.send(JSON.stringify(message));
+}
+
+export function sendYourTurnMessage(playerId: string, data: YourTurnMessage['data']): void {
+	const message: YourTurnMessage = { type: 'your_turn', data };
+	sendMessageToPlayer(playerId, message);
 }
 
 export function sendFriendJoinedMessage(playerId: string, data: FriendJoinedMessage['data']): void {
-	const webSocket: WebSocket | undefined = connections.get(playerId);
-	if (webSocket == null) {
-		throw new InternalServerError(`Connection for player '${playerId}' not found`);
-	}
-
 	const message: FriendJoinedMessage = {
-		type: 'friend-joined',
+		type: 'friend_joined',
 		data,
 	};
-
-	webSocket.send(JSON.stringify(message));
+	sendMessageToPlayer(playerId, message);
 }
 
-export function sendReadyToPlayMessage(playerId: string, data: ReadyToPlayMessage['data']): void {
-	const webSocket: WebSocket | undefined = connections.get(playerId);
-	if (webSocket == null) {
-		throw new InternalServerError(`Connection for player '${playerId}' not found`);
-	}
-
-	const message: ReadyToPlayMessage = {
-		type: 'ready-to-play',
+export function sendGameStartedMessage(playerId: string, data: GameStartedMessage['data']): void {
+	const message: GameStartedMessage = {
+		type: 'game_started',
 		data,
 	};
-
-	webSocket.send(JSON.stringify(message));
+	sendMessageToPlayer(playerId, message);
 }
