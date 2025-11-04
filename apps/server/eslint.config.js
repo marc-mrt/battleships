@@ -1,8 +1,9 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import { defineConfig } from 'eslint/config';
 
-export default tseslint.config(
+export default defineConfig(
 	{
 		ignores: ['dist/**/*'],
 	},
@@ -13,6 +14,9 @@ export default tseslint.config(
 			ecmaVersion: 2020,
 			globals: globals.node,
 			sourceType: 'module',
+			parserOptions: {
+				tsconfigRootDir: import.meta.dirname,
+			},
 		},
 	},
 );
