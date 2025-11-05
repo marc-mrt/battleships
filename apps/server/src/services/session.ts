@@ -1,16 +1,12 @@
 import * as SessionDB from '../database/session.ts';
 import { Session, SessionInGame, SessionWaitingForBoats } from '../models/session.ts';
 import { Player } from '../models/player.ts';
-import {
-	sendFriendJoinedMessage,
-	sendGameStartedMessage,
-	sendYourTurnMessage,
-} from '../controllers/websocket.ts';
+import { sendFriendJoinedMessage } from '../controllers/websocket.ts';
 import * as PlayerDB from '../database/player.ts';
 import * as BoatDB from '../database/boat.ts';
 import { NotFoundError } from '../controllers/errors.ts';
 import { Coordinates } from '../models/shot.ts';
-import { PlayerState } from './player-state.ts';
+import { GameStateManager } from './game-state-manager.ts';
 
 interface CreateSessionPayload {
 	username: string;
@@ -96,9 +92,8 @@ export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
 			playerId: firstPlayerId,
 		});
 
-		sendGameStartedMessage(updatedSession.owner.id, { session: updatedSession });
-		sendGameStartedMessage(updatedSession.friend.id, { session: updatedSession });
-		sendYourTurnMessage(firstPlayerId, { sessionId: updatedSession.id });
+		const gameManager = new GameStateManager(updatedSession);
+		gameManager.broadcastNextTurn(firstPlayerId);
 	}
 }
 
@@ -110,10 +105,9 @@ interface ProcessShotPayload {
 
 export async function handleShotFired(payload: ProcessShotPayload): Promise<void> {
 	const session = await getSessionByPlayerId(payload.playerId);
-	if (session.status !== 'in_game') throw new Error('Game not in progress'); //@TODO(marc-mrt): Handle Errors properly
-	if (session.currentTurn.id !== payload.playerId) throw new Error('Not your turn'); //@TODO(marc-mrt): Handle Errors properly
+	const gameManager = new GameStateManager(session);
 
-	const playerState = new PlayerState(payload.playerId, session);
+	const playerId = payload.playerId;
 	const coordinates: Coordinates = { x: payload.x, y: payload.y };
-	await playerState.handleShotFired(coordinates);
+	await gameManager.handleShotFired(playerId, coordinates);
 }

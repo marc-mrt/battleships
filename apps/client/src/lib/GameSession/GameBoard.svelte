@@ -2,14 +2,17 @@
 	import type { Player } from '../models/player';
 	import { onDestroy } from 'svelte';
 	import { gameStore } from '../services/game-store.svelte';
+	import type { GameState } from 'game-messages';
 
 	let player: Player | null = $state(null);
 	let opponent: Player | null = $state(null);
+	let game: GameState | null = $state(null);
 
 	const unsubscribe = gameStore.store.subscribe((store) => {
 		if (store != null) {
 			player = store.player;
 			opponent = store.opponent;
+			game = store.game;
 		}
 	});
 
@@ -21,7 +24,17 @@
 	<h3>{opponent?.username}</h3>
 </header>
 
-<main>GAME IN PROGRESS</main>
+<main>
+	{#if game != null}
+		{#if game.turn === 'opponent_turn'}
+			OPPONENT'S TURN
+		{:else}
+			YOUR TURN
+		{/if}
+	{:else}
+		GAME IN PROGRESS
+	{/if}
+</main>
 
 <footer></footer>
 

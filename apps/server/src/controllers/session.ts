@@ -4,7 +4,7 @@ import * as SessionService from '../services/session.ts';
 import { BadRequestError } from './errors';
 import { parseSessionCookie, setSessionCookie } from '../middlwares/cookies.ts';
 import { getSessionByPlayerId } from '../database/session.ts';
-import { SessionWaitingForBoats } from '../models/session.ts';
+import { Session, SessionStatus, SessionWaitingForBoats } from '../models/session.ts';
 
 const CreateSessionRequestBody = z.object({
 	username: z.string(),
@@ -24,7 +24,8 @@ export async function createSession(request: Request, response: Response) {
 		playerId: session.owner.id,
 	});
 
-	return response.status(201).send(session);
+	const mapped = mapToSessionResponse(session);
+	return response.status(201).send(mapped);
 }
 
 const JoinSessionRequestBody = z.object({
@@ -46,7 +47,8 @@ export async function joinSession(request: Request, response: Response) {
 		playerId: session.friend.id,
 	});
 
-	return response.status(200).send(session);
+	const mapped = mapToSessionResponse(session);
+	return response.status(200).send(mapped);
 }
 
 export async function getCurrentSession(request: Request, response: Response) {
@@ -60,5 +62,37 @@ export async function getCurrentSession(request: Request, response: Response) {
 	if (!session) {
 		return response.status(204).send();
 	}
-	return response.status(200).send(session);
+	const mapped = mapToSessionResponse(session);
+	return response.status(200).send(mapped);
+}
+
+interface SessionResponse {
+	slug: string;
+	status: SessionStatus;
+	owner: {
+		id: string;
+		username: string;
+	};
+	friend: {
+		id: string;
+		username: string;
+	} | null;
+}
+
+function mapToSessionResponse(session: Session): SessionResponse {
+	return {
+		slug: session.slug,
+		status: session.status,
+		owner: {
+			id: session.owner.id,
+			username: session.owner.username,
+		},
+		friend:
+			session.status !== 'waiting_for_friend'
+				? {
+						id: session.friend.id,
+						username: session.friend.username,
+					}
+				: null,
+	};
 }

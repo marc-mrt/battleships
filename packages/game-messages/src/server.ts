@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CoordinateSchema } from "./shared";
 
 export const FriendJoinedMessageSchema = z.object({
   type: z.literal("friend_joined"),
@@ -14,27 +15,49 @@ export const FriendJoinedMessageSchema = z.object({
 });
 export type FriendJoinedMessage = z.infer<typeof FriendJoinedMessageSchema>;
 
-export const GameStartedMessageSchema = z.object({
-  type: z.literal("game_started"),
-  data: z.object({
-    session: z.object({
-      status: z.literal("in_game"),
-    }),
-  }),
+export const BoatSchema = z.object({
+  startX: CoordinateSchema,
+  startY: CoordinateSchema,
+  orientation: z.enum(["horizontal", "vertical"]),
+  length: z.number().int().min(2).max(5),
 });
-export type GameStartedMessage = z.infer<typeof GameStartedMessageSchema>;
 
-export const YourTurnMessageSchema = z.object({
-  type: z.literal("your_turn"),
-  data: z.object({
-    sessionId: z.string(),
-  }),
+export const ShotSchema = z.object({
+  x: CoordinateSchema,
+  y: CoordinateSchema,
+  hit: z.boolean(),
 });
-export type YourTurnMessage = z.infer<typeof YourTurnMessageSchema>;
+
+export const PlayerGameStateSchema = z.object({
+  boats: z.array(BoatSchema),
+  shots: z.array(ShotSchema),
+});
+export type PlayerGameState = z.infer<typeof PlayerGameStateSchema>;
+
+export const OpponentGameStateSchema = z.object({
+  sunkBoats: z.array(BoatSchema),
+  shotsAgainstPlayer: z.array(ShotSchema),
+});
+export type OpponentGameState = z.infer<typeof OpponentGameStateSchema>;
+
+export const GameStateSchema = z.object({
+  turn: z.enum(["player_turn", "opponent_turn"]),
+  session: z.object({
+    status: z.enum(["in_game", "game_over"]),
+  }),
+  player: PlayerGameStateSchema,
+  opponent: OpponentGameStateSchema,
+});
+export type GameState = z.infer<typeof GameStateSchema>;
+
+export const NextTurnMessageSchema = z.object({
+  type: z.literal("next_turn"),
+  data: GameStateSchema,
+});
+export type NextTurnMessage = z.infer<typeof NextTurnMessageSchema>;
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   FriendJoinedMessageSchema,
-  GameStartedMessageSchema,
-  YourTurnMessageSchema,
+  NextTurnMessageSchema,
 ]);
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;

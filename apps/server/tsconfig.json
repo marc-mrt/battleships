@@ -4,6 +4,7 @@
 		"target": "ESNext",
 		"module": "CommonJS",
 		"skipLibCheck": true,
+		"noEmit": true,
 		"allowImportingTsExtensions": true,
 		"moduleDetection": "force",
 		"outDir": "./dist",

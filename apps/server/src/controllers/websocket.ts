@@ -4,9 +4,8 @@ import {
 	type ClientMessage,
 	ClientMessageSchema,
 	type FriendJoinedMessage,
-	type GameStartedMessage,
+	type NextTurnMessage,
 	type ServerMessage,
-	type YourTurnMessage,
 } from 'game-messages';
 import { InternalServerError } from './errors';
 import * as SessionService from '../services/session.ts';
@@ -90,22 +89,14 @@ function sendMessageToPlayer(playerId: string, message: ServerMessage): void {
 	webSocket.send(JSON.stringify(message));
 }
 
-export function sendYourTurnMessage(playerId: string, data: YourTurnMessage['data']): void {
-	const message: YourTurnMessage = { type: 'your_turn', data };
+export function sendNextTurnMessage(playerId: string, data: NextTurnMessage['data']): void {
+	const message: NextTurnMessage = { type: 'next_turn', data };
 	sendMessageToPlayer(playerId, message);
 }
 
 export function sendFriendJoinedMessage(playerId: string, data: FriendJoinedMessage['data']): void {
 	const message: FriendJoinedMessage = {
 		type: 'friend_joined',
-		data,
-	};
-	sendMessageToPlayer(playerId, message);
-}
-
-export function sendGameStartedMessage(playerId: string, data: GameStartedMessage['data']): void {
-	const message: GameStartedMessage = {
-		type: 'game_started',
 		data,
 	};
 	sendMessageToPlayer(playerId, message);

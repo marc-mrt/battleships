@@ -4,7 +4,8 @@ import * as API from '../api';
 import {
 	type ClientMessage,
 	type FriendJoinedMessage,
-	type GameStartedMessage,
+	type GameState,
+	type NextTurnMessage,
 	type ServerMessage,
 } from 'game-messages';
 import type { SessionStatus } from '../models/session';
@@ -24,6 +25,7 @@ export interface Store {
 		id: string;
 		username: string;
 	} | null;
+	game: GameState | null;
 }
 
 class GameStoreSvelte {
@@ -51,6 +53,7 @@ class GameStoreSvelte {
 				username: session.owner.username,
 			},
 			opponent: null,
+			game: null,
 		});
 	}
 
@@ -79,6 +82,7 @@ class GameStoreSvelte {
 				id: session.owner.id,
 				username: session.owner.username,
 			},
+			game: null,
 		});
 	}
 
@@ -105,6 +109,7 @@ class GameStoreSvelte {
 						username: session.friend.username,
 					}
 				: null,
+			game: null,
 		});
 	}
 
@@ -112,8 +117,8 @@ class GameStoreSvelte {
 		switch (message.type) {
 			case 'friend_joined':
 				return this.handleFriendJoinedMessage(message);
-			case 'game_started':
-				return this.handleGameStarted(message);
+			case 'next_turn':
+				return this.handleNextTurn(message);
 			default:
 				break;
 		}
@@ -136,7 +141,7 @@ class GameStoreSvelte {
 		});
 	}
 
-	private handleGameStarted(message: GameStartedMessage): void {
+	private handleNextTurn(message: NextTurnMessage): void {
 		this.store.update((state): Store | null => {
 			if (state == null) {
 				console.warn('Received game-started message before player store was initialized');
@@ -145,6 +150,7 @@ class GameStoreSvelte {
 
 			return R.mergeDeepRight(state, {
 				session: { status: message.data.session.status },
+				game: message.data,
 			});
 		});
 	}
