@@ -111,7 +111,7 @@ export async function setCurrentTurn(payload: SetCurrentTurnPayload): Promise<Se
 																								'orientation', b.orientation, 'sunk', b.sunk))
 							FROM boats b
 							WHERE friend_player.id = b.player_id) AS friend_boats,
-						 (SELECT json_agg(json_build_object('id', shots.id, 'shooter_id', shots.shooter_id, 'target_id',
+						 (SELECT json_agg(json_build_object('id', shots.id, 'created_at', shots.created_at, 'shooter_id', shots.shooter_id, 'target_id',
 																								shots.target_id,
 																								'x', shots.x, 'y', shots.y, 'hit', shots.hit))
 							FROM shots
@@ -155,7 +155,7 @@ export async function getSessionByPlayerId(playerId: string): Promise<Session | 
 																								'orientation', b.orientation, 'sunk', b.sunk))
 							FROM boats b
 							WHERE friend_player.id = b.player_id) AS friend_boats,
-						 (SELECT json_agg(json_build_object('id', shots.id, 'shooter_id', shots.shooter_id, 'target_id',
+						 (SELECT json_agg(json_build_object('id', shots.id, 'created_at', shots.created_at, 'shooter_id', shots.shooter_id, 'target_id',
 																								shots.target_id,
 																								'x', shots.x, 'y', shots.y, 'hit', shots.hit))
 							FROM shots

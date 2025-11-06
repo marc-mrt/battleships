@@ -15,7 +15,7 @@ interface CreateShotPayload {
 export async function recordShot(payload: CreateShotPayload): Promise<Shot> {
 	const result = await query(
 		`INSERT INTO shots (session_id, shooter_id, target_id, x, y, hit)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
 		[payload.sessionId, payload.shooterId, payload.targetId, payload.x, payload.y, payload.hit],
 	);
 	return mapToShot(result.rows[0]);
