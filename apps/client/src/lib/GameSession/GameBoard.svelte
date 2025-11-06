@@ -3,6 +3,8 @@
 	import { onDestroy } from 'svelte';
 	import { gameStore } from '../services/game-store.svelte';
 	import type { GameState } from 'game-messages';
+	import OpponentTurnView from './components/OpponentTurnView.svelte';
+	import YourTurnView from './components/YourTurnView.svelte';
 
 	let player: Player | null = $state(null);
 	let opponent: Player | null = $state(null);
@@ -25,14 +27,14 @@
 </header>
 
 <main>
-	{#if game != null}
+	{#if game}
 		{#if game.turn === 'opponent_turn'}
-			OPPONENT'S TURN
+			<OpponentTurnView {game} />
 		{:else}
-			YOUR TURN
+			<YourTurnView {game} />
 		{/if}
 	{:else}
-		GAME IN PROGRESS
+		<p>Loading game...</p>
 	{/if}
 </main>
 
