@@ -54,8 +54,9 @@ async function deleteBoats(playerId: string): Promise<void> {
 	await query('DELETE FROM boats WHERE player_id = $1', [playerId]);
 }
 
-export async function markBoatAsSunk(boatId: string): Promise<void> {
-	await query('UPDATE boats SET sunk = TRUE WHERE id = $1', [boatId]);
+export async function markBoatAsSunk(boatId: string): Promise<Boat> {
+	const result = await query('UPDATE boats SET sunk = TRUE WHERE id = $1 RETURNING *', [boatId]);
+	return mapToBoat(result.rows[0]);
 }
 
 export async function getBoatsByPlayerId(playerId: string) {

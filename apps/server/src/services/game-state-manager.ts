@@ -6,6 +6,7 @@ import * as SessionDB from '../database/session.ts';
 import * as ShotDB from '../database/shot';
 import { Boat } from '../models/boat';
 import { Coordinates, Shot } from '../models/shot';
+import * as R from 'ramda';
 
 export class GameStateManager {
 	private readonly session: SessionInGame;
@@ -31,19 +32,12 @@ export class GameStateManager {
 
 		const result = this.checkIncomingShot(targettedPlayerId, coordinates);
 
-		await ShotDB.recordShot({
-			sessionId: this.session.id,
-			shooterId: playerId,
-			targetId: targettedPlayerId,
-			x: coordinates.x,
-			y: coordinates.y,
-			hit: result.hit,
-		});
+		await this.recordShot(playerId, targettedPlayerId, coordinates, result.hit);
 
 		let nextTurnPlayerId: string;
 		if (result.hit) {
 			if (result.sunk) {
-				await BoatDB.markBoatAsSunk(result.boatId);
+				await this.markBoatAsSunk(result.boatId);
 				nextTurnPlayerId = targettedPlayerId;
 			} else {
 				nextTurnPlayerId = playerId;
@@ -58,6 +52,42 @@ export class GameStateManager {
 		});
 
 		this.broadcastNextTurn(nextTurnPlayerId);
+	}
+
+	private async recordShot(
+		shooterId: string,
+		targetId: string,
+		coordinates: Coordinates,
+		hit: boolean,
+	): Promise<void> {
+		const recordedShot = await ShotDB.recordShot({
+			sessionId: this.session.id,
+			shooterId,
+			targetId,
+			x: coordinates.x,
+			y: coordinates.y,
+			hit,
+		});
+		this.session.shots.push(recordedShot);
+	}
+
+	private async markBoatAsSunk(boatId: string): Promise<void> {
+		const updatedBoat = await BoatDB.markBoatAsSunk(boatId);
+
+		const isBoatInOwnerBoats = R.any(R.propEq(boatId, 'id'), this.session.ownerBoats);
+		const boatsToUpdate: Boat[] = isBoatInOwnerBoats
+			? this.session.ownerBoats
+			: this.session.friendBoats;
+
+		const boatIndex = R.findIndex(R.propEq(boatId, 'id'), boatsToUpdate);
+		if (boatIndex !== -1) {
+			const updatedBoats = R.update(boatIndex, updatedBoat, boatsToUpdate);
+			if (isBoatInOwnerBoats) {
+				this.session.ownerBoats = updatedBoats;
+			} else {
+				this.session.friendBoats = updatedBoats;
+			}
+		}
 	}
 
 	private checkIncomingShot(
