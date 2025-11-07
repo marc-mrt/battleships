@@ -1,23 +1,15 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
-	import CreateOrJoinSession from './lib/GameSession/CreateOrJoinSession.svelte';
-	import type { SessionStatus } from './lib/models/session';
-	import WaitForPlayerToJoin from './lib/GameSession/WaitForPlayerToJoin.svelte';
-	import PlaceBoats from './lib/GameSession/PlaceBoats.svelte';
-	import GameBoard from './lib/GameSession/GameBoard.svelte';
+	import { onMount } from 'svelte';
+	import { CreateOrJoinSession, WaitForPlayerToJoin, PlaceBoats, GameBoard } from './lib/views';
 	import { gameStore } from './lib/services/game-store.svelte';
 
 	const urlParams = new URLSearchParams(window.location.search);
 	const querySharedSlug = urlParams.has('s') ? urlParams.get('s') : null;
 
-	let initializing: boolean = $state(true);
-	let status: SessionStatus | null = $state(null);
+	let initializing = $state(true);
 
-	const unsubscribe = gameStore.store.subscribe((store) => {
-		if (store != null) {
-			status = store.session.status;
-		}
-	});
+	// Use derived state from the reactive store
+	const status = $derived(gameStore.session?.status ?? null);
 
 	onMount(async () => {
 		try {
@@ -26,18 +18,15 @@
 			initializing = false;
 		}
 	});
-
-	onDestroy(() => {
-		gameStore.destroy();
-		unsubscribe();
-	});
 </script>
 
 {#if initializing}
 	<main>
-		<p>Loading...</p>
+		<div class="loading">
+			<p>Loading...</p>
+		</div>
 	</main>
-{:else if status != null}
+{:else if status !== null}
 	{#if status === 'waiting_for_friend'}
 		<WaitForPlayerToJoin />
 	{:else if status === 'waiting_for_boat_placements'}
@@ -45,8 +34,31 @@
 	{:else if status === 'in_game'}
 		<GameBoard />
 	{:else}
-		Unknown status: {status}
+		<div class="error">
+			<p>Unknown status: {status}</p>
+		</div>
 	{/if}
 {:else}
 	<CreateOrJoinSession sharedSlug={querySharedSlug} />
 {/if}
+
+<style>
+	.loading,
+	.error {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		min-height: 100vh;
+		padding: 2rem;
+	}
+
+	.loading p {
+		color: var(--color-text-subtle);
+		font-size: 1.2rem;
+	}
+
+	.error p {
+		color: var(--color-text-error);
+		font-size: 1.2rem;
+	}
+</style>

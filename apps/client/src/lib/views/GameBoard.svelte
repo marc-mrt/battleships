@@ -1,0 +1,147 @@
+<script lang="ts">
+	import { gameStore } from '../services/game-store.svelte';
+	import BattleGrid from './BattleGrid.svelte';
+	import { GridManager } from '../domain/grid-manager.svelte';
+
+	const player = $derived(gameStore.player);
+	const opponent = $derived(gameStore.opponent);
+	const game = $derived(gameStore.game);
+
+	const opponentTurnCells = $derived.by(() => {
+		if (!game) return [];
+
+		const gridManager = new GridManager();
+		return gridManager.toDisplayGrid({
+			boats: game.player.boats,
+			shots: game.opponent.shotsAgainstPlayer,
+		});
+	});
+
+	const yourTurnCells = $derived.by(() => {
+		if (!game) return [];
+
+		const gridManager = new GridManager();
+		return gridManager.toDisplayGrid({
+			shots: game.player.shots,
+			sunkBoats: game.opponent.sunkBoats,
+		});
+	});
+
+	function handleCellClick(x: number, y: number) {
+		gameStore.sendAction({
+			type: 'fire_shot',
+			data: { x, y },
+		});
+	}
+
+	function getCellAriaLabel(x: number, y: number): string {
+		return `Fire at position ${x}, ${y}`;
+	}
+</script>
+
+<header>
+	<h3 class="player">{player?.username}</h3>
+	<h3>{opponent?.username}</h3>
+</header>
+
+<main>
+	{#if !game}
+		<div class="loading">
+			<p>Loading game...</p>
+		</div>
+	{:else if game.turn === 'opponent_turn'}
+		<div class="turn-view">
+			<p class="status-message opponent-turn">Opponent is taking their shot...</p>
+
+			<div class="grid-container">
+				<h4>Your Grid</h4>
+				<BattleGrid cells={opponentTurnCells} />
+			</div>
+		</div>
+	{:else}
+		<div class="turn-view">
+			<p class="status-message your-turn">Your turn - Click to fire!</p>
+
+			<div class="grid-container">
+				<h4>Opponent's Grid</h4>
+				<BattleGrid
+					cells={yourTurnCells}
+					interactive
+					onCellClick={handleCellClick}
+					{getCellAriaLabel}
+				/>
+			</div>
+		</div>
+	{/if}
+</main>
+
+<footer></footer>
+
+<style>
+	header {
+		display: flex;
+		justify-content: space-between;
+		margin-bottom: 0.5rem;
+	}
+
+	header h3 {
+		margin: 0;
+		font-size: 1rem;
+	}
+
+	.player {
+		text-decoration: underline;
+		text-decoration-color: var(--color-text-success);
+	}
+
+	.turn-view {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+		width: 100%;
+	}
+
+	.loading {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		padding: 2rem;
+		color: var(--color-text-subtle);
+	}
+
+	.status-message {
+		font-size: 1.1rem;
+		font-weight: 500;
+		margin: 0;
+	}
+
+	.status-message.your-turn {
+		color: var(--color-text-success);
+	}
+
+	.status-message.opponent-turn {
+		color: var(--color-accent);
+	}
+
+	.grid-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+	}
+
+	.grid-container h4 {
+		margin: 0;
+		font-size: 0.875rem;
+		color: var(--color-text-subtle);
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	footer {
+		margin-top: 1rem;
+		text-align: center;
+	}
+</style>

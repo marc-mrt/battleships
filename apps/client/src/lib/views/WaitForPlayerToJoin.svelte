@@ -1,33 +1,25 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
-	import type { Player } from '../models/player';
 	import { gameStore } from '../services/game-store.svelte';
+	import { ClipboardManager } from '../utils/clipboard.svelte';
 
-	let player: Player | null = $state(null);
-	let slug: string | null = $state(null);
-
-	const unsubscribe = gameStore.store.subscribe((store) => {
-		if (store != null) {
-			player = store.player;
-			slug = store.session.slug;
-		}
-	});
+	const player = $derived(gameStore.player);
+	const slug = $derived(gameStore.session?.slug);
 
 	const urlToShare = $derived(`${window.location.origin}?s=${slug}`);
-	let copied = $state(false);
+	const clipboard = new ClipboardManager();
 
 	function copyToClipboard() {
 		if (slug) {
-			navigator.clipboard.writeText(urlToShare).then(() => {
-				copied = true;
-				setTimeout(() => (copied = false), 1500);
-			});
+			clipboard.copy(urlToShare);
 		}
 	}
 
-	onDestroy(() => {
-		unsubscribe();
-	});
+	function handleKeyPress(event: KeyboardEvent) {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			copyToClipboard();
+		}
+	}
 </script>
 
 <header>
@@ -40,11 +32,13 @@
 			<input
 				type="text"
 				readonly
-				value={copied ? 'Copied!' : urlToShare}
+				value={clipboard.isCopied ? 'Copied!' : urlToShare}
 				onclick={copyToClipboard}
-				class:copied
+				onkeydown={handleKeyPress}
+				class:copied={clipboard.isCopied}
 				aria-label="Copy link to clipboard"
 				tabindex="0"
+				role="button"
 			/>
 		</div>
 	</div>

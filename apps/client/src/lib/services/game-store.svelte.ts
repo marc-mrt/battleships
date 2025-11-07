@@ -1,18 +1,11 @@
-import { writable } from 'svelte/store';
-import * as R from 'ramda';
 import * as API from '../api';
-import {
-	type ClientMessage,
-	type FriendJoinedMessage,
-	type GameState,
-	type NextTurnMessage,
-	type ServerMessage,
-} from 'game-messages';
+import type { ClientMessage, ServerMessage } from 'game-messages';
+import type { GameState } from 'game-messages';
 import type { SessionStatus } from '../models/session';
+import { getWebsocketManager, type WebsocketManagerSvelte } from './websocket-manager.svelte';
+import { GameMessageHandler } from '../domain/game-message-handler';
 
-import { getWebsocketManager } from './websocket-manager.svelte';
-
-export interface Store {
+export interface StoreData {
 	session: {
 		slug: string;
 		status: SessionStatus;
@@ -28,131 +21,183 @@ export interface Store {
 	game: GameState | null;
 }
 
-class GameStoreSvelte {
-	public store = writable<Store | null>(null);
-	public webSocket = getWebsocketManager();
-	private readonly unsubscribe: (() => void) | null = null;
+type StoreState =
+	| { status: 'uninitialized' }
+	| { status: 'loading' }
+	| { status: 'ready'; data: StoreData };
 
-	constructor() {
+interface GameStoreOptions {
+	webSocketManager?: WebsocketManagerSvelte;
+	apiClient?: typeof API;
+	messageHandler?: GameMessageHandler;
+}
+
+class GameStoreSvelte {
+	private webSocket: WebsocketManagerSvelte;
+	private api: typeof API;
+	private messageHandler: GameMessageHandler;
+	private unsubscribe: (() => void) | null = null;
+
+	state = $state<StoreState>({ status: 'uninitialized' });
+
+	get isReady(): boolean {
+		return this.state.status === 'ready';
+	}
+
+	get data(): StoreData | null {
+		return this.state.status === 'ready' ? this.state.data : null;
+	}
+
+	get player() {
+		return this.data?.player ?? null;
+	}
+
+	get opponent() {
+		return this.data?.opponent ?? null;
+	}
+
+	get session() {
+		return this.data?.session ?? null;
+	}
+
+	get game() {
+		return this.data?.game ?? null;
+	}
+
+	constructor(options: GameStoreOptions = {}) {
+		this.webSocket = options.webSocketManager ?? getWebsocketManager();
+		this.api = options.apiClient ?? API;
+		this.messageHandler = options.messageHandler ?? new GameMessageHandler();
 		this.unsubscribe = this.webSocket.onMessage(this.handleIncomingMessage.bind(this));
 	}
 
 	public async createSession(payload: { username: string }) {
 		const { username } = payload;
 
-		const session = await API.createSession({ username });
-		await this.webSocket.connect();
+		this.state = { status: 'loading' };
 
-		this.store.set({
-			session: {
-				slug: session.slug,
-				status: session.status,
-			},
-			player: {
-				id: session.owner.id,
-				username: session.owner.username,
-			},
-			opponent: null,
-			game: null,
-		});
+		try {
+			const session = await this.api.createSession({ username });
+			await this.webSocket.connect();
+
+			this.state = {
+				status: 'ready',
+				data: {
+					session: {
+						slug: session.slug,
+						status: session.status,
+					},
+					player: {
+						id: session.owner.id,
+						username: session.owner.username,
+					},
+					opponent: null,
+					game: null,
+				},
+			};
+		} catch (error) {
+			this.state = { status: 'uninitialized' };
+			throw error;
+		}
 	}
 
 	public async joinSession(payload: { username: string; slug: string }) {
 		const { username, slug } = payload;
 
-		const session = await API.joinSession({ username, slug });
-		const player = session.friend;
+		this.state = { status: 'loading' };
 
-		if (!player) {
-			throw new Error('Failed to find player in session');
+		try {
+			const session = await this.api.joinSession({ username, slug });
+			const player = session.friend;
+
+			if (!player) {
+				throw new Error('Failed to find player in session');
+			}
+
+			await this.webSocket.connect();
+
+			this.state = {
+				status: 'ready',
+				data: {
+					session: {
+						slug: session.slug,
+						status: session.status,
+					},
+					player: {
+						id: player.id,
+						username: player.username,
+					},
+					opponent: {
+						id: session.owner.id,
+						username: session.owner.username,
+					},
+					game: null,
+				},
+			};
+		} catch (error) {
+			this.state = { status: 'uninitialized' };
+			throw error;
 		}
-
-		await this.webSocket.connect();
-
-		this.store.set({
-			session: {
-				slug: session.slug,
-				status: session.status,
-			},
-			player: {
-				id: player.id,
-				username: player.username,
-			},
-			opponent: {
-				id: session.owner.id,
-				username: session.owner.username,
-			},
-			game: null,
-		});
 	}
 
 	public async attemptReconnect() {
-		const session = await API.getSession();
-		if (session == null) {
+		try {
+			const session = await this.api.getSession();
+			if (session == null) {
+				return;
+			}
+
+			await this.webSocket.connect();
+
+			this.state = {
+				status: 'ready',
+				data: {
+					session: {
+						slug: session.slug,
+						status: session.status,
+					},
+					player: {
+						id: session.owner.id,
+						username: session.owner.username,
+					},
+					opponent: session.friend
+						? {
+								id: session.friend.id,
+								username: session.friend.username,
+							}
+						: null,
+					game: null,
+				},
+			};
+		} catch (error) {
+			console.error('Reconnection failed:', error);
+		}
+	}
+
+	private updateStateData(updater: (data: StoreData) => StoreData): void {
+		if (this.state.status !== 'ready') {
+			console.warn('Cannot update state when not ready');
 			return;
 		}
-
-		await this.webSocket.connect();
-
-		this.store.set({
-			session: {
-				slug: session.slug,
-				status: session.status,
-			},
-			player: {
-				id: session.owner.id,
-				username: session.owner.username,
-			},
-			opponent: session.friend
-				? {
-						id: session.friend.id,
-						username: session.friend.username,
-					}
-				: null,
-			game: null,
-		});
+		this.state = {
+			status: 'ready',
+			data: updater(this.state.data),
+		};
 	}
 
 	private handleIncomingMessage(message: ServerMessage): void {
-		switch (message.type) {
-			case 'friend_joined':
-				return this.handleFriendJoinedMessage(message);
-			case 'next_turn':
-				return this.handleNextTurn(message);
-			default:
-				break;
+		if (this.state.status !== 'ready') {
+			console.warn('Received message before store was initialized');
+			return;
 		}
-	}
 
-	private handleFriendJoinedMessage(message: FriendJoinedMessage): void {
-		this.store.update((state): Store | null => {
-			if (state == null) {
-				console.warn('Received friend joined message before player store was initialized');
-				return null;
-			}
-
-			return R.mergeDeepRight(state, {
-				opponent: {
-					id: message.data.friend.playerId,
-					username: message.data.friend.username,
-				},
-				session: { status: message.data.session.status },
-			});
-		});
-	}
-
-	private handleNextTurn(message: NextTurnMessage): void {
-		this.store.update((state): Store | null => {
-			if (state == null) {
-				console.warn('Received game-started message before player store was initialized');
-				return null;
-			}
-
-			return R.mergeDeepRight(state, {
-				session: { status: message.data.session.status },
-				game: message.data,
-			});
-		});
+		const newData = this.messageHandler.handleMessage(message, this.state.data);
+		if (newData) {
+			this.state = {
+				status: 'ready',
+				data: newData,
+			};
+		}
 	}
 
 	sendAction(action: ClientMessage) {
@@ -161,6 +206,7 @@ class GameStoreSvelte {
 
 	destroy() {
 		this.unsubscribe?.();
+		this.webSocket.disconnect();
 	}
 }
 

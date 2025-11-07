@@ -1,15 +1,5 @@
 <script lang="ts">
-	export type CellState = {
-		boat?: boolean;
-		shot?: boolean;
-		hit?: boolean;
-		miss?: boolean;
-		sunk?: boolean;
-		selected?: boolean;
-		preview?: boolean;
-		validDrop?: boolean;
-		invalidDrop?: boolean;
-	};
+	import type { CellState } from '../domain/grid-manager.svelte';
 
 	interface Props {
 		cells: CellState[][];
@@ -123,7 +113,6 @@
 		padding: 0;
 	}
 
-	/* Interactive cells */
 	button.cell {
 		cursor: pointer;
 	}
@@ -137,7 +126,6 @@
 		cursor: default;
 	}
 
-	/* Draggable cells */
 	.cell[draggable='true'] {
 		cursor: grab;
 	}
@@ -146,7 +134,6 @@
 		cursor: grabbing;
 	}
 
-	/* Cell states */
 	.cell.boat {
 		background: var(--color-accent);
 	}
