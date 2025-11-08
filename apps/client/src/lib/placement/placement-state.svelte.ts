@@ -54,6 +54,7 @@ export class PlacementStateStore {
 		const newState = PlacementOps.moveBoat(this.state, boatId, startX, startY, orientation);
 		if (newState === this.state) return false;
 		this.state = newState;
+		this.selected = boatId;
 		return true;
 	}
 

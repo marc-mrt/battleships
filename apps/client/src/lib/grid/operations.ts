@@ -1,4 +1,4 @@
-import type { GridState, Cell, Position, Orientation } from './types';
+import type { GridState, Cell, Position, Orientation, Boat } from './types';
 
 export function createEmptyGrid(size: number): GridState {
 	const cells = Array(size)
@@ -62,4 +62,10 @@ export function generateBoatId(): string {
 	const array = new Uint32Array(10);
 	self.crypto.getRandomValues(array);
 	return `boat-${array}`;
+}
+
+export function getBoatAt(grid: GridState, boats: Boat[], pos: Position): Boat | null {
+	const cell = getCell(grid, pos);
+	if (!cell?.boatId) return null;
+	return boats.find((b) => b.id === cell.boatId) || null;
 }
