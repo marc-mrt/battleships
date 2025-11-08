@@ -1,10 +1,4 @@
-export interface ReconnectionStrategy {
-	shouldRetry(attempts: number): boolean;
-	getDelay(attempts: number): number;
-	reset(): void;
-}
-
-export class ExponentialBackoffStrategy implements ReconnectionStrategy {
+export class ExponentialBackoffStrategyFactory {
 	constructor(
 		private maxAttempts: number = 5,
 		private baseDelay: number = 1000,

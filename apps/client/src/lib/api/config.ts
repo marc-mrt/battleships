@@ -3,7 +3,7 @@ if (!API_BASE_URL) {
 	throw new Error('VITE_SERVER_BASE_URL is not defined.');
 }
 
-export const WS_BASE_URL: string = API_BASE_URL.replace(
+export const WEBSOCKET_BASE_URL: string = API_BASE_URL.replace(
 	/^http/,
 	window.location.protocol === 'https:' ? 'wss' : 'ws',
 );

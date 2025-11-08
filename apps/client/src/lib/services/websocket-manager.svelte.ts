@@ -1,10 +1,6 @@
 import type { ClientMessage, ServerMessage } from 'game-messages';
 import { SvelteSet } from 'svelte/reactivity';
-import {
-	type ReconnectionStrategy,
-	ExponentialBackoffStrategy,
-} from '../domain/reconnection-strategy';
-import { type WebSocketFactory, SessionWebSocketFactory } from '../domain/websocket-factory';
+import { ExponentialBackoffStrategyFactory, ApiWebSocketFactory } from '../factories';
 
 type MessageHandler<T = ServerMessage> = (message: T) => void;
 type ConnectionStatusHandler = (connected: boolean) => void;
@@ -14,6 +10,16 @@ export interface WebSocketError {
 	type: 'connection' | 'parse' | 'send' | 'reconnect';
 	message: string;
 	originalError?: unknown;
+}
+
+interface ReconnectionStrategyFactory {
+	shouldRetry(attempts: number): boolean;
+	getDelay(attempts: number): number;
+	reset(): void;
+}
+
+interface WebSocketFactory {
+	create(): WebSocket;
 }
 
 export class WebsocketManagerSvelte {
@@ -28,8 +34,8 @@ export class WebsocketManagerSvelte {
 	error = $state<WebSocketError | null>(null);
 
 	constructor(
-		private factory: WebSocketFactory = new SessionWebSocketFactory(),
-		private reconnectionStrategy: ReconnectionStrategy = new ExponentialBackoffStrategy(),
+		private factory: WebSocketFactory = new ApiWebSocketFactory(),
+		private reconnectionStrategy: ReconnectionStrategyFactory = new ExponentialBackoffStrategyFactory(),
 	) {}
 
 	connect(): Promise<void> {
