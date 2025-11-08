@@ -1,6 +1,7 @@
 import type { PlacementState, CellState, Position, DragState } from '../grid/types';
 import { getBoatCells, getCell } from '../grid/operations';
 import { canPlaceBoat } from './operations';
+import { createEmptyCellGrid } from '../grid/render-utils';
 
 export function renderPlacementCells(
 	state: PlacementState,
@@ -9,25 +10,23 @@ export function renderPlacementCells(
 	draggedBoatId: string | null,
 ): CellState[][] {
 	const size = state.grid.size;
-	const cells: CellState[][] = [];
+	const cells = createEmptyCellGrid(size);
 
 	for (let y = 0; y < size; y++) {
-		const row: CellState[] = [];
 		for (let x = 0; x < size; x++) {
 			const cell = getCell(state.grid, { x, y });
 			const isDraggedCell = draggedBoatId !== null && cell?.boatId === draggedBoatId;
 			const isSelected = selectedBoatId !== null && cell?.boatId === selectedBoatId;
 			const previewInfo = getPreviewInfo({ x, y }, state, drag, draggedBoatId);
 
-			row.push({
+			cells[y][x] = {
 				boat: cell?.occupied && !isDraggedCell,
 				selected: isSelected && !drag.isDragging,
 				preview: previewInfo.isPreview,
 				validDrop: previewInfo.isPreview && previewInfo.isValid,
 				invalidDrop: previewInfo.isPreview && !previewInfo.isValid,
-			});
+			};
 		}
-		cells.push(row);
 	}
 
 	return cells;
