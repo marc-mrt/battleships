@@ -1,7 +1,6 @@
 import { ServerMessageSchema, type ClientMessage, type ServerMessage } from 'game-messages';
 import { SvelteSet } from 'svelte/reactivity';
-import { ApiWebSocketFactory } from './websocket-factory';
-import { ExponentialBackoffStrategy } from './reconnection-strategy';
+import { WEBSOCKET_BASE_URL } from '../../api/config';
 
 type MessageHandler<T = ServerMessage> = (message: T) => void;
 type ErrorHandler = (error: WebSocketError) => void;
@@ -12,34 +11,22 @@ interface WebSocketError {
 	originalError?: unknown;
 }
 
-interface ReconnectionStrategy {
-	shouldRetry(): boolean;
-	computeDelay(): number;
-	reset(): void;
-}
-
-interface WebSocketFactory {
-	create(): WebSocket;
-}
-
 export class ConnectionManager {
 	private ws: WebSocket | null = null;
 	private messageHandlers = new SvelteSet<MessageHandler>();
 	private errorHandlers = new SvelteSet<ErrorHandler>();
+	private reconnectionAttempts = 0;
+	private readonly maxReconnectionAttempts = 5;
+	private readonly baseReconnectionDelay = 1000;
 
 	connected = $state(false);
 	reconnecting = $state(false);
 	error = $state<WebSocketError | null>(null);
 
-	constructor(
-		private factory: WebSocketFactory = new ApiWebSocketFactory(),
-		private reconnectionStrategy: ReconnectionStrategy = new ExponentialBackoffStrategy(),
-	) {}
-
 	connect(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			try {
-				this.ws = this.factory.create();
+				this.ws = new WebSocket(WEBSOCKET_BASE_URL);
 				this.setupEventHandlers(resolve, reject);
 			} catch (err) {
 				const error: WebSocketError = {
@@ -60,7 +47,7 @@ export class ConnectionManager {
 			this.connected = true;
 			this.reconnecting = false;
 			this.error = null;
-			this.reconnectionStrategy.reset();
+			this.reconnectionAttempts = 0;
 			resolve();
 		};
 
@@ -96,7 +83,7 @@ export class ConnectionManager {
 	}
 
 	private handleReconnect(): void {
-		if (!this.reconnectionStrategy.shouldRetry()) {
+		if (this.reconnectionAttempts >= this.maxReconnectionAttempts) {
 			const error: WebSocketError = {
 				type: 'reconnect',
 				message: 'Failed to reconnect after maximum attempts',
@@ -108,7 +95,7 @@ export class ConnectionManager {
 
 		this.reconnecting = true;
 
-		const delay: number = this.reconnectionStrategy.computeDelay();
+		const delay = this.baseReconnectionDelay * ++this.reconnectionAttempts;
 		setTimeout(() => this.connect(), delay);
 	}
 
