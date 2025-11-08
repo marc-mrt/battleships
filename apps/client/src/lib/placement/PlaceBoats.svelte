@@ -1,15 +1,16 @@
 <script lang="ts">
-	import { gameStore } from '../services/game-store.svelte';
-	import BattleGrid from './BattleGrid.svelte';
+	import { appStore } from '../app-store';
+	import BattleGrid from '../grid/BattleGrid.svelte';
 	import type { PlaceBoatsMessage } from 'game-messages';
 	import Trash from '../icons/Trash.svelte';
 	import Rotate from '../icons/Rotate.svelte';
-	import { PlaceBoatsState } from './place-boats-state.svelte';
+	import { PlacementStore } from './store.svelte';
+	import { TOTAL_BOATS_COUNT } from 'game-rules';
 
-	const player = $derived(gameStore.player);
-	const opponent = $derived(gameStore.opponent);
+	const player = $derived(appStore.player);
+	const opponent = $derived(appStore.opponent);
 
-	const placement = new PlaceBoatsState();
+	const placement = new PlacementStore();
 
 	let isReady = $state(false);
 
@@ -20,7 +21,7 @@
 			type: 'place_boats',
 			data: { boats: placement.boats },
 		};
-		gameStore.sendAction(message);
+		appStore.sendAction(message);
 		isReady = true;
 	}
 </script>
@@ -36,13 +37,13 @@
 			<div class="controls-section">
 				<div class="boat-stock">
 					<h5>Place Your Boats:</h5>
-					{#each placement.boatStock as stock (stock.length)}
+					{#each placement.stock as stock (stock.length)}
 						{@const isAvailable = stock.placed < stock.count}
 						<div class="stock-item" class:depleted={!isAvailable}>
 							<div
 								class="boat-visual"
 								draggable={isAvailable}
-								ondragstart={() => placement.startDrag(stock.length, true)}
+								ondragstart={() => placement.startDragFromStock(stock.length)}
 								ondragend={() => placement.endDrag()}
 								class:depleted={!isAvailable}
 								role="presentation"
@@ -61,19 +62,23 @@
 
 			<div class="grid-section">
 				<BattleGrid
-					cells={placement.gridCells}
+					cells={placement.cells}
 					draggable
-					onCellClick={(x, y) => placement.handleCellClick(x, y)}
-					onCellDragStart={(x, y) => placement.handleCellDragStart(x, y)}
+					onCellClick={(x, y) => placement.selectBoat(x, y)}
+					onCellDragStart={(x, y) => {
+						placement.startDragFromCell(x, y);
+					}}
 					onCellDragEnd={() => placement.endDrag()}
-					onCellDragOver={(e, x, y) => placement.handleCellDragOver(e, x, y)}
-					onGridDragLeave={() => placement.handleGridDragLeave()}
+					onCellDragOver={(e, x, y) => {
+						e.preventDefault();
+						placement.setHoveredCell({ x, y });
+					}}
 				/>
 
 				<div class="selected-boat-actions">
 					{#if placement.selectedBoatId}
 						<button
-							onclick={() => placement.rotateSelectedBoat()}
+							onclick={() => placement.rotateSelected()}
 							class="action-btn"
 							title="Rotate boat"
 							aria-label="Rotate selected boat"
@@ -81,7 +86,7 @@
 							<Rotate />
 						</button>
 						<button
-							onclick={() => placement.deleteSelectedBoat()}
+							onclick={() => placement.deleteSelected()}
 							class="action-btn delete"
 							title="Delete boat"
 							aria-label="Delete selected boat"
@@ -100,14 +105,14 @@
 		<button
 			class="ready-button"
 			onclick={sendBoatPlacements}
-			disabled={!placement.canSubmit}
-			aria-label={placement.canSubmit
+			disabled={!placement.isComplete}
+			aria-label={placement.isComplete
 				? 'Submit boat placements'
-				: `Place ${placement.totalBoatsRequired - placement.boats.length} more boats`}
+				: `Place ${TOTAL_BOATS_COUNT - placement.boats.length} more boats`}
 		>
-			Ready {placement.canSubmit
+			Ready {placement.isComplete
 				? ''
-				: `(${placement.boats.length}/${placement.totalBoatsRequired} boats placed)`}
+				: `(${placement.boats.length}/${TOTAL_BOATS_COUNT} boats placed)`}
 		</button>
 	{:else}
 		<div class="status-message">Waiting for opponent to place boats...</div>

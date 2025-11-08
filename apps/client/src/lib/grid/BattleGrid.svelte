@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CellState } from '../domain/grid-manager.svelte';
+	import type { CellState } from './types';
 
 	interface Props {
 		cells: CellState[][];
@@ -9,7 +9,6 @@
 		onCellDragStart?: (x: number, y: number) => void;
 		onCellDragEnd?: () => void;
 		onCellDragOver?: (event: DragEvent, x: number, y: number) => void;
-		onGridDragLeave?: () => void;
 		getCellAriaLabel?: (x: number, y: number) => string;
 	}
 
@@ -21,12 +20,17 @@
 		onCellDragStart,
 		onCellDragEnd,
 		onCellDragOver,
-		onGridDragLeave,
 		getCellAriaLabel,
 	}: Props = $props();
 
 	function handleCellClick(x: number, y: number, cellState: CellState) {
 		if (interactive && onCellClick && !cellState.shot) {
+			onCellClick(x, y);
+		}
+	}
+
+	function handleNonInteractiveCellClick(x: number, y: number) {
+		if (onCellClick) {
 			onCellClick(x, y);
 		}
 	}
@@ -45,7 +49,7 @@
 	}
 </script>
 
-<div class="grid" ondragleave={onGridDragLeave} role="presentation">
+<div class="grid" role="presentation">
 	{#each cells as row, y (y)}
 		{#each row as cell, x (`${x}-${y}`)}
 			{#if interactive}
@@ -81,6 +85,8 @@
 					ondragstart={() => handleDragStart(x, y, cell)}
 					ondragend={onCellDragEnd}
 					ondragover={(e) => handleDragOver(e, x, y)}
+					ondrop={(e) => e.preventDefault()}
+					onclick={() => handleNonInteractiveCellClick(x, y)}
 					onkeydown={undefined}
 					role="presentation"
 				></div>
@@ -132,6 +138,14 @@
 
 	.cell[draggable='true']:active {
 		cursor: grabbing;
+	}
+
+	div.cell {
+		cursor: pointer;
+	}
+
+	div.cell[draggable='true'] {
+		cursor: grab;
 	}
 
 	.cell.boat {

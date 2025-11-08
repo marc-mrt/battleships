@@ -1,34 +1,24 @@
 <script lang="ts">
-	import { gameStore } from '../services/game-store.svelte';
-	import BattleGrid from './BattleGrid.svelte';
-	import { GridManager } from '../domain/grid-manager.svelte';
+	import { appStore } from '../app-store';
+	import BattleGrid from '../grid/BattleGrid.svelte';
+	import { renderPlayerGrid, renderOpponentGrid } from './presenter';
 
-	const player = $derived(gameStore.player);
-	const opponent = $derived(gameStore.opponent);
-	const game = $derived(gameStore.game);
+	const player = $derived(appStore.player);
+	const opponent = $derived(appStore.opponent);
+	const game = $derived(appStore.game);
 
 	const opponentTurnCells = $derived.by(() => {
 		if (!game) return [];
-
-		const gridManager = new GridManager();
-		return gridManager.toDisplayGrid({
-			boats: game.player.boats,
-			shots: game.opponent.shotsAgainstPlayer,
-		});
+		return renderPlayerGrid(game);
 	});
 
 	const yourTurnCells = $derived.by(() => {
 		if (!game) return [];
-
-		const gridManager = new GridManager();
-		return gridManager.toDisplayGrid({
-			shots: game.player.shots,
-			sunkBoats: game.opponent.sunkBoats,
-		});
+		return renderOpponentGrid(game);
 	});
 
 	function handleCellClick(x: number, y: number) {
-		gameStore.sendAction({
+		appStore.sendAction({
 			type: 'fire_shot',
 			data: { x, y },
 		});

@@ -1,19 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { CreateOrJoinSession, WaitForPlayerToJoin, PlaceBoats, GameBoard } from './lib/views';
-	import { gameStore } from './lib/services/game-store.svelte';
+	import { CreateOrJoinSession } from './lib/new-session';
+	import { WaitForPlayerToJoin } from './lib/waiting-for-opponent';
+	import { appStore } from './lib/app-store';
+	import { PlaceBoats } from './lib/placement';
+	import { GameBoard } from './lib/game';
 
 	const urlParams = new URLSearchParams(window.location.search);
 	const querySharedSlug = urlParams.has('s') ? urlParams.get('s') : null;
 
 	let initializing = $state(true);
 
-	// Use derived state from the reactive store
-	const status = $derived(gameStore.session?.status ?? null);
+	const status = $derived(appStore.session?.status ?? null);
 
 	onMount(async () => {
 		try {
-			await gameStore.attemptReconnect();
+			await appStore.attemptReconnect();
 		} finally {
 			initializing = false;
 		}

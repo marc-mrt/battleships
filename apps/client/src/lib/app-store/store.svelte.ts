@@ -1,11 +1,10 @@
-import * as API from '../api';
-import type { ClientMessage, ServerMessage } from 'game-messages';
-import type { GameState } from 'game-messages';
-import type { SessionStatus } from '../models/session';
+import * as R from 'ramda';
+import * as API from '../../api';
+import type { ClientMessage, ServerMessage, GameState } from 'game-messages';
+import type { SessionStatus } from '../../models/session';
 import { getConnectionManager, type ConnectionManager } from './connection-manager.svelte';
-import { GameMessageHandler } from '../domain/game-message-handler';
 
-export interface StoreData {
+export interface Metadata {
 	session: {
 		slug: string;
 		status: SessionStatus;
@@ -18,47 +17,36 @@ export interface StoreData {
 		id: string;
 		username: string;
 	} | null;
-	game: GameState | null;
 }
 
-type StoreState =
+export type State =
 	| { status: 'uninitialized' }
 	| { status: 'loading' }
-	| { status: 'ready'; data: StoreData };
+	| { status: 'ready'; meta: Metadata; game: GameState | null };
 
-class GameStore {
+class AppStore {
 	private unsubscribe: (() => void) | null = null;
-
-	state = $state<StoreState>({ status: 'uninitialized' });
-
-	get isReady(): boolean {
-		return this.state.status === 'ready';
-	}
-
-	get data(): StoreData | null {
-		return this.state.status === 'ready' ? this.state.data : null;
-	}
+	private state = $state<State>({ status: 'uninitialized' });
 
 	get player() {
-		return this.data?.player ?? null;
+		return this.state.status === 'ready' ? this.state.meta.player : null;
 	}
 
 	get opponent() {
-		return this.data?.opponent ?? null;
+		return this.state.status === 'ready' ? this.state.meta.opponent : null;
 	}
 
 	get session() {
-		return this.data?.session ?? null;
+		return this.state.status === 'ready' ? this.state.meta.session : null;
 	}
 
 	get game() {
-		return this.data?.game ?? null;
+		return this.state.status === 'ready' ? this.state.game : null;
 	}
 
 	constructor(
 		private connectionManager: ConnectionManager = getConnectionManager(),
 		private api: typeof API = API,
-		private messageHandler: GameMessageHandler = new GameMessageHandler(),
 	) {
 		this.unsubscribe = this.connectionManager.onMessage(this.handleIncomingMessage.bind(this));
 	}
@@ -74,7 +62,7 @@ class GameStore {
 
 			this.state = {
 				status: 'ready',
-				data: {
+				meta: {
 					session: {
 						slug: session.slug,
 						status: session.status,
@@ -84,8 +72,8 @@ class GameStore {
 						username: session.owner.username,
 					},
 					opponent: null,
-					game: null,
 				},
+				game: null,
 			};
 		} catch (error) {
 			this.state = { status: 'uninitialized' };
@@ -110,7 +98,7 @@ class GameStore {
 
 			this.state = {
 				status: 'ready',
-				data: {
+				meta: {
 					session: {
 						slug: session.slug,
 						status: session.status,
@@ -123,8 +111,8 @@ class GameStore {
 						id: session.owner.id,
 						username: session.owner.username,
 					},
-					game: null,
 				},
+				game: null,
 			};
 		} catch (error) {
 			this.state = { status: 'uninitialized' };
@@ -143,7 +131,7 @@ class GameStore {
 
 			this.state = {
 				status: 'ready',
-				data: {
+				meta: {
 					session: {
 						slug: session.slug,
 						status: session.status,
@@ -158,23 +146,12 @@ class GameStore {
 								username: session.friend.username,
 							}
 						: null,
-					game: null,
 				},
+				game: null,
 			};
 		} catch (error) {
 			console.error('Reconnection failed:', error);
 		}
-	}
-
-	private updateStateData(updater: (data: StoreData) => StoreData): void {
-		if (this.state.status !== 'ready') {
-			console.warn('Cannot update state when not ready');
-			return;
-		}
-		this.state = {
-			status: 'ready',
-			data: updater(this.state.data),
-		};
 	}
 
 	private handleIncomingMessage(message: ServerMessage): void {
@@ -183,12 +160,32 @@ class GameStore {
 			return;
 		}
 
-		const newData = this.messageHandler.handleMessage(message, this.state.data);
-		if (newData) {
-			this.state = {
-				status: 'ready',
-				data: newData,
-			};
+		switch (message.type) {
+			case 'friend_joined':
+				this.state = R.mergeDeepRight(this.state, {
+					meta: {
+						session: {
+							status: message.data.session.status,
+						},
+						opponent: {
+							id: message.data.friend.playerId,
+							username: message.data.friend.username,
+						},
+					},
+				});
+				break;
+			case 'next_turn':
+				this.state = R.mergeDeepRight(this.state, {
+					game: message.data,
+					meta: {
+						session: {
+							status: message.data.session.status,
+						},
+					},
+				});
+				break;
+			default:
+				break;
 		}
 	}
 
@@ -197,9 +194,8 @@ class GameStore {
 	}
 
 	destroy() {
-		this.unsubscribe?.();
 		this.connectionManager.disconnect();
 	}
 }
 
-export const gameStore: GameStore = new GameStore();
+export const appStore: AppStore = new AppStore();

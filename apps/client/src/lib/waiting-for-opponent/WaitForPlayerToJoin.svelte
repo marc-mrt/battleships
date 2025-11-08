@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { gameStore } from '../services/game-store.svelte';
-	import { ClipboardManager } from '../utils/clipboard.svelte';
+	import { appStore } from '../app-store';
+	import { ClipboardManager } from './clipboard.svelte';
 
-	const player = $derived(gameStore.player);
-	const slug = $derived(gameStore.session?.slug);
+	const player = $derived(appStore.player);
+	const slug = $derived(appStore.session?.slug);
 
 	const urlToShare = $derived(`${window.location.origin}?s=${slug}`);
 	const clipboard = new ClipboardManager();

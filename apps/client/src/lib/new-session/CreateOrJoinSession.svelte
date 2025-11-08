@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { gameStore } from '../services/game-store.svelte.js';
-	import { validateUsername, validateSlug } from '../utils/session-validators';
+	import { appStore } from '../app-store';
+	import { validateUsername, validateSlug } from './session-validators';
 
 	interface Props {
 		sharedSlug?: string | null;
@@ -37,7 +37,7 @@
 		error = '';
 
 		try {
-			await gameStore.createSession({ username: username.trim() });
+			await appStore.createSession({ username: username.trim() });
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to create session';
 		} finally {
@@ -52,7 +52,7 @@
 		error = '';
 
 		try {
-			await gameStore.joinSession({ username: username.trim(), slug: slug.trim() });
+			await appStore.joinSession({ username: username.trim(), slug: slug.trim() });
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to join session';
 		} finally {

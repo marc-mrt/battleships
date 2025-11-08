@@ -1,4 +1,4 @@
-export class ExponentialBackoffStrategyFactory {
+export class ExponentialBackoffStrategy {
 	private attempts: number = 0;
 
 	constructor(
