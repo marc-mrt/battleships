@@ -1,5 +1,5 @@
 import { Session, SessionInGame } from '../models/session';
-import { GameState } from 'game-messages';
+import { GameState, LastShot } from 'game-messages';
 import { sendNextTurnMessage } from '../controllers/websocket.ts';
 import * as BoatDB from '../database/boat.ts';
 import * as SessionDB from '../database/session.ts';
@@ -32,7 +32,7 @@ export class GameStateManager {
 
 		const result = this.checkIncomingShot(targettedPlayerId, coordinates);
 
-		await this.recordShot(playerId, targettedPlayerId, coordinates, result.hit);
+		const shot: Shot = await this.recordShot(playerId, targettedPlayerId, coordinates, result.hit);
 
 		let nextTurnPlayerId: string;
 		if (result.hit) {
@@ -51,7 +51,10 @@ export class GameStateManager {
 			playerId: nextTurnPlayerId,
 		});
 
-		this.broadcastNextTurn(nextTurnPlayerId);
+		this.broadcastNextTurn(nextTurnPlayerId, {
+			...shot,
+			sunkBoat: result.hit ? result.sunk : false,
+		});
 	}
 
 	private async recordShot(
@@ -59,7 +62,7 @@ export class GameStateManager {
 		targetId: string,
 		coordinates: Coordinates,
 		hit: boolean,
-	): Promise<void> {
+	): Promise<Shot> {
 		const recordedShot = await ShotDB.recordShot({
 			sessionId: this.session.id,
 			shooterId,
@@ -69,6 +72,7 @@ export class GameStateManager {
 			hit,
 		});
 		this.session.shots.push(recordedShot);
+		return recordedShot;
 	}
 
 	private async markBoatAsSunk(boatId: string): Promise<void> {
@@ -116,18 +120,29 @@ export class GameStateManager {
 		return { hit: true, sunk, boatId: hitBoat.id };
 	}
 
-	public broadcastNextTurn(nextTurnPlayerId: string): void {
+	public broadcastNextTurn(nextTurnPlayerId: string, lastShot?: LastShot): void {
 		const otherPlayerId: string =
 			nextTurnPlayerId === this.session.owner.id ? this.session.friend.id : this.session.owner.id;
 
-		sendNextTurnMessage(nextTurnPlayerId, this.getStateForPlayer('player_turn', nextTurnPlayerId));
-		sendNextTurnMessage(otherPlayerId, this.getStateForPlayer('opponent_turn', otherPlayerId));
+		sendNextTurnMessage(
+			nextTurnPlayerId,
+			this.getStateForPlayer('player_turn', nextTurnPlayerId, lastShot),
+		);
+		sendNextTurnMessage(
+			otherPlayerId,
+			this.getStateForPlayer('opponent_turn', otherPlayerId, lastShot),
+		);
 	}
 
-	private getStateForPlayer(turn: GameState['turn'], playerId: string): GameState {
+	private getStateForPlayer(
+		turn: GameState['turn'],
+		playerId: string,
+		lastShot?: LastShot,
+	): GameState {
 		return {
 			turn,
 			session: { status: this.session.status },
+			lastShot: lastShot ?? null,
 			player: {
 				boats: this.getPlayerBoats(playerId),
 				shots: this.getPlayerShots(playerId),

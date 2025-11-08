@@ -51,7 +51,12 @@ class EffectManager {
 		}
 	}
 
-	async playShootingSequence(x: number, y: number, result: 'hit' | 'miss', sunk: boolean): Promise<void> {
+	async playShootingSequence(
+		x: number,
+		y: number,
+		result: 'hit' | 'miss',
+		sunk: boolean,
+	): Promise<void> {
 		this.state = { type: 'shooting', x, y };
 		this.playSound('shoot');
 		await this.delay(ANIMATION_DELAYS.shoot);
@@ -73,7 +78,12 @@ class EffectManager {
 		this.state = { type: 'idle' };
 	}
 
-	async playReceivingSequence(x: number, y: number, result: 'hit' | 'miss', sunk: boolean): Promise<void> {
+	async playReceivingSequence(
+		x: number,
+		y: number,
+		result: 'hit' | 'miss',
+		sunk: boolean,
+	): Promise<void> {
 		if (sunk) {
 			this.state = { type: 'sunk', x, y };
 			this.playSound('sunk');

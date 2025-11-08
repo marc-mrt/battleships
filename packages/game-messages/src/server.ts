@@ -28,6 +28,13 @@ export const ShotSchema = z.object({
   hit: z.boolean(),
 });
 
+export const LastShotSchema = ShotSchema.and(
+  z.object({
+    sunkBoat: z.boolean(),
+  }),
+);
+export type LastShot = z.infer<typeof LastShotSchema>;
+
 export const PlayerGameStateSchema = z.object({
   boats: z.array(BoatSchema),
   shots: z.array(ShotSchema),
@@ -45,6 +52,7 @@ export const GameStateSchema = z.object({
   session: z.object({
     status: z.enum(["in_game", "game_over"]),
   }),
+  lastShot: LastShotSchema.nullable(),
   player: PlayerGameStateSchema,
   opponent: OpponentGameStateSchema,
 });

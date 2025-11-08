@@ -16,7 +16,6 @@
 	const effectManager = createEffectManager();
 	let displayedGame = $state<GameState | null>(null);
 	let pendingGame = $state<GameState | null>(null);
-	let lastShotCoords = $state<{ x: number; y: number } | null>(null);
 
 	const game = $derived(displayedGame);
 
@@ -52,98 +51,29 @@
 
 	async function handleGameStateChange(oldGame: GameState, newGame: GameState) {
 		const previousTurn = oldGame.turn;
+		const lastShot = newGame.lastShot;
+		if (!lastShot) {
+			return;
+		}
 
 		if (previousTurn === 'player_turn') {
-			const newShot = findNewShot(oldGame.player.shots, newGame.player.shots);
-			if (newShot && lastShotCoords) {
-				const sunk = isShotSunk(newGame.opponent.sunkBoats, lastShotCoords.x, lastShotCoords.y);
-				await effectManager.playShootingSequence(
-					lastShotCoords.x,
-					lastShotCoords.y,
-					newShot.hit ? 'hit' : 'miss',
-					sunk,
-				);
-			}
-		} else {
-			const newShot = findNewShot(
-				oldGame.opponent.shotsAgainstPlayer,
-				newGame.opponent.shotsAgainstPlayer,
+			await effectManager.playShootingSequence(
+				lastShot.x,
+				lastShot.y,
+				lastShot.hit ? 'hit' : 'miss',
+				lastShot.sunkBoat,
 			);
-			if (newShot) {
-				const sunk = isShotSunkOnPlayerBoats(
-					newGame.player.boats,
-					oldGame.player.boats,
-					newShot.x,
-					newShot.y,
-				);
-				await effectManager.playReceivingSequence(
-					newShot.x,
-					newShot.y,
-					newShot.hit ? 'hit' : 'miss',
-					sunk,
-				);
-			}
+		} else {
+			await effectManager.playReceivingSequence(
+				lastShot.x,
+				lastShot.y,
+				lastShot.hit ? 'hit' : 'miss',
+				lastShot.sunkBoat,
+			);
 		}
 
 		displayedGame = newGame;
 		pendingGame = null;
-		lastShotCoords = null;
-	}
-
-	function findNewShot(
-		oldShots: Array<{ x: number; y: number; hit: boolean }>,
-		newShots: Array<{ x: number; y: number; hit: boolean }>,
-	) {
-		if (newShots.length > oldShots.length) {
-			return newShots[newShots.length - 1];
-		}
-		return null;
-	}
-
-	function isShotSunk(
-		sunkBoats: Array<{ startX: number; startY: number; length: number; orientation: string }>,
-		x: number,
-		y: number,
-	): boolean {
-		return sunkBoats.some((boat) => {
-			for (let i = 0; i < boat.length; i++) {
-				const boatX = boat.orientation === 'horizontal' ? boat.startX + i : boat.startX;
-				const boatY = boat.orientation === 'vertical' ? boat.startY + i : boat.startY;
-				if (boatX === x && boatY === y) {
-					return true;
-				}
-			}
-			return false;
-		});
-	}
-
-	function isShotSunkOnPlayerBoats(
-		newBoats: Array<{ startX: number; startY: number; length: number; orientation: string }>,
-		oldBoats: Array<{ startX: number; startY: number; length: number; orientation: string }>,
-		x: number,
-		y: number,
-	): boolean {
-		const boatAtShot = newBoats.find((boat) => {
-			for (let i = 0; i < boat.length; i++) {
-				const boatX = boat.orientation === 'horizontal' ? boat.startX + i : boat.startX;
-				const boatY = boat.orientation === 'vertical' ? boat.startY + i : boat.startY;
-				if (boatX === x && boatY === y) {
-					return true;
-				}
-			}
-			return false;
-		});
-
-		if (!boatAtShot) return false;
-
-		const oldBoat = oldBoats.find(
-			(b) =>
-				b.startX === boatAtShot.startX &&
-				b.startY === boatAtShot.startY &&
-				b.orientation === boatAtShot.orientation,
-		);
-
-		return oldBoat !== undefined;
 	}
 
 	function handleCellClick(x: number, y: number) {
@@ -151,7 +81,6 @@
 			return;
 		}
 
-		lastShotCoords = { x, y };
 		appStore.sendAction({
 			type: 'fire_shot',
 			data: { x, y },
