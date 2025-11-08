@@ -1,16 +1,20 @@
 export class ExponentialBackoffStrategyFactory {
+	private attempts: number = 0;
+
 	constructor(
 		private maxAttempts: number = 5,
 		private baseDelay: number = 1000,
 	) {}
 
-	shouldRetry(attempts: number): boolean {
-		return attempts < this.maxAttempts;
+	shouldRetry(): boolean {
+		return this.attempts < this.maxAttempts;
 	}
 
-	getDelay(attempts: number): number {
-		return this.baseDelay * attempts;
+	computeDelay(): number {
+		return this.baseDelay * ++this.attempts;
 	}
 
-	reset(): void {}
+	reset(): void {
+		this.attempts = 0;
+	}
 }

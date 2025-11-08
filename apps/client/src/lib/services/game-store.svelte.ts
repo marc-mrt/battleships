@@ -2,7 +2,7 @@ import * as API from '../api';
 import type { ClientMessage, ServerMessage } from 'game-messages';
 import type { GameState } from 'game-messages';
 import type { SessionStatus } from '../models/session';
-import { getWebsocketManager, type WebsocketManagerSvelte } from './websocket-manager.svelte';
+import { getConnectionManager, type ConnectionManager } from './connection-manager.svelte';
 import { GameMessageHandler } from '../domain/game-message-handler';
 
 export interface StoreData {
@@ -26,16 +26,7 @@ type StoreState =
 	| { status: 'loading' }
 	| { status: 'ready'; data: StoreData };
 
-interface GameStoreOptions {
-	webSocketManager?: WebsocketManagerSvelte;
-	apiClient?: typeof API;
-	messageHandler?: GameMessageHandler;
-}
-
-class GameStoreSvelte {
-	private webSocket: WebsocketManagerSvelte;
-	private api: typeof API;
-	private messageHandler: GameMessageHandler;
+class GameStore {
 	private unsubscribe: (() => void) | null = null;
 
 	state = $state<StoreState>({ status: 'uninitialized' });
@@ -64,11 +55,12 @@ class GameStoreSvelte {
 		return this.data?.game ?? null;
 	}
 
-	constructor(options: GameStoreOptions = {}) {
-		this.webSocket = options.webSocketManager ?? getWebsocketManager();
-		this.api = options.apiClient ?? API;
-		this.messageHandler = options.messageHandler ?? new GameMessageHandler();
-		this.unsubscribe = this.webSocket.onMessage(this.handleIncomingMessage.bind(this));
+	constructor(
+		private connectionManager: ConnectionManager = getConnectionManager(),
+		private api: typeof API = API,
+		private messageHandler: GameMessageHandler = new GameMessageHandler(),
+	) {
+		this.unsubscribe = this.connectionManager.onMessage(this.handleIncomingMessage.bind(this));
 	}
 
 	public async createSession(payload: { username: string }) {
@@ -78,7 +70,7 @@ class GameStoreSvelte {
 
 		try {
 			const session = await this.api.createSession({ username });
-			await this.webSocket.connect();
+			await this.connectionManager.connect();
 
 			this.state = {
 				status: 'ready',
@@ -114,7 +106,7 @@ class GameStoreSvelte {
 				throw new Error('Failed to find player in session');
 			}
 
-			await this.webSocket.connect();
+			await this.connectionManager.connect();
 
 			this.state = {
 				status: 'ready',
@@ -147,7 +139,7 @@ class GameStoreSvelte {
 				return;
 			}
 
-			await this.webSocket.connect();
+			await this.connectionManager.connect();
 
 			this.state = {
 				status: 'ready',
@@ -201,13 +193,13 @@ class GameStoreSvelte {
 	}
 
 	sendAction(action: ClientMessage) {
-		this.webSocket.send(action);
+		this.connectionManager.send(action);
 	}
 
 	destroy() {
 		this.unsubscribe?.();
-		this.webSocket.disconnect();
+		this.connectionManager.disconnect();
 	}
 }
 
-export const gameStore = new GameStoreSvelte();
+export const gameStore: GameStore = new GameStore();
