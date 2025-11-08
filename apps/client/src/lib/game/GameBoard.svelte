@@ -47,7 +47,6 @@
 			<p class="status-message opponent-turn">Opponent is taking their shot...</p>
 
 			<div class="grid-container">
-				<h4>Your Grid</h4>
 				<WaitingGrid cells={opponentTurnCells} />
 			</div>
 		</div>
@@ -56,7 +55,6 @@
 			<p class="status-message your-turn">Your turn - Click to fire!</p>
 
 			<div class="grid-container">
-				<h4>Opponent's Grid</h4>
 				<ShootingGrid cells={yourTurnCells} onCellClick={handleCellClick} {getCellAriaLabel} />
 			</div>
 		</div>
