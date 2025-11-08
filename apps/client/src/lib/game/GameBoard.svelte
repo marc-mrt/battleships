@@ -118,14 +118,6 @@
 		width: 100%;
 	}
 
-	.grid-container h4 {
-		margin: 0;
-		font-size: 0.875rem;
-		color: var(--color-text-subtle);
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-	}
-
 	footer {
 		margin-top: 1rem;
 		text-align: center;
