@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { appStore } from '../app-store';
+	import { appStore } from '../app-store/store.svelte';
 	import { ClipboardManager } from './clipboard.svelte';
 
 	const player = $derived(appStore.player);

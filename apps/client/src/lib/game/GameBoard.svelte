@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { appStore } from '../app-store';
+	import { appStore } from '../app-store/store.svelte';
 	import BattleGrid from '../grid/BattleGrid.svelte';
 	import { renderPlayerGrid, renderOpponentGrid } from './presenter';
 

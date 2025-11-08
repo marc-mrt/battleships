@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { CreateOrJoinSession } from './lib/new-session';
-	import { WaitForPlayerToJoin } from './lib/waiting-for-opponent';
-	import { appStore } from './lib/app-store';
-	import { PlaceBoats } from './lib/placement';
-	import { GameBoard } from './lib/game';
+	import CreateOrJoinSession from './lib/new-session/CreateOrJoinSession.svelte';
+	import WaitForPlayerToJoin from './lib/waiting-for-opponent/WaitForPlayerToJoin.svelte';
+	import { appStore } from './lib/app-store/store.svelte';
+	import PlaceBoats from './lib/placement/PlaceBoats.svelte';
+	import GameBoard from './lib/game/GameBoard.svelte';
 
 	const urlParams = new URLSearchParams(window.location.search);
 	const querySharedSlug = urlParams.has('s') ? urlParams.get('s') : null;
