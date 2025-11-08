@@ -35,5 +35,27 @@
     "shell": "system",
     "show_summary": true,
     "show_command": true
+  },
+  {
+    "label": "lint",
+    "command": "pnpm -r lint",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "no_focus",
+    "hide": "on_success",
+    "shell": "system",
+    "show_summary": true,
+    "show_command": true
+  },
+  {
+    "label": "format",
+    "command": "pnpm -r format",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "no_focus",
+    "hide": "on_success",
+    "shell": "system",
+    "show_summary": true,
+    "show_command": true
   }
 ]
