@@ -1,19 +1,22 @@
 <script lang="ts">
 	import { appStore } from '../app-store/store.svelte';
-	import BattleGrid from '../grid/BattleGrid.svelte';
+	import ShootingGrid from './ShootingGrid.svelte';
+	import WaitingGrid from './WaitingGrid.svelte';
 	import { renderPlayerGrid, renderOpponentGrid } from './presenter';
+	import { createEmptyCellGrid } from '../grid/render-utils';
+	import { GRID_SIZE } from 'game-rules';
 
 	const player = $derived(appStore.player);
 	const opponent = $derived(appStore.opponent);
 	const game = $derived(appStore.game);
 
 	const opponentTurnCells = $derived.by(() => {
-		if (!game) return [];
+		if (!game) return createEmptyCellGrid(GRID_SIZE);
 		return renderPlayerGrid(game);
 	});
 
 	const yourTurnCells = $derived.by(() => {
-		if (!game) return [];
+		if (!game) return createEmptyCellGrid(GRID_SIZE);
 		return renderOpponentGrid(game);
 	});
 
@@ -45,7 +48,7 @@
 
 			<div class="grid-container">
 				<h4>Your Grid</h4>
-				<BattleGrid cells={opponentTurnCells} />
+				<WaitingGrid cells={opponentTurnCells} />
 			</div>
 		</div>
 	{:else}
@@ -54,12 +57,7 @@
 
 			<div class="grid-container">
 				<h4>Opponent's Grid</h4>
-				<BattleGrid
-					cells={yourTurnCells}
-					interactive
-					onCellClick={handleCellClick}
-					{getCellAriaLabel}
-				/>
+				<ShootingGrid cells={yourTurnCells} onCellClick={handleCellClick} {getCellAriaLabel} />
 			</div>
 		</div>
 	{/if}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { appStore } from '../app-store/store.svelte';
-	import BattleGrid from '../grid/BattleGrid.svelte';
+	import BoatPlacementGrid from './BoatPlacementGrid.svelte';
 	import type { PlaceBoatsMessage } from 'game-messages';
 	import Trash from '../icons/Trash.svelte';
 	import Rotate from '../icons/Rotate.svelte';
@@ -61,9 +61,8 @@
 			</div>
 
 			<div class="grid-section">
-				<BattleGrid
+				<BoatPlacementGrid
 					cells={placement.cells}
-					draggable
 					onCellClick={(x, y) => placement.selectBoat(x, y)}
 					onCellDragStart={(x, y) => {
 						placement.startDragFromCell(x, y);
