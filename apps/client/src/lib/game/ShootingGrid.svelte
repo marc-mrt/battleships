@@ -1,18 +1,35 @@
 <script lang="ts">
 	import type { CellState } from '../grid/types';
+	import './grid-styles.css';
+
+	interface AnimationState {
+		type: 'idle' | 'shooting' | 'hit' | 'miss' | 'sunk';
+		x?: number;
+		y?: number;
+	}
 
 	interface Props {
 		cells: CellState[][];
 		onCellClick: (x: number, y: number) => void;
 		getCellAriaLabel?: (x: number, y: number) => string;
+		animationState: AnimationState;
 	}
 
-	let { cells, onCellClick, getCellAriaLabel }: Props = $props();
+	let { cells, onCellClick, getCellAriaLabel, animationState }: Props = $props();
 
 	function handleCellClick(x: number, y: number, cellState: CellState) {
 		if (!cellState.shot) {
 			onCellClick(x, y);
 		}
+	}
+
+	function isAnimatingCell(x: number, y: number): boolean {
+		return animationState.type !== 'idle' && animationState.x === x && animationState.y === y;
+	}
+
+	function getAnimationClass(x: number, y: number): string {
+		if (!isAnimatingCell(x, y)) return '';
+		return `animating-${animationState.type}`;
 	}
 </script>
 
@@ -25,6 +42,11 @@
 				class:hit={cell.hit}
 				class:miss={cell.miss}
 				class:sunk={cell.sunk}
+				class:animating={isAnimatingCell(x, y)}
+				class:animating-shooting={getAnimationClass(x, y) === 'animating-shooting'}
+				class:animating-hit={getAnimationClass(x, y) === 'animating-hit'}
+				class:animating-miss={getAnimationClass(x, y) === 'animating-miss'}
+				class:animating-sunk={getAnimationClass(x, y) === 'animating-sunk'}
 				disabled={cell.shot}
 				onclick={() => handleCellClick(x, y, cell)}
 				type="button"
@@ -35,35 +57,15 @@
 </div>
 
 <style>
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(9, 1fr);
-		gap: 1px;
-		background: #ddd;
-		padding: 1px;
-		border-radius: 2px;
-		width: 100%;
-		max-width: 360px;
-	}
-
 	.cell {
-		aspect-ratio: 1;
-		width: 100%;
-		background: var(--color-white);
-		border: none;
 		border-radius: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
 		transition: all 0.1s;
-		padding: 0;
 		cursor: pointer;
 	}
 
 	.cell:not(:disabled):hover {
 		position: relative;
 		background: var(--color-white);
-
 		animation: borderGrow 0.2s ease-out forwards;
 	}
 
@@ -166,41 +168,5 @@
 
 	.cell:disabled {
 		cursor: default;
-	}
-
-	.cell.sunk {
-		background: #666;
-	}
-
-	.cell.hit {
-		background: var(--color-text-error);
-		position: relative;
-	}
-
-	.cell.hit::after {
-		content: '×';
-		font-size: 1.5rem;
-		font-weight: bold;
-		color: white;
-		line-height: 1;
-	}
-
-	.cell.miss {
-		background: var(--color-white);
-		position: relative;
-	}
-
-	.cell.miss::after {
-		content: '•';
-		font-size: 1.5rem;
-		color: var(--color-text-subtle);
-		line-height: 1;
-	}
-
-	.cell.sunk::before {
-		content: '☠';
-		font-size: 1.2rem;
-		color: white;
-		line-height: 1;
 	}
 </style>
