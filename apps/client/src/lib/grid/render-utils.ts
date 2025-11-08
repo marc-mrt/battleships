@@ -1,12 +1,10 @@
 import type { CellState } from './types';
 
 export function createEmptyCellGrid(size: number): CellState[][] {
-	return Array.from({ length: size }, () =>
-		Array.from({ length: size }, () => ({})),
-	);
+	return Array.from({ length: size }, () => Array.from({ length: size }, () => ({})));
 }
 
-export function isValidGridPosition(x: number, y: number, size: number): boolean {
+function isValidGridPosition(x: number, y: number, size: number): boolean {
 	return x >= 0 && x < size && y >= 0 && y < size;
 }
 

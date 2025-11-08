@@ -59,11 +59,6 @@ export async function markBoatAsSunk(boatId: string): Promise<Boat> {
 	return mapToBoat(result.rows[0]);
 }
 
-export async function getBoatsByPlayerId(playerId: string) {
-	const result = await query('SELECT * FROM boats WHERE player_id = $1', [playerId]);
-	return result.rows.map(mapToBoat);
-}
-
 export const BoatDatabaseSchema = z.object({
 	id: z.string(),
 	start_x: z.number(),

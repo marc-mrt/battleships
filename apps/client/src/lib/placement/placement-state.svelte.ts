@@ -45,7 +45,12 @@ export class PlacementStateStore {
 		return true;
 	}
 
-	moveBoat(boatId: string, startX: number, startY: number, orientation: 'horizontal' | 'vertical'): boolean {
+	moveBoat(
+		boatId: string,
+		startX: number,
+		startY: number,
+		orientation: 'horizontal' | 'vertical',
+	): boolean {
 		const newState = PlacementOps.moveBoat(this.state, boatId, startX, startY, orientation);
 		if (newState === this.state) return false;
 		this.state = newState;
