@@ -1,161 +1,123 @@
-import type { PlacementUIState, Position, DragState, Boat } from '../grid/types';
-import * as PlacementOps from './operations';
-import * as GridOps from '../grid/operations';
+import type { Boat, Position } from '../grid/types';
+import { PlacementStateStore } from './placement-state.svelte';
+import { DragStateStore } from './drag-state.svelte';
 import { renderPlacementCells } from './presenter';
-import { GRID_SIZE } from 'game-rules';
-
-const initialDragState: DragState = {
-	isDragging: false,
-	boatLength: null,
-	orientation: 'horizontal',
-	hoveredCell: null,
-	offset: { x: 0, y: 0 },
-	originalBoat: null,
-};
+import * as GridOps from '../grid/operations';
 
 export class PlacementStore {
-	private state = $state<PlacementUIState>({
-		placement: PlacementOps.createInitialPlacementState(GRID_SIZE),
-		drag: { ...initialDragState },
-		selectedBoatId: null,
-	});
-
-	private draggedBoatId = $state<string | null>(null);
+	private placementState = new PlacementStateStore();
+	private dragState = new DragStateStore();
 
 	get boats(): Boat[] {
-		return this.state.placement.boats;
+		return this.placementState.boats;
 	}
 
 	get stock() {
-		return this.state.placement.stock;
+		return this.placementState.stock;
 	}
 
 	get isComplete(): boolean {
-		return PlacementOps.isPlacementComplete(this.state.placement);
+		return this.placementState.isComplete;
 	}
 
 	get selectedBoatId(): string | null {
-		return this.state.selectedBoatId;
+		return this.placementState.selectedBoatId;
 	}
 
 	get isDragging(): boolean {
-		return this.state.drag.isDragging;
+		return this.dragState.isDragging;
 	}
 
 	get cells() {
 		return renderPlacementCells(
-			this.state.placement,
-			this.state.selectedBoatId,
-			this.state.drag,
-			this.draggedBoatId,
+			{
+				grid: this.placementState.grid,
+				boats: this.placementState.boats,
+				stock: this.placementState.stock,
+			},
+			this.placementState.selectedBoatId,
+			{
+				isDragging: this.dragState.isDragging,
+				boatLength: this.dragState.boatLength,
+				orientation: this.dragState.orientation,
+				hoveredCell: this.dragState.hoveredCell,
+				offset: this.dragState.offset,
+				originalBoat: this.dragState.originalBoat,
+			},
+			this.dragState.draggedBoatId,
 		);
 	}
 
 	startDragFromStock(length: number): void {
-		const stockItem = this.state.placement.stock.find((s) => s.length === length);
+		const stockItem = this.placementState.stock.find((s) => s.length === length);
 		if (!stockItem || stockItem.placed >= stockItem.count) return;
 
-		this.state.drag = {
-			isDragging: true,
-			boatLength: length,
-			orientation: 'horizontal',
-			hoveredCell: null,
-			offset: { x: 0, y: 0 },
-			originalBoat: null,
-		};
+		this.dragState.startDragFromStock(length);
 	}
 
 	startDragFromCell(cellX: number, cellY: number): void {
-		const cell = GridOps.getCell(this.state.placement.grid, { x: cellX, y: cellY });
-		if (!cell?.boatId) return;
-
-		const boat = this.state.placement.boats.find((b) => b.id === cell.boatId);
+		const boat = GridOps.getBoatAt(this.placementState.grid, this.placementState.boats, {
+			x: cellX,
+			y: cellY,
+		});
 		if (!boat) return;
 
-		this.draggedBoatId = boat.id;
-		this.state.selectedBoatId = boat.id;
-		this.state.drag = {
-			isDragging: true,
-			boatLength: boat.length,
-			orientation: boat.orientation,
-			hoveredCell: null,
-			offset: { x: cellX - boat.startX, y: cellY - boat.startY },
-			originalBoat: boat,
-		};
+		this.placementState.selectBoatAt({ x: cellX, y: cellY });
+		this.dragState.startDragFromBoat(boat, cellX, cellY);
 	}
 
 	setHoveredCell(pos: Position | null): void {
-		this.state.drag = { ...this.state.drag, hoveredCell: pos };
+		this.dragState.setHoveredCell(pos);
 	}
 
 	endDrag(): void {
-		if (!this.state.drag.isDragging || !this.state.drag.boatLength) {
-			this.state.drag = { ...initialDragState };
-			this.draggedBoatId = null;
+		if (!this.dragState.isDragging || !this.dragState.boatLength) {
+			this.dragState.endDrag();
 			return;
 		}
 
-		const hoveredCell = this.state.drag.hoveredCell;
-		const originalBoat = this.state.drag.originalBoat;
+		const hoveredCell = this.dragState.hoveredCell;
+		const originalBoat = this.dragState.originalBoat;
 
 		if (hoveredCell) {
-			const startX = hoveredCell.x - this.state.drag.offset.x;
-			const startY = hoveredCell.y - this.state.drag.offset.y;
+			const startX = hoveredCell.x - this.dragState.offset.x;
+			const startY = hoveredCell.y - this.dragState.offset.y;
 
 			if (originalBoat) {
-				const newState = PlacementOps.moveBoat(
-					this.state.placement,
-					originalBoat.id,
-					startX,
-					startY,
-					this.state.drag.orientation,
-				);
-				if (newState !== this.state.placement) {
-					this.state.placement = newState;
-					this.state.selectedBoatId = originalBoat.id;
-				}
+				this.placementState.moveBoat(originalBoat.id, startX, startY, this.dragState.orientation);
 			} else {
-				const newBoat = {
+				const newBoat: Boat = {
 					id: GridOps.generateBoatId(),
 					startX,
 					startY,
-					length: this.state.drag.boatLength,
-					orientation: this.state.drag.orientation,
+					length: this.dragState.boatLength,
+					orientation: this.dragState.orientation,
 				};
-				const newState = PlacementOps.addBoat(this.state.placement, newBoat);
-				if (newState !== this.state.placement) {
-					this.state.placement = newState;
-					this.state.selectedBoatId = newBoat.id;
-				}
+				this.placementState.addBoat(newBoat);
 			}
 		}
 
-		this.state.drag = { ...initialDragState };
-		this.draggedBoatId = null;
+		this.dragState.endDrag();
 	}
 
 	selectBoat(x: number, y: number): void {
-		const cell = GridOps.getCell(this.state.placement.grid, { x, y });
-		this.state.selectedBoatId = cell?.boatId || null;
+		this.placementState.selectBoatAt({ x, y });
 	}
 
 	rotateSelected(): void {
-		if (!this.state.selectedBoatId) return;
-		this.state.placement = PlacementOps.rotateBoat(this.state.placement, this.state.selectedBoatId);
+		const selectedId = this.placementState.selectedBoatId;
+		if (!selectedId) return;
+		this.placementState.rotateBoat(selectedId);
 	}
 
 	deleteSelected(): void {
-		if (!this.state.selectedBoatId) return;
-		this.state.placement = PlacementOps.removeBoat(this.state.placement, this.state.selectedBoatId);
-		this.state.selectedBoatId = null;
+		const selectedId = this.placementState.selectedBoatId;
+		if (!selectedId) return;
+		this.placementState.removeBoat(selectedId);
 	}
 
 	reset(): void {
-		this.state = {
-			placement: PlacementOps.createInitialPlacementState(GRID_SIZE),
-			drag: { ...initialDragState },
-			selectedBoatId: null,
-		};
-		this.draggedBoatId = null;
+		this.placementState.reset();
+		this.dragState.reset();
 	}
 }
