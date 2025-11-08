@@ -51,17 +51,117 @@
 		width: 100%;
 		background: var(--color-white);
 		border: none;
+		border-radius: 0;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		transition: background 0.1s;
+		transition: all 0.1s;
 		padding: 0;
 		cursor: pointer;
 	}
 
 	.cell:not(:disabled):hover {
-		background: var(--color-accent);
-		opacity: 0.3;
+		position: relative;
+		background: var(--color-white);
+
+		animation: borderGrow 0.2s ease-out forwards;
+	}
+
+	.cell:not(:disabled):hover::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border: 2px solid red;
+		border-radius: 0px;
+		animation: borderGrow 0.2s ease-out forwards;
+	}
+
+	.cell:not(:disabled):hover::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(
+				to bottom,
+				red 0%,
+				red 48%,
+				transparent 48%,
+				transparent 52%,
+				red 52%,
+				red 100%
+			),
+			linear-gradient(
+				to right,
+				red 0%,
+				red 48%,
+				transparent 48%,
+				transparent 52%,
+				red 52%,
+				red 100%
+			),
+			red;
+		clip-path: polygon(
+			48% 0,
+			52% 0,
+			52% 48%,
+			100% 48%,
+			100% 52%,
+			52% 52%,
+			52% 100%,
+			48% 100%,
+			48% 52%,
+			0 52%,
+			0 48%,
+			48% 48%
+		);
+		animation: crosshairExpand 0.4s ease-out forwards;
+	}
+
+	@keyframes borderGrow {
+		from {
+			border-radius: 0px;
+		}
+		to {
+			border-radius: 24px;
+		}
+	}
+
+	@keyframes crosshairExpand {
+		from {
+			clip-path: polygon(
+				50% 50%,
+				50% 50%,
+				50% 50%,
+				50% 50%,
+				50% 50%,
+				50% 50%,
+				50% 50%,
+				50% 50%,
+				50% 50%,
+				50% 50%,
+				50% 50%,
+				50% 50%
+			);
+		}
+		to {
+			clip-path: polygon(
+				48% 0,
+				52% 0,
+				52% 48%,
+				100% 48%,
+				100% 52%,
+				52% 52%,
+				52% 100%,
+				48% 100%,
+				48% 52%,
+				0 52%,
+				0 48%,
+				48% 48%
+			);
+		}
 	}
 
 	.cell:disabled {
