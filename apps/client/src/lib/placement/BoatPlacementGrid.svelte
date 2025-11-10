@@ -11,23 +11,69 @@
 
 	let { cells, onCellClick, onCellDragStart, onCellDragEnd, onCellDragOver }: Props = $props();
 
+	function hasClickHandler(): boolean {
+		return onCellClick !== undefined;
+	}
+
+	function hasDragStartHandler(): boolean {
+		return onCellDragStart !== undefined;
+	}
+
+	function hasDragOverHandler(): boolean {
+		return onCellDragOver !== undefined;
+	}
+
+	function isCellBoat(cellState: CellState): boolean {
+		return cellState.boat ?? false;
+	}
+
+	function canDragCell(cellState: CellState): boolean {
+		return isCellBoat(cellState) && hasDragStartHandler();
+	}
+
 	function handleCellClick(x: number, y: number) {
-		if (onCellClick) {
+		if (hasClickHandler() && onCellClick) {
 			onCellClick(x, y);
 		}
 	}
 
 	function handleDragStart(x: number, y: number, cellState: CellState) {
-		if (cellState.boat && onCellDragStart) {
+		if (canDragCell(cellState) && onCellDragStart) {
 			onCellDragStart(x, y);
 		}
 	}
 
+	function preventDefaultEvent(event: DragEvent) {
+		event.preventDefault();
+	}
+
 	function handleDragOver(event: DragEvent, x: number, y: number) {
-		if (onCellDragOver) {
-			event.preventDefault();
+		if (hasDragOverHandler() && onCellDragOver) {
+			preventDefaultEvent(event);
 			onCellDragOver(event, x, y);
 		}
+	}
+
+	function handleDrop(event: DragEvent) {
+		preventDefaultEvent(event);
+	}
+
+	function createDragStartHandler(x: number, y: number, cell: CellState) {
+		return function handleStart() {
+			handleDragStart(x, y, cell);
+		};
+	}
+
+	function createDragOverHandler(x: number, y: number) {
+		return function handleOver(e: DragEvent) {
+			handleDragOver(e, x, y);
+		};
+	}
+
+	function createClickHandler(x: number, y: number) {
+		return function handleClick() {
+			handleCellClick(x, y);
+		};
 	}
 </script>
 
@@ -42,11 +88,11 @@
 				class:valid-drop={cell.validDrop}
 				class:invalid-drop={cell.invalidDrop}
 				draggable={cell.boat}
-				ondragstart={() => handleDragStart(x, y, cell)}
+				ondragstart={createDragStartHandler(x, y, cell)}
 				ondragend={onCellDragEnd}
-				ondragover={(e) => handleDragOver(e, x, y)}
-				ondrop={(e) => e.preventDefault()}
-				onclick={() => handleCellClick(x, y)}
+				ondragover={createDragOverHandler(x, y)}
+				ondrop={handleDrop}
+				onclick={createClickHandler(x, y)}
 				onkeydown={undefined}
 				role="presentation"
 			></div>

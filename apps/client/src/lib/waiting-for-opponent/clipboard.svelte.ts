@@ -6,16 +6,24 @@ export class ClipboardManager {
 		return this.copied;
 	}
 
+	private resetCopiedState(): void {
+		this.copied = false;
+	}
+
+	private handleCopySuccess(): void {
+		this.copied = true;
+	}
+
 	copy(text: string, duration: number = 1500): Promise<void> {
-		return navigator.clipboard.writeText(text).then(() => {
-			this.copied = true;
+		return navigator.clipboard.writeText(text).then(this.handleTextWritten.bind(this, duration));
+	}
 
-			if (this.timeoutId) clearTimeout(this.timeoutId);
+	private handleTextWritten(duration: number): void {
+		this.handleCopySuccess();
 
-			this.timeoutId = setTimeout(() => {
-				this.copied = false;
-			}, duration);
-		});
+		if (this.timeoutId) clearTimeout(this.timeoutId);
+
+		this.timeoutId = setTimeout(this.resetCopiedState.bind(this), duration);
 	}
 
 	cleanup(): void {

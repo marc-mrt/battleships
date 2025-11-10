@@ -6,20 +6,34 @@
 	import PlaceBoats from './lib/placement/PlaceBoats.svelte';
 	import GameBoard from './lib/game/GameBoard.svelte';
 
-	const urlParams = new URLSearchParams(window.location.search);
-	const querySharedSlug = urlParams.has('s') ? urlParams.get('s') : null;
+	function getSharedSlugFromUrl(): string | null {
+		const urlParams = new URLSearchParams(window.location.search);
+		return urlParams.has('s') ? urlParams.get('s') : null;
+	}
+
+	function getSessionStatus(): string | null {
+		return appStore.session?.status ?? null;
+	}
+
+	const querySharedSlug = getSharedSlugFromUrl();
 
 	let initializing = $state(true);
 
-	const status = $derived(appStore.session?.status ?? null);
+	const status = $derived(getSessionStatus());
 
-	onMount(async () => {
+	function finishInitializing(): void {
+		initializing = false;
+	}
+
+	async function initialize(): Promise<void> {
 		try {
 			await appStore.attemptReconnect();
 		} finally {
-			initializing = false;
+			finishInitializing();
 		}
-	});
+	}
+
+	onMount(initialize);
 </script>
 
 {#if initializing}

@@ -1,27 +1,14 @@
 import { API_BASE_URL } from './config';
 import type { Session } from '../models/session';
+import { post, type Result } from './http-client';
 
 interface JoinSessionRequestPayload {
 	slug: string;
 	username: string;
 }
 
-export async function joinSession(payload: JoinSessionRequestPayload): Promise<Session> {
-	const { slug, username } = payload;
-	const response = await fetch(`${API_BASE_URL}/sessions/${slug}/join`, {
-		method: 'POST',
-		credentials: 'include',
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify({
-			username,
-		}),
+export function joinSession(payload: JoinSessionRequestPayload): Promise<Result<Session, string>> {
+	return post<Session>(`${API_BASE_URL}/sessions/${payload.slug}/join`, {
+		username: payload.username,
 	});
-
-	if (!response.ok) {
-		throw new Error(`Failed to join session: ${response.statusText}`);
-	}
-
-	return response.json();
 }

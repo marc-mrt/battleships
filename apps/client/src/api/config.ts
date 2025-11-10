@@ -1,9 +1,23 @@
-export const API_BASE_URL: string | undefined = import.meta.env.VITE_SERVER_BASE_URL;
-if (!API_BASE_URL) {
-	throw new Error('VITE_SERVER_BASE_URL is not defined.');
+function getBaseUrl(): string {
+	const url = import.meta.env.VITE_SERVER_BASE_URL;
+	if (!url) {
+		throw new Error('VITE_SERVER_BASE_URL is not defined.');
+	}
+	return url;
 }
 
-export const WEBSOCKET_BASE_URL: string = API_BASE_URL.replace(
-	/^http/,
-	window.location.protocol === 'https:' ? 'wss' : 'ws',
-);
+function isHttps(): boolean {
+	return window.location.protocol === 'https:';
+}
+
+function getWebSocketProtocol(): string {
+	return isHttps() ? 'wss' : 'ws';
+}
+
+function convertToWebSocketUrl(httpUrl: string): string {
+	return httpUrl.replace(/^http/, getWebSocketProtocol());
+}
+
+export const API_BASE_URL: string = getBaseUrl();
+
+export const WEBSOCKET_BASE_URL: string = convertToWebSocketUrl(API_BASE_URL);

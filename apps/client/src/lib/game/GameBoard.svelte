@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 	import type { GameState } from 'game-messages';
+	import type { CellState } from '../grid/types';
 	import { appStore } from '../app-store/store.svelte';
 	import ShootingGrid from './ShootingGrid.svelte';
 	import WaitingGrid from './WaitingGrid.svelte';
@@ -8,6 +9,41 @@
 	import { createEmptyCellGrid } from '../grid/render-utils';
 	import { GRID_SIZE } from 'game-rules';
 	import { createEffectManager } from './effect-manager.svelte';
+
+	function shouldResetGame(rawGame: GameState | null): boolean {
+		return !rawGame;
+	}
+
+	function shouldInitializeGame(displayedGame: GameState | null): boolean {
+		return !displayedGame;
+	}
+
+	function hasGameChanged(rawGame: GameState, displayedGame: GameState): boolean {
+		return rawGame !== displayedGame;
+	}
+
+	function getHitResult(hit: boolean): 'hit' | 'miss' {
+		return hit ? 'hit' : 'miss';
+	}
+
+	function isPlayerTurn(turn: string): boolean {
+		return turn === 'player_turn';
+	}
+
+	function isOpponentTurn(turn: string): boolean {
+		return turn === 'opponent_turn';
+	}
+
+	function canFireShot(
+		effectManager: ReturnType<typeof createEffectManager>,
+		pendingGame: GameState | null,
+	): boolean {
+		return !effectManager.isAnimating() && !pendingGame;
+	}
+
+	function buildCellAriaLabel(x: number, y: number): string {
+		return `Fire at position ${x}, ${y}`;
+	}
 
 	const player = $derived(appStore.player);
 	const opponent = $derived(appStore.opponent);
@@ -19,35 +55,94 @@
 
 	const game = $derived(displayedGame);
 
-	const opponentTurnCells = $derived.by(() => {
+	function computeOpponentTurnCells(): CellState[][] {
 		if (!game) return createEmptyCellGrid(GRID_SIZE);
 		return renderPlayerGrid(game);
-	});
+	}
 
-	const yourTurnCells = $derived.by(() => {
+	function computeYourTurnCells(): CellState[][] {
 		if (!game) return createEmptyCellGrid(GRID_SIZE);
 		return renderOpponentGrid(game);
-	});
+	}
 
-	$effect(() => {
+	const opponentTurnCells = $derived.by(computeOpponentTurnCells);
+
+	const yourTurnCells = $derived.by(computeYourTurnCells);
+
+	function resetGameState() {
+		displayedGame = null;
+		pendingGame = null;
+	}
+
+	function initializeGame(rawGame: GameState) {
+		displayedGame = rawGame;
+	}
+
+	function updatePendingGame(rawGame: GameState) {
+		pendingGame = rawGame;
+	}
+
+	function syncGameState(): void {
+		if (shouldResetGame(rawGame)) {
+			resetGameState();
+			return;
+		}
+
 		if (!rawGame) {
-			displayedGame = null;
-			pendingGame = null;
+			return;
+		}
+
+		if (shouldInitializeGame(displayedGame)) {
+			initializeGame(rawGame);
 			return;
 		}
 
 		if (!displayedGame) {
-			displayedGame = rawGame;
 			return;
 		}
 
-		if (rawGame === displayedGame) {
+		if (!hasGameChanged(rawGame, displayedGame)) {
 			return;
 		}
 
-		pendingGame = rawGame;
+		updatePendingGame(rawGame);
 		handleGameStateChange(displayedGame, rawGame);
-	});
+	}
+
+	$effect(syncGameState);
+
+	function updateDisplayedGame(newGame: GameState) {
+		displayedGame = newGame;
+		pendingGame = null;
+	}
+
+	async function playShootingAnimation(lastShot: {
+		x: number;
+		y: number;
+		hit: boolean;
+		sunkBoat: boolean;
+	}) {
+		await effectManager.playShootingSequence(
+			lastShot.x,
+			lastShot.y,
+			getHitResult(lastShot.hit),
+			lastShot.sunkBoat,
+		);
+	}
+
+	async function playReceivingAnimation(lastShot: {
+		x: number;
+		y: number;
+		hit: boolean;
+		sunkBoat: boolean;
+	}) {
+		await effectManager.playReceivingSequence(
+			lastShot.x,
+			lastShot.y,
+			getHitResult(lastShot.hit),
+			lastShot.sunkBoat,
+		);
+	}
 
 	async function handleGameStateChange(oldGame: GameState, newGame: GameState) {
 		const previousTurn = oldGame.turn;
@@ -56,44 +151,35 @@
 			return;
 		}
 
-		if (previousTurn === 'player_turn') {
-			await effectManager.playShootingSequence(
-				lastShot.x,
-				lastShot.y,
-				lastShot.hit ? 'hit' : 'miss',
-				lastShot.sunkBoat,
-			);
+		if (isPlayerTurn(previousTurn)) {
+			await playShootingAnimation(lastShot);
 		} else {
-			await effectManager.playReceivingSequence(
-				lastShot.x,
-				lastShot.y,
-				lastShot.hit ? 'hit' : 'miss',
-				lastShot.sunkBoat,
-			);
+			await playReceivingAnimation(lastShot);
 		}
 
-		displayedGame = newGame;
-		pendingGame = null;
+		updateDisplayedGame(newGame);
 	}
 
-	function handleCellClick(x: number, y: number) {
-		if (effectManager.isAnimating() || pendingGame) {
-			return;
-		}
-
+	function sendFireShotAction(x: number, y: number) {
 		appStore.sendAction({
 			type: 'fire_shot',
 			data: { x, y },
 		});
 	}
 
-	function getCellAriaLabel(x: number, y: number): string {
-		return `Fire at position ${x}, ${y}`;
+	function handleCellClick(x: number, y: number) {
+		if (!canFireShot(effectManager, pendingGame)) {
+			return;
+		}
+
+		sendFireShotAction(x, y);
 	}
 
-	onDestroy(() => {
+	function cleanup(): void {
 		effectManager.reset();
-	});
+	}
+
+	onDestroy(cleanup);
 </script>
 
 <header>
@@ -106,7 +192,7 @@
 		<div class="loading">
 			<p>Loading game...</p>
 		</div>
-	{:else if game.turn === 'opponent_turn'}
+	{:else if isOpponentTurn(game.turn)}
 		<div class="turn-view">
 			<p class="status-message opponent-turn">Opponent is taking their shot...</p>
 
@@ -122,7 +208,7 @@
 				<ShootingGrid
 					cells={yourTurnCells}
 					onCellClick={handleCellClick}
-					{getCellAriaLabel}
+					getCellAriaLabel={buildCellAriaLabel}
 					animationState={effectManager.state}
 				/>
 			</div>

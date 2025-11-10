@@ -8,64 +8,128 @@
 
 	let { sharedSlug = null }: Props = $props();
 
+	function shouldValidateUsername(loading: boolean, username: string): boolean {
+		return !loading && username.length > 0;
+	}
+
+	function shouldValidateSlug(mode: 'create' | 'join', loading: boolean, slug: string): boolean {
+		return mode === 'join' && !loading && slug.length > 0;
+	}
+
+	function getValidationError(isValid: boolean, errorMessage: string | null): string | null {
+		return isValid ? null : errorMessage;
+	}
+
+	function extractErrorMessage(e: unknown, fallback: string): string {
+		return e instanceof Error ? e.message : fallback;
+	}
+
+	function trimmedUsername(username: string): string {
+		return username.trim();
+	}
+
+	function trimmedSlug(slug: string): string {
+		return slug.trim();
+	}
+
+	function hasValidUsername(username: string): boolean {
+		return trimmedUsername(username).length > 0;
+	}
+
+	function canSubmitForm(
+		usernameError: string | null,
+		slugError: string | null,
+		loading: boolean,
+		username: string,
+	): boolean {
+		return !usernameError && !slugError && !loading && hasValidUsername(username);
+	}
+
 	let mode = $state<'create' | 'join'>(sharedSlug ? 'join' : 'create');
 	let username = $state('');
 	let slug = $state(sharedSlug ?? '');
 	let loading = $state(false);
 	let error = $state('');
 
-	const usernameError = $derived.by(() => {
-		if (loading || !username) return null;
+	function validateUsernameField(): string | null {
+		if (!shouldValidateUsername(loading, username)) return null;
 		const result = validateUsername(username);
-		return result.valid ? null : result.error;
-	});
+		return getValidationError(result.valid, result.error);
+	}
 
-	const slugError = $derived.by(() => {
-		if (mode !== 'join' || loading || !slug) return null;
+	function validateSlugField(): string | null {
+		if (!shouldValidateSlug(mode, loading, slug)) return null;
 		const result = validateSlug(slug);
-		return result.valid ? null : result.error;
-	});
+		return getValidationError(result.valid, result.error);
+	}
 
-	const canSubmit = $derived(
-		!usernameError && !slugError && !loading && username.trim().length > 0,
-	);
+	const usernameError = $derived(validateUsernameField());
+	const slugError = $derived(validateSlugField());
+	const canSubmit = $derived(canSubmitForm(usernameError, slugError, loading, username));
 
-	async function handleCreateSession() {
+	function startLoading(): void {
+		loading = true;
+		error = '';
+	}
+
+	function finishLoading(): void {
+		loading = false;
+	}
+
+	function setError(message: string): void {
+		error = message;
+	}
+
+	async function handleCreateSession(): Promise<void> {
 		if (!canSubmit) return;
 
-		loading = true;
-		error = '';
+		startLoading();
 
 		try {
-			await appStore.createSession({ username: username.trim() });
+			await appStore.createSession({ username: trimmedUsername(username) });
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to create session';
+			setError(extractErrorMessage(e, 'Failed to create session'));
 		} finally {
-			loading = false;
+			finishLoading();
 		}
 	}
 
-	async function handleJoinSession() {
+	async function handleJoinSession(): Promise<void> {
 		if (!canSubmit || mode !== 'join') return;
 
-		loading = true;
-		error = '';
+		startLoading();
 
 		try {
-			await appStore.joinSession({ username: username.trim(), slug: slug.trim() });
+			await appStore.joinSession({
+				username: trimmedUsername(username),
+				slug: trimmedSlug(slug),
+			});
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to join session';
+			setError(extractErrorMessage(e, 'Failed to join session'));
 		} finally {
-			loading = false;
+			finishLoading();
 		}
 	}
 
-	function handleSubmit() {
-		if (mode === 'create') {
+	function isCreateMode(): boolean {
+		return mode === 'create';
+	}
+
+	function handleSubmit(): void {
+		if (isCreateMode()) {
 			handleCreateSession();
 		} else {
 			handleJoinSession();
 		}
+	}
+
+	function switchToJoinMode(): void {
+		mode = 'join';
+	}
+
+	function preventDefaultAndSubmit(e: Event): void {
+		e.preventDefault();
+		handleSubmit();
 	}
 </script>
 
@@ -75,10 +139,7 @@
 <main>
 	<form
 		id="init-session"
-		onsubmit={(e) => {
-			e.preventDefault();
-			handleSubmit();
-		}}
+		onsubmit={preventDefaultAndSubmit}
 		aria-label="Create or join game session"
 	>
 		<div class="form-group">
@@ -132,7 +193,7 @@
 		<button
 			class="alternative"
 			type="button"
-			onclick={() => (mode = 'join')}
+			onclick={switchToJoinMode}
 			disabled={loading}
 			aria-label="Switch to join session mode"
 		>

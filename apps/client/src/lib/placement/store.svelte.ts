@@ -4,6 +4,16 @@ import { DragStateStore } from './drag-state.svelte';
 import { renderPlacementCells } from './presenter';
 import * as GridOps from '../grid/operations';
 
+function hasMatchingLength(length: number) {
+	return function matchLength(s: { length: number; count: number; placed: number }): boolean {
+		return s.length === length;
+	};
+}
+
+function isStockItemAvailable(stockItem: { placed: number; count: number } | undefined): boolean {
+	return stockItem !== undefined && stockItem.placed < stockItem.count;
+}
+
 export class PlacementStore {
 	private placementState = new PlacementStateStore();
 	private dragState = new DragStateStore();
@@ -49,20 +59,18 @@ export class PlacementStore {
 	}
 
 	startDragFromStock(length: number): void {
-		const stockItem = this.placementState.stock.find((s) => s.length === length);
-		if (!stockItem || stockItem.placed >= stockItem.count) return;
+		const stockItem = this.placementState.stock.find(hasMatchingLength(length));
+		if (!isStockItemAvailable(stockItem)) return;
 
 		this.dragState.startDragFromStock(length);
 	}
 
 	startDragFromCell(cellX: number, cellY: number): void {
-		const boat = GridOps.getBoatAt(this.placementState.grid, this.placementState.boats, {
-			x: cellX,
-			y: cellY,
-		});
+		const position = { x: cellX, y: cellY };
+		const boat = GridOps.getBoatAt(this.placementState.grid, this.placementState.boats, position);
 		if (!boat) return;
 
-		this.placementState.selectBoatAt({ x: cellX, y: cellY });
+		this.placementState.selectBoatAt(position);
 		this.dragState.startDragFromBoat(boat, cellX, cellY);
 	}
 
@@ -71,37 +79,42 @@ export class PlacementStore {
 	}
 
 	endDrag(): void {
-		if (!this.dragState.isDragging || !this.dragState.boatLength) {
+		const boatLength = this.dragState.boatLength;
+		const cannotDrop = !this.dragState.isDragging || !boatLength;
+		if (cannotDrop) {
 			this.dragState.endDrag();
 			return;
 		}
 
 		const hoveredCell = this.dragState.hoveredCell;
+		if (!hoveredCell) {
+			this.dragState.endDrag();
+			return;
+		}
+
+		const startX = hoveredCell.x - this.dragState.offset.x;
+		const startY = hoveredCell.y - this.dragState.offset.y;
 		const originalBoat = this.dragState.originalBoat;
 
-		if (hoveredCell) {
-			const startX = hoveredCell.x - this.dragState.offset.x;
-			const startY = hoveredCell.y - this.dragState.offset.y;
-
-			if (originalBoat) {
-				this.placementState.moveBoat(originalBoat.id, startX, startY, this.dragState.orientation);
-			} else {
-				const newBoat: Boat = {
-					id: GridOps.generateBoatId(),
-					startX,
-					startY,
-					length: this.dragState.boatLength,
-					orientation: this.dragState.orientation,
-				};
-				this.placementState.addBoat(newBoat);
-			}
+		if (originalBoat) {
+			this.placementState.moveBoat(originalBoat.id, startX, startY, this.dragState.orientation);
+		} else {
+			const newBoat: Boat = {
+				id: GridOps.generateBoatId(),
+				startX,
+				startY,
+				length: boatLength,
+				orientation: this.dragState.orientation,
+			};
+			this.placementState.addBoat(newBoat);
 		}
 
 		this.dragState.endDrag();
 	}
 
 	selectBoat(x: number, y: number): void {
-		this.placementState.selectBoatAt({ x, y });
+		const position = { x, y };
+		this.placementState.selectBoatAt(position);
 	}
 
 	rotateSelected(): void {

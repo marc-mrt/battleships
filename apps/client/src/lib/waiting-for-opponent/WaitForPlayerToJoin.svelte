@@ -2,10 +2,22 @@
 	import { appStore } from '../app-store/store.svelte';
 	import { ClipboardManager } from './clipboard.svelte';
 
+	function buildShareableUrl(slug: string | undefined): string {
+		return `${window.location.origin}?s=${slug}`;
+	}
+
+	function getDisplayValue(isCopied: boolean, url: string): string {
+		return isCopied ? 'Copied!' : url;
+	}
+
+	function isActivationKey(key: string): boolean {
+		return key === 'Enter' || key === ' ';
+	}
+
 	const player = $derived(appStore.player);
 	const slug = $derived(appStore.session?.slug);
 
-	const urlToShare = $derived(`${window.location.origin}?s=${slug}`);
+	const urlToShare = $derived(buildShareableUrl(slug));
 	const clipboard = new ClipboardManager();
 
 	function copyToClipboard() {
@@ -15,7 +27,7 @@
 	}
 
 	function handleKeyPress(event: KeyboardEvent) {
-		if (event.key === 'Enter' || event.key === ' ') {
+		if (isActivationKey(event.key)) {
 			event.preventDefault();
 			copyToClipboard();
 		}
@@ -32,7 +44,7 @@
 			<input
 				type="text"
 				readonly
-				value={clipboard.isCopied ? 'Copied!' : urlToShare}
+				value={getDisplayValue(clipboard.isCopied, urlToShare)}
 				onclick={copyToClipboard}
 				onkeydown={handleKeyPress}
 				class:copied={clipboard.isCopied}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import * as R from 'ramda';
 	import { appStore } from '../app-store/store.svelte';
 	import BoatPlacementGrid from './BoatPlacementGrid.svelte';
 	import type { PlaceBoatsMessage } from 'game-messages';
@@ -7,6 +8,10 @@
 	import { PlacementStore } from './store.svelte';
 	import { TOTAL_BOATS_COUNT } from 'game-rules';
 
+	function identity<T>(x: T): T {
+		return x;
+	}
+
 	const player = $derived(appStore.player);
 	const opponent = $derived(appStore.opponent);
 
@@ -14,7 +19,7 @@
 
 	let isReady = $state(false);
 
-	function sendBoatPlacements() {
+	function sendBoatPlacements(): void {
 		if (placement.boats.length === 0) return;
 
 		const message: PlaceBoatsMessage = {
@@ -23,6 +28,41 @@
 		};
 		appStore.sendAction(message);
 		isReady = true;
+	}
+
+	function handleDragStartFromStock(length: number): void {
+		placement.startDragFromStock(length);
+	}
+
+	function handleDragEnd(): void {
+		placement.endDrag();
+	}
+
+	function handleCellClick(x: number, y: number): void {
+		placement.selectBoat(x, y);
+	}
+
+	function handleCellDragStart(x: number, y: number): void {
+		placement.startDragFromCell(x, y);
+	}
+
+	function handleCellDragOver(e: DragEvent, x: number, y: number): void {
+		e.preventDefault();
+		placement.setHoveredCell({ x, y });
+	}
+
+	function handleRotateSelected(): void {
+		placement.rotateSelected();
+	}
+
+	function handleDeleteSelected(): void {
+		placement.deleteSelected();
+	}
+
+	function createStockDragStartHandler(length: number) {
+		return function handleStockDragStart() {
+			handleDragStartFromStock(length);
+		};
 	}
 </script>
 
@@ -43,12 +83,12 @@
 							<div
 								class="boat-visual"
 								draggable={isAvailable}
-								ondragstart={() => placement.startDragFromStock(stock.length)}
-								ondragend={() => placement.endDrag()}
+								ondragstart={createStockDragStartHandler(stock.length)}
+								ondragend={handleDragEnd}
 								class:depleted={!isAvailable}
 								role="presentation"
 							>
-								{#each Array.from({ length: stock.length }, (_, i) => i) as idx (idx)}
+								{#each R.times(identity, stock.length) as idx (idx)}
 									<div class="boat-segment"></div>
 								{/each}
 							</div>
@@ -63,21 +103,16 @@
 			<div class="grid-section">
 				<BoatPlacementGrid
 					cells={placement.cells}
-					onCellClick={(x, y) => placement.selectBoat(x, y)}
-					onCellDragStart={(x, y) => {
-						placement.startDragFromCell(x, y);
-					}}
-					onCellDragEnd={() => placement.endDrag()}
-					onCellDragOver={(e, x, y) => {
-						e.preventDefault();
-						placement.setHoveredCell({ x, y });
-					}}
+					onCellClick={handleCellClick}
+					onCellDragStart={handleCellDragStart}
+					onCellDragEnd={handleDragEnd}
+					onCellDragOver={handleCellDragOver}
 				/>
 
 				<div class="selected-boat-actions">
 					{#if placement.selectedBoatId}
 						<button
-							onclick={() => placement.rotateSelected()}
+							onclick={handleRotateSelected}
 							class="action-btn"
 							title="Rotate boat"
 							aria-label="Rotate selected boat"
@@ -85,7 +120,7 @@
 							<Rotate />
 						</button>
 						<button
-							onclick={() => placement.deleteSelected()}
+							onclick={handleDeleteSelected}
 							class="action-btn delete"
 							title="Delete boat"
 							aria-label="Delete selected boat"

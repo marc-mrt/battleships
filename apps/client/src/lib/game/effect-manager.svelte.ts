@@ -14,6 +14,21 @@ const ANIMATION_DELAYS = {
 	sunk: 1200,
 };
 
+function createAudioElement(path: string): HTMLAudioElement {
+	const audio = new Audio(path);
+	audio.preload = 'auto';
+	return audio;
+}
+
+function getSoundFiles(): Record<SoundType, string> {
+	return {
+		shoot: '/sounds/shoot.mp3',
+		hit: '/sounds/explosion.mp3',
+		miss: '/sounds/splash.mp3',
+		sunk: '/sounds/sinking.mp3',
+	};
+}
+
 class EffectManager {
 	state = $state<AnimationState>({ type: 'idle' });
 	private timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -25,18 +40,21 @@ class EffectManager {
 	}
 
 	private initializeSounds() {
-		const soundFiles: Record<SoundType, string> = {
-			shoot: '/sounds/shoot.mp3',
-			hit: '/sounds/explosion.mp3',
-			miss: '/sounds/splash.mp3',
-			sunk: '/sounds/sinking.mp3',
-		};
+		const soundFiles = getSoundFiles();
 
-		Object.entries(soundFiles).forEach(([type, path]) => {
-			const audio = new Audio(path);
-			audio.preload = 'auto';
-			this.sounds.set(type as SoundType, audio);
-		});
+		function loadSound(entry: [string, string], sounds: Map<SoundType, HTMLAudioElement>): void {
+			const [type, path] = entry;
+			const audio = createAudioElement(path);
+			sounds.set(type as SoundType, audio);
+		}
+
+		function createSoundLoader(sounds: Map<SoundType, HTMLAudioElement>) {
+			return function loadSoundEntry(entry: [string, string]): void {
+				loadSound(entry, sounds);
+			};
+		}
+
+		Object.entries(soundFiles).forEach(createSoundLoader(this.sounds));
 	}
 
 	private playSound(type: SoundType) {
@@ -45,10 +63,14 @@ class EffectManager {
 		const sound = this.sounds.get(type);
 		if (sound) {
 			sound.currentTime = 0;
-			sound.play().catch((error) => {
-				console.warn(`Failed to play ${type} sound:`, error);
-			});
+			sound.play().catch(this.handlePlayError(type));
 		}
+	}
+
+	private handlePlayError(type: SoundType) {
+		return function logPlayError(error: unknown): void {
+			console.warn(`Failed to play ${type} sound:`, error);
+		};
 	}
 
 	async playShootingSequence(

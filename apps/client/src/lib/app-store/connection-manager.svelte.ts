@@ -1,6 +1,7 @@
 import { ServerMessageSchema, type ClientMessage, type ServerMessage } from 'game-messages';
 import { SvelteSet } from 'svelte/reactivity';
 import { WEBSOCKET_BASE_URL } from '../../api/config';
+import { createReconnectionStrategy, type ReconnectionStrategy } from './reconnection-strategy';
 
 type MessageHandler<T = ServerMessage> = (message: T) => void;
 type ErrorHandler = (error: WebSocketError) => void;
@@ -11,112 +12,155 @@ interface WebSocketError {
 	originalError?: unknown;
 }
 
+function createWebSocketError(
+	type: 'connection' | 'parse' | 'send' | 'reconnect',
+	message: string,
+	originalError?: unknown,
+): WebSocketError {
+	return { type, message, originalError };
+}
+
+function createConnectionError(err: unknown): WebSocketError {
+	return createWebSocketError('connection', 'Failed to establish WebSocket connection', err);
+}
+
+function createParseError(err: unknown): WebSocketError {
+	return createWebSocketError('parse', 'Failed to parse WebSocket message', err);
+}
+
+function createConnectionEventError(event: Event): WebSocketError {
+	return createWebSocketError('connection', 'WebSocket connection error', event);
+}
+
+function createSendError(err: unknown): WebSocketError {
+	return createWebSocketError('send', 'Failed to send WebSocket message', err);
+}
+
+function createNotConnectedError(): WebSocketError {
+	return createWebSocketError('send', 'WebSocket is not connected');
+}
+
+function createReconnectError(): WebSocketError {
+	return createWebSocketError('reconnect', 'Failed to reconnect after maximum attempts');
+}
+
 export class ConnectionManager {
 	private ws: WebSocket | null = null;
 	private messageHandlers = new SvelteSet<MessageHandler>();
 	private errorHandlers = new SvelteSet<ErrorHandler>();
-	private reconnectionAttempts = 0;
-	private readonly maxReconnectionAttempts = 5;
-	private readonly baseReconnectionDelay = 1000;
+	private reconnectionStrategy: ReconnectionStrategy;
 
 	connected = $state(false);
 	reconnecting = $state(false);
 	error = $state<WebSocketError | null>(null);
 
+	constructor(reconnectionStrategy?: ReconnectionStrategy) {
+		this.reconnectionStrategy = reconnectionStrategy ?? createReconnectionStrategy();
+	}
+
 	connect(): Promise<void> {
-		return new Promise((resolve, reject) => {
-			try {
-				this.ws = new WebSocket(WEBSOCKET_BASE_URL);
-				this.setupEventHandlers(resolve, reject);
-			} catch (err) {
-				const error: WebSocketError = {
-					type: 'connection',
-					message: 'Failed to establish WebSocket connection',
-					originalError: err,
-				};
-				this.handleError(error);
-				reject(error);
-			}
-		});
+		return new Promise(this.createConnection.bind(this));
+	}
+
+	private createConnection(resolve: () => void, reject: (error: WebSocketError) => void): void {
+		try {
+			this.ws = new WebSocket(WEBSOCKET_BASE_URL);
+			this.setupEventHandlers(resolve, reject);
+		} catch (err) {
+			const error = createConnectionError(err);
+			this.handleError(error);
+			reject(error);
+		}
 	}
 
 	private setupEventHandlers(resolve: () => void, reject: (error: WebSocketError) => void): void {
 		if (!this.ws) return;
 
-		this.ws.onopen = () => {
-			this.connected = true;
-			this.reconnecting = false;
-			this.error = null;
-			this.reconnectionAttempts = 0;
-			resolve();
-		};
+		this.ws.onopen = this.handleOpen.bind(this, resolve);
+		this.ws.onmessage = this.handleMessage.bind(this);
+		this.ws.onerror = this.handleErrorEvent.bind(this, reject);
+		this.ws.onclose = this.handleClose.bind(this);
+	}
 
-		this.ws.onmessage = (event) => {
-			try {
-				const json = JSON.parse(event.data);
-				const message: ServerMessage = ServerMessageSchema.parse(json);
-				this.notifyMessageHandlers(message);
-			} catch (err) {
-				const error: WebSocketError = {
-					type: 'parse',
-					message: 'Failed to parse WebSocket message',
-					originalError: err,
-				};
-				this.handleError(error);
-			}
-		};
+	private handleOpen(resolve: () => void): void {
+		this.connected = true;
+		this.reconnecting = false;
+		this.error = null;
+		this.reconnectionStrategy.reset();
+		resolve();
+	}
 
-		this.ws.onerror = (event) => {
-			const error: WebSocketError = {
-				type: 'connection',
-				message: 'WebSocket connection error',
-				originalError: event,
-			};
+	private handleMessage(event: MessageEvent): void {
+		try {
+			const json = JSON.parse(event.data);
+			const message: ServerMessage = ServerMessageSchema.parse(json);
+			this.notifyMessageHandlers(message);
+		} catch (err) {
+			const error = createParseError(err);
 			this.handleError(error);
-			reject(error);
-		};
+		}
+	}
 
-		this.ws.onclose = () => {
-			this.connected = false;
-			this.handleReconnect();
-		};
+	private handleErrorEvent(reject: (error: WebSocketError) => void, event: Event): void {
+		const error = createConnectionEventError(event);
+		this.handleError(error);
+		reject(error);
+	}
+
+	private handleClose(): void {
+		this.connected = false;
+		this.handleReconnect();
 	}
 
 	private handleReconnect(): void {
-		if (this.reconnectionAttempts >= this.maxReconnectionAttempts) {
-			const error: WebSocketError = {
-				type: 'reconnect',
-				message: 'Failed to reconnect after maximum attempts',
-			};
-			this.handleError(error);
-			this.reconnecting = false;
+		const shouldAttempt = this.reconnectionStrategy.shouldReconnect();
+		if (!shouldAttempt) {
+			this.handleReconnectFailure();
 			return;
 		}
 
-		this.reconnecting = true;
+		this.attemptReconnection();
+	}
 
-		const delay = this.baseReconnectionDelay * ++this.reconnectionAttempts;
-		setTimeout(() => this.connect(), delay);
+	private handleReconnectFailure(): void {
+		const error = createReconnectError();
+		this.handleError(error);
+		this.reconnecting = false;
+	}
+
+	private attemptReconnection(): void {
+		this.reconnecting = true;
+		this.reconnectionStrategy.incrementAttempts();
+
+		const delay = this.reconnectionStrategy.getDelay();
+		setTimeout(this.reconnect.bind(this), delay);
+	}
+
+	private reconnect(): void {
+		this.connect();
 	}
 
 	send(message: ClientMessage): void {
-		if (this.ws?.readyState === WebSocket.OPEN) {
-			try {
-				this.ws.send(JSON.stringify(message));
-			} catch (err) {
-				const error: WebSocketError = {
-					type: 'send',
-					message: 'Failed to send WebSocket message',
-					originalError: err,
-				};
-				this.handleError(error);
-				throw error;
-			}
-		} else {
-			const error: WebSocketError = {
-				type: 'send',
-				message: 'WebSocket is not connected',
-			};
+		const isConnected = this.ws?.readyState === WebSocket.OPEN;
+		if (!isConnected) {
+			this.throwNotConnectedError();
+		}
+
+		this.sendMessage(message);
+	}
+
+	private throwNotConnectedError(): never {
+		const error = createNotConnectedError();
+		this.handleError(error);
+		throw error;
+	}
+
+	private sendMessage(message: ClientMessage): void {
+		try {
+			const json = JSON.stringify(message);
+			this.ws!.send(json);
+		} catch (err) {
+			const error = createSendError(err);
 			this.handleError(error);
 			throw error;
 		}
@@ -124,9 +168,7 @@ export class ConnectionManager {
 
 	onMessage(handler: MessageHandler): () => void {
 		this.messageHandlers.add(handler);
-		return () => {
-			this.messageHandlers.delete(handler);
-		};
+		return this.createUnsubscriber(this.messageHandlers, handler);
 	}
 
 	onError(handler: ErrorHandler): () => void {
@@ -134,26 +176,52 @@ export class ConnectionManager {
 		if (this.error) {
 			handler(this.error);
 		}
-		return () => {
-			this.errorHandlers.delete(handler);
+		return this.createUnsubscriber(this.errorHandlers, handler);
+	}
+
+	private createUnsubscriber<T>(set: SvelteSet<T>, item: T) {
+		return function unsubscribe(): void {
+			set.delete(item);
 		};
 	}
 
 	private notifyMessageHandlers(message: ServerMessage): void {
-		this.messageHandlers.forEach((handler) => handler(message));
+		function callHandler(handler: MessageHandler): void {
+			handler(message);
+		}
+		this.messageHandlers.forEach(callHandler);
 	}
 
 	private handleError(error: WebSocketError): void {
 		this.error = error;
+		this.logError(error);
+		this.notifyErrorHandlers(error);
+	}
+
+	private logError(error: WebSocketError): void {
 		console.error(`WebSocket ${error.type} error:`, error.message, error.originalError);
-		this.errorHandlers.forEach((handler) => handler(error));
+	}
+
+	private notifyErrorHandlers(error: WebSocketError): void {
+		function callHandler(handler: ErrorHandler): void {
+			handler(error);
+		}
+		this.errorHandlers.forEach(callHandler);
 	}
 
 	disconnect(): void {
+		this.closeWebSocket();
+		this.resetState();
+	}
+
+	private closeWebSocket(): void {
 		if (this.ws) {
 			this.ws.close();
 			this.ws = null;
 		}
+	}
+
+	private resetState(): void {
 		this.connected = false;
 		this.reconnecting = false;
 		this.error = null;

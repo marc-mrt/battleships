@@ -15,13 +15,29 @@
 
 	let { cells, animationState }: Props = $props();
 
+	function isIdle(animationState: AnimationState): boolean {
+		return animationState.type === 'idle';
+	}
+
+	function matchesPosition(animationState: AnimationState, x: number, y: number): boolean {
+		return animationState.x === x && animationState.y === y;
+	}
+
 	function isAnimatingCell(x: number, y: number): boolean {
-		return animationState.type !== 'idle' && animationState.x === x && animationState.y === y;
+		return !isIdle(animationState) && matchesPosition(animationState, x, y);
+	}
+
+	function buildAnimationClass(type: string): string {
+		return `animating-${type}`;
 	}
 
 	function getAnimationClass(x: number, y: number): string {
 		if (!isAnimatingCell(x, y)) return '';
-		return `animating-${animationState.type}`;
+		return buildAnimationClass(animationState.type);
+	}
+
+	function shouldAnimateWithClass(x: number, y: number, className: string): boolean {
+		return getAnimationClass(x, y) === className;
 	}
 </script>
 
@@ -36,9 +52,9 @@
 				class:miss={cell.miss}
 				class:sunk={cell.sunk}
 				class:animating={isAnimatingCell(x, y)}
-				class:animating-hit={getAnimationClass(x, y) === 'animating-hit'}
-				class:animating-miss={getAnimationClass(x, y) === 'animating-miss'}
-				class:animating-sunk={getAnimationClass(x, y) === 'animating-sunk'}
+				class:animating-hit={shouldAnimateWithClass(x, y, 'animating-hit')}
+				class:animating-miss={shouldAnimateWithClass(x, y, 'animating-miss')}
+				class:animating-sunk={shouldAnimateWithClass(x, y, 'animating-sunk')}
 			></div>
 		{/each}
 	{/each}

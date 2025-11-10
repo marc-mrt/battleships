@@ -17,19 +17,53 @@
 
 	let { cells, onCellClick, getCellAriaLabel, animationState }: Props = $props();
 
+	function isCellShot(cellState: CellState): boolean {
+		return cellState.shot ?? false;
+	}
+
 	function handleCellClick(x: number, y: number, cellState: CellState) {
-		if (!cellState.shot) {
+		if (!isCellShot(cellState)) {
 			onCellClick(x, y);
 		}
 	}
 
+	function isIdle(animationState: AnimationState): boolean {
+		return animationState.type === 'idle';
+	}
+
+	function matchesPosition(animationState: AnimationState, x: number, y: number): boolean {
+		return animationState.x === x && animationState.y === y;
+	}
+
 	function isAnimatingCell(x: number, y: number): boolean {
-		return animationState.type !== 'idle' && animationState.x === x && animationState.y === y;
+		return !isIdle(animationState) && matchesPosition(animationState, x, y);
+	}
+
+	function buildAnimationClass(type: string): string {
+		return `animating-${type}`;
 	}
 
 	function getAnimationClass(x: number, y: number): string {
 		if (!isAnimatingCell(x, y)) return '';
-		return `animating-${animationState.type}`;
+		return buildAnimationClass(animationState.type);
+	}
+
+	function shouldAnimateWithClass(x: number, y: number, className: string): boolean {
+		return getAnimationClass(x, y) === className;
+	}
+
+	function getDefaultAriaLabel(x: number, y: number): string {
+		return `Cell ${x}, ${y}`;
+	}
+
+	function getCellLabel(x: number, y: number): string {
+		return getCellAriaLabel ? getCellAriaLabel(x, y) : getDefaultAriaLabel(x, y);
+	}
+
+	function createClickHandler(x: number, y: number, cell: CellState) {
+		return function handleClick() {
+			handleCellClick(x, y, cell);
+		};
 	}
 </script>
 
@@ -43,14 +77,14 @@
 				class:miss={cell.miss}
 				class:sunk={cell.sunk}
 				class:animating={isAnimatingCell(x, y)}
-				class:animating-shooting={getAnimationClass(x, y) === 'animating-shooting'}
-				class:animating-hit={getAnimationClass(x, y) === 'animating-hit'}
-				class:animating-miss={getAnimationClass(x, y) === 'animating-miss'}
-				class:animating-sunk={getAnimationClass(x, y) === 'animating-sunk'}
-				disabled={cell.shot}
-				onclick={() => handleCellClick(x, y, cell)}
+				class:animating-shooting={shouldAnimateWithClass(x, y, 'animating-shooting')}
+				class:animating-hit={shouldAnimateWithClass(x, y, 'animating-hit')}
+				class:animating-miss={shouldAnimateWithClass(x, y, 'animating-miss')}
+				class:animating-sunk={shouldAnimateWithClass(x, y, 'animating-sunk')}
+				disabled={isCellShot(cell)}
+				onclick={createClickHandler(x, y, cell)}
 				type="button"
-				aria-label={getCellAriaLabel ? getCellAriaLabel(x, y) : `Cell ${x}, ${y}`}
+				aria-label={getCellLabel(x, y)}
 			></button>
 		{/each}
 	{/each}

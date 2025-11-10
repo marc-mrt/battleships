@@ -4,8 +4,8 @@
 
 A real-time 2-player battleships game for the web using WebSockets for game state synchronization.
 
-**Author**: Marc Morant  
-**License**: MIT  
+**Author**: Marc Morant
+**License**: MIT
 **Tech Stack**: TypeScript, Svelte 5, Express, PostgreSQL, WebSockets
 
 ---
@@ -94,21 +94,6 @@ server/src/
 - Helper functions: `parseSessionCookie()`, `setSessionCookie()`
 
 ### Frontend (Svelte 5)
-
-#### Folder Structure
-
-```
-client/src/
-├── main.ts                # Application entry
-├── App.svelte             # Root component
-├── app.css                # Global styles
-└── lib/
-    ├── api/               # Backend API client functions
-    ├── GameSession/       # Game UI components
-    ├── icons/             # Icon components
-    ├── models/            # TypeScript types
-    └── services/          # Client-side services
-```
 
 #### Key Patterns
 
