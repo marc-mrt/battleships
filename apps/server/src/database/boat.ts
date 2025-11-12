@@ -68,13 +68,15 @@ export const BoatDatabaseSchema = z.object({
 	sunk: z.boolean(),
 });
 
-const mapper = (parsed: z.infer<typeof BoatDatabaseSchema>): Boat => ({
-	id: parsed.id,
-	startX: parsed.start_x,
-	startY: parsed.start_y,
-	length: parsed.length,
-	orientation: parsed.orientation,
-	sunk: parsed.sunk,
-});
+function mapper(parsed: z.infer<typeof BoatDatabaseSchema>): Boat {
+	return {
+		id: parsed.id,
+		startX: parsed.start_x,
+		startY: parsed.start_y,
+		length: parsed.length,
+		orientation: parsed.orientation,
+		sunk: parsed.sunk,
+	};
+}
 
 export const mapToBoat = generateMapperToDomainModel(BoatDatabaseSchema, mapper);

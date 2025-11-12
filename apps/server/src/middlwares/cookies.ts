@@ -11,19 +11,18 @@ export const SessionCookieSchema = z.object({
 
 export type SessionCookie = z.infer<typeof SessionCookieSchema>;
 
+function parseCookieString(acc: Record<string, string>, cookie: string): Record<string, string> {
+	const [key, value] = cookie.trim().split('=');
+	if (key && value) {
+		acc[key] = decodeURIComponent(value);
+	}
+	return acc;
+}
+
 export function parseSessionCookie(cookieHeader: string | undefined): SessionCookie | null {
 	if (!cookieHeader) return null;
 
-	const cookies = cookieHeader.split(';').reduce(
-		(acc, cookie) => {
-			const [key, value] = cookie.trim().split('=');
-			if (key && value) {
-				acc[key] = decodeURIComponent(value);
-			}
-			return acc;
-		},
-		{} as Record<string, string>,
-	);
+	const cookies = cookieHeader.split(';').reduce(parseCookieString, {} as Record<string, string>);
 
 	try {
 		const cookie: string | undefined = cookies[COOKIE_NAME];

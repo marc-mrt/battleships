@@ -42,14 +42,16 @@ export const ShotDatabaseSchema = z.object({
 	hit: z.boolean(),
 });
 
-const mapper = (parsed: z.infer<typeof ShotDatabaseSchema>): Shot => ({
-	id: parsed.id,
-	createdAt: parsed.created_at,
-	shooterId: parsed.shooter_id,
-	targetId: parsed.target_id,
-	x: parsed.x,
-	y: parsed.y,
-	hit: parsed.hit,
-});
+function mapper(parsed: z.infer<typeof ShotDatabaseSchema>): Shot {
+	return {
+		id: parsed.id,
+		createdAt: parsed.created_at,
+		shooterId: parsed.shooter_id,
+		targetId: parsed.target_id,
+		x: parsed.x,
+		y: parsed.y,
+		hit: parsed.hit,
+	};
+}
 
 export const mapToShot = generateMapperToDomainModel(ShotDatabaseSchema, mapper);

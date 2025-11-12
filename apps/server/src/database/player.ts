@@ -18,9 +18,11 @@ const PlayerDatabaseSchema = z.object({
 	username: z.string(),
 });
 
-const mapper = (parsed: z.infer<typeof PlayerDatabaseSchema>): Player => ({
-	id: parsed.id,
-	username: parsed.username,
-});
+function mapper(parsed: z.infer<typeof PlayerDatabaseSchema>): Player {
+	return {
+		id: parsed.id,
+		username: parsed.username,
+	};
+}
 
 const mapToPlayer = generateMapperToDomainModel(PlayerDatabaseSchema, mapper);

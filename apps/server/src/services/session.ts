@@ -6,7 +6,7 @@ import * as PlayerDB from '../database/player.ts';
 import * as BoatDB from '../database/boat.ts';
 import { NotFoundError } from '../controllers/errors.ts';
 import { Coordinates } from '../models/shot.ts';
-import { GameStateManager } from './game-state-manager.ts';
+import * as GameStateManager from './game-state-manager.ts';
 
 interface CreateSessionPayload {
 	username: string;
@@ -92,8 +92,7 @@ export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
 			playerId: firstPlayerId,
 		});
 
-		const gameManager = new GameStateManager(updatedSession);
-		gameManager.broadcastNextTurn(firstPlayerId);
+		GameStateManager.broadcastNextTurn(updatedSession, firstPlayerId);
 	}
 }
 
@@ -105,9 +104,7 @@ interface ProcessShotPayload {
 
 export async function handleShotFired(payload: ProcessShotPayload): Promise<void> {
 	const session = await getSessionByPlayerId(payload.playerId);
-	const gameManager = new GameStateManager(session);
-
 	const playerId = payload.playerId;
 	const coordinates: Coordinates = { x: payload.x, y: payload.y };
-	await gameManager.handleShotFired(playerId, coordinates);
+	await GameStateManager.handleShotFired(session, playerId, coordinates);
 }
