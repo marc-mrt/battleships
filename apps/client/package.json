@@ -9,7 +9,8 @@
 		"preview": "vite preview",
 		"check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
 		"lint": "eslint .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"game-messages": "workspace:",

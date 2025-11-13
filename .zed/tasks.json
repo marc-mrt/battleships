@@ -57,5 +57,16 @@
     "shell": "system",
     "show_summary": true,
     "show_command": true
+  },
+  {
+    "label": "typecheck",
+    "command": "pnpm -r typecheck",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "no_focus",
+    "hide": "on_success",
+    "shell": "system",
+    "show_summary": true,
+    "show_command": true
   }
 ]

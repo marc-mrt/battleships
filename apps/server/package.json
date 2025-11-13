@@ -10,7 +10,8 @@
 		"build": "pnpm build:clean && pnpm tsc --build && echo '{\"module\": \"commonjs\"}' >> dist/package.json",
 		"build:clean": "rm -rf dist/",
 		"lint": "eslint .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"cookie-parser": "^1.4.7",
