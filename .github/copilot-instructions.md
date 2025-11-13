@@ -146,10 +146,43 @@ server/src/
 
 **Type Definitions**
 
-- Use `interface` for object shapes (models, DTOs)
+- Use `interface` for object shapes (models, DTOs, payload objects)
 - Use `type` for unions, aliases, and complex types
 - Export types alongside implementation
 - Use `Pick<T, 'field'>` for partial types from models
+
+**Function Parameters**
+
+- Functions with >2 parameters MUST use payload objects
+- Payload interfaces should be named `{FunctionName}Payload`
+- Example:
+  ```typescript
+  interface ProcessPaymentPayload {
+    userId: string;
+    amount: number;
+    currency: string;
+  }
+  
+  function processPayment(payload: ProcessPaymentPayload): Result {
+    const { userId, amount, currency } = payload;
+    // ...
+  }
+  ```
+
+**Function Definitions**
+
+- Prefer named functions over arrow functions
+- Exception: Simple callbacks in array methods
+- Example:
+  ```typescript
+  // ✅ Good
+  function isActive(item: Item): boolean {
+    return item.status === 'active';
+  }
+  
+  // ❌ Avoid
+  const isActive = (item: Item) => item.status === 'active';
+  ```
 
 **Naming Conventions**
 
@@ -167,6 +200,26 @@ server/src/
 - Use named imports for services: `import * as GameService from '../services/game'`
 - Use type imports: `import type { Player } from './models/player'`
 - Ramda: `import * as R from 'ramda'`
+
+**Functional Patterns**
+
+- Use currying for reusable transformations
+- Leverage Ramda for common operations (`R.pipe`, `R.propEq`, `R.map`)
+- Separate pure functions from side effects
+- Example:
+  ```typescript
+  // Curried function
+  function createFilter(status: string) {
+    return function filter(items: Item[]): Item[] {
+      return items.filter(item => item.status === status);
+    };
+  }
+  
+  // Using Ramda
+  function isShooter(playerId: string) {
+    return R.propEq(playerId, 'shooterId');
+  }
+  ```
 
 ### Zod Schemas
 
@@ -356,6 +409,11 @@ cd apps/server && pnpm build
 - Handle WebSocket reconnection gracefully
 - Use TypeScript strict mode
 - Export types alongside implementations
+- Use payload objects for functions with >2 parameters
+- Use named functions instead of arrow functions
+- Apply functional programming patterns (currying, composition)
+- Keep functions small and focused (single responsibility)
+- Use explicit, descriptive names for functions and variables
 
 ### ❌ DON'T
 
@@ -366,6 +424,10 @@ cd apps/server && pnpm build
 - Don't forget error handling in async functions
 - Don't mutate props in Svelte components
 - Don't use `onMount` for subscription setup if `$effect` is more appropriate
+- Don't use arrow functions for main logic (use named functions)
+- Don't pass >2 individual parameters (use payload objects)
+- Don't mix side effects with pure logic
+- Don't use magic numbers/strings (use named constants)
 
 ---
 
@@ -376,6 +438,88 @@ cd apps/server && pnpm build
 - Prettier for consistent formatting
 - Type checking via `tsc` and `svelte-check`
 - No unused locals/parameters (enforced by tsconfig)
+
+---
+
+## Code Examples
+
+### Payload Object Pattern
+
+```typescript
+// ✅ Correct: >2 parameters use payload
+interface HandleShotFiredPayload {
+  session: Session;
+  playerId: string;
+  coordinates: Coordinates;
+}
+
+async function handleShotFired(payload: HandleShotFiredPayload): Promise<void> {
+  const { session, playerId, coordinates } = payload;
+  // ...
+}
+
+// Usage
+await handleShotFired({ session, playerId, coordinates });
+```
+
+### Curried Functions
+
+```typescript
+// ✅ Reusable through currying
+function getPlayerShots(playerId: string) {
+  return function filterShots(shots: Shot[]): Shot[] {
+    return shots.filter(R.propEq(playerId, 'shooterId'));
+  };
+}
+
+// Usage
+const filterByPlayer = getPlayerShots('player-123');
+const playerShots = filterByPlayer(allShots);
+```
+
+### Type Guards
+
+```typescript
+// ✅ Type-safe error handling
+function isDatabaseError(error: unknown): error is DatabaseError {
+  return error instanceof DatabaseError;
+}
+
+function handleError(error: unknown): void {
+  if (isDatabaseError(error)) {
+    // TypeScript knows error is DatabaseError
+    handleDatabaseError(error);
+    return;
+  }
+  // Handle other cases
+}
+```
+
+### Functional Composition
+
+```typescript
+// ✅ Using Ramda pipe
+const transformations = [
+  updateStatus('active'),
+  updateTimestamp(Date.now()),
+  validateData(),
+] as const;
+
+const result = R.pipe(...transformations)(data);
+```
+
+### Mapper Pattern
+
+```typescript
+// ✅ Type-safe database mapping
+const mapToPlayer = generateMapperToDomainModel({
+  schema: PlayerDatabaseSchema,
+  mapper: (parsed) => ({
+    id: parsed.id,
+    username: parsed.username,
+  }),
+});
+```
 
 ---
 
