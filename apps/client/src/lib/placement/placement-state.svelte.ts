@@ -28,7 +28,7 @@ export class PlacementStateStore {
 	}
 
 	addBoat(boat: Boat): boolean {
-		const newState = PlacementOps.addBoat(this.state, boat);
+		const newState = PlacementOps.addBoat({ state: this.state, boat });
 		if (newState === this.state) return false;
 		this.state = newState;
 		this.selected = boat.id;
@@ -36,7 +36,7 @@ export class PlacementStateStore {
 	}
 
 	removeBoat(boatId: string): boolean {
-		const newState = PlacementOps.removeBoat(this.state, boatId);
+		const newState = PlacementOps.removeBoat({ state: this.state, boatId });
 		if (newState === this.state) return false;
 		this.state = newState;
 		if (this.selected === boatId) {
@@ -51,7 +51,13 @@ export class PlacementStateStore {
 		startY: number,
 		orientation: 'horizontal' | 'vertical',
 	): boolean {
-		const newState = PlacementOps.moveBoat(this.state, boatId, startX, startY, orientation);
+		const newState = PlacementOps.moveBoat({
+			state: this.state,
+			boatId,
+			startX,
+			startY,
+			orientation,
+		});
 		if (newState === this.state) return false;
 		this.state = newState;
 		this.selected = boatId;
@@ -59,7 +65,7 @@ export class PlacementStateStore {
 	}
 
 	rotateBoat(boatId: string): boolean {
-		const newState = PlacementOps.rotateBoat(this.state, boatId);
+		const newState = PlacementOps.rotateBoat({ state: this.state, boatId });
 		if (newState === this.state) return false;
 		this.state = newState;
 		return true;
@@ -75,7 +81,7 @@ export class PlacementStateStore {
 	}
 
 	canPlaceBoat(boat: Boat): boolean {
-		return PlacementOps.canPlaceBoat(this.state, boat);
+		return PlacementOps.canPlaceBoat({ state: this.state, boat });
 	}
 
 	reset(): void {

@@ -84,7 +84,11 @@ function getPreviewInfo(
 	const previewBoat = createPreviewBoat(drag);
 	const cells = getBoatCells(previewBoat);
 	const isPreview = isPositionInCells(pos, cells);
-	const isValid = canPlaceBoat(state, previewBoat, draggedBoatId || undefined);
+	const isValid = canPlaceBoat({
+		state,
+		boat: previewBoat,
+		excludeBoatId: draggedBoatId || undefined,
+	});
 
 	return { isPreview, isValid };
 }
