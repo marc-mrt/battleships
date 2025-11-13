@@ -9,20 +9,26 @@ import {
 } from '../grid/operations';
 import { BOATS_CONFIGURATION } from 'game-rules';
 
-function updateStockItem(
-	stockItem: { length: number; count: number; placed: number },
-	length: number,
-	delta: number,
-): { length: number; count: number; placed: number } {
-	if (stockItem.length === length) {
-		return { ...stockItem, placed: stockItem.placed + delta };
+interface UpdateStockItemPayload {
+	stockItem: { length: number; count: number; placed: number };
+	length: number;
+	delta: number;
+}
+
+function updateStockItem(payload: UpdateStockItemPayload): {
+	length: number;
+	count: number;
+	placed: number;
+} {
+	if (payload.stockItem.length === payload.length) {
+		return { ...payload.stockItem, placed: payload.stockItem.placed + payload.delta };
 	}
-	return stockItem;
+	return payload.stockItem;
 }
 
 function updateStockPlaced(length: number, delta: number) {
 	return function updateStock(stockItem: { length: number; count: number; placed: number }) {
-		return updateStockItem(stockItem, length, delta);
+		return updateStockItem({ stockItem, length, delta });
 	};
 }
 
@@ -42,33 +48,41 @@ export function createInitialPlacementState(size: number): PlacementState {
 	};
 }
 
-function isCellAvailableForBoat(
-	state: PlacementState,
-	pos: { x: number; y: number },
-	excludeBoatId?: string,
-): boolean {
-	if (!isValidPosition(pos, state.grid.size)) {
+interface IsCellAvailableForBoatPayload {
+	state: PlacementState;
+	pos: { x: number; y: number };
+	excludeBoatId?: string;
+}
+
+function isCellAvailableForBoat(payload: IsCellAvailableForBoatPayload): boolean {
+	if (!isValidPosition(payload.pos, payload.state.grid.size)) {
 		return false;
 	}
-	const cell = getCell(state.grid, pos);
+	const cell = getCell(payload.state.grid, payload.pos);
 	if (!cell) {
 		return false;
 	}
 	if (!cell.occupied) {
 		return true;
 	}
-	return cell.boatId === excludeBoatId;
+	return cell.boatId === payload.excludeBoatId;
 }
 
 function checkCellAvailability(state: PlacementState, excludeBoatId?: string) {
 	return function checkCell(pos: { x: number; y: number }): boolean {
-		return isCellAvailableForBoat(state, pos, excludeBoatId);
+		return isCellAvailableForBoat({ state, pos, excludeBoatId });
 	};
 }
 
-export function canPlaceBoat(state: PlacementState, boat: Boat, excludeBoatId?: string): boolean {
-	const cells = getBoatCells(boat);
-	return cells.every(checkCellAvailability(state, excludeBoatId));
+interface CanPlaceBoatPayload {
+	state: PlacementState;
+	boat: Boat;
+	excludeBoatId?: string;
+}
+
+export function canPlaceBoat(payload: CanPlaceBoatPayload): boolean {
+	const cells = getBoatCells(payload.boat);
+	return cells.every(checkCellAvailability(payload.state, payload.excludeBoatId));
 }
 
 function hasLength(length: number) {
@@ -111,12 +125,18 @@ function createUpdateForBoat(boatId: string) {
 	};
 }
 
-export function addBoat(state: PlacementState, boat: Boat): PlacementState {
+interface AddBoatPayload {
+	state: PlacementState;
+	boat: Boat;
+}
+
+export function addBoat(payload: AddBoatPayload): PlacementState {
+	const { state, boat } = payload;
 	const stockItem = findStockItem(state, boat.length);
 	if (!isStockAvailable(stockItem)) {
 		return state;
 	}
-	if (!canPlaceBoat(state, boat)) {
+	if (!canPlaceBoat({ state, boat })) {
 		return state;
 	}
 
@@ -151,7 +171,13 @@ function removeBoatFromList(boats: Boat[], boatId: string): Boat[] {
 	return boats.filter(isNotBoatId(boatId));
 }
 
-export function removeBoat(state: PlacementState, boatId: string): PlacementState {
+interface RemoveBoatPayload {
+	state: PlacementState;
+	boatId: string;
+}
+
+export function removeBoat(payload: RemoveBoatPayload): PlacementState {
+	const { state, boatId } = payload;
 	const boat = findBoat(state, boatId);
 	if (!boat) {
 		return state;
@@ -168,13 +194,20 @@ export function removeBoat(state: PlacementState, boatId: string): PlacementStat
 	};
 }
 
-function createUpdatedBoat(
-	boat: Boat,
-	startX: number,
-	startY: number,
-	orientation: 'horizontal' | 'vertical',
-): Boat {
-	return { ...boat, startX, startY, orientation };
+interface CreateUpdatedBoatPayload {
+	boat: Boat;
+	startX: number;
+	startY: number;
+	orientation: 'horizontal' | 'vertical';
+}
+
+function createUpdatedBoat(payload: CreateUpdatedBoatPayload): Boat {
+	return {
+		...payload.boat,
+		startX: payload.startX,
+		startY: payload.startY,
+		orientation: payload.orientation,
+	};
 }
 
 function replaceIfMatches(boatId: string, updatedBoat: Boat) {
@@ -183,24 +216,33 @@ function replaceIfMatches(boatId: string, updatedBoat: Boat) {
 	};
 }
 
-function replaceBoat(boats: Boat[], boatId: string, updatedBoat: Boat): Boat[] {
-	return boats.map(replaceIfMatches(boatId, updatedBoat));
+interface ReplaceBoatPayload {
+	boats: Boat[];
+	boatId: string;
+	updatedBoat: Boat;
 }
 
-export function moveBoat(
-	state: PlacementState,
-	boatId: string,
-	startX: number,
-	startY: number,
-	orientation: 'horizontal' | 'vertical',
-): PlacementState {
+function replaceBoat(payload: ReplaceBoatPayload): Boat[] {
+	return payload.boats.map(replaceIfMatches(payload.boatId, payload.updatedBoat));
+}
+
+interface MoveBoatPayload {
+	state: PlacementState;
+	boatId: string;
+	startX: number;
+	startY: number;
+	orientation: 'horizontal' | 'vertical';
+}
+
+export function moveBoat(payload: MoveBoatPayload): PlacementState {
+	const { state, boatId, startX, startY, orientation } = payload;
 	const boat = findBoat(state, boatId);
 	if (!boat) {
 		return state;
 	}
 
-	const updatedBoat = createUpdatedBoat(boat, startX, startY, orientation);
-	if (!canPlaceBoat(state, updatedBoat, boatId)) {
+	const updatedBoat = createUpdatedBoat({ boat, startX, startY, orientation });
+	if (!canPlaceBoat({ state, boat: updatedBoat, excludeBoatId: boatId })) {
 		return state;
 	}
 
@@ -213,7 +255,7 @@ export function moveBoat(
 	return {
 		...state,
 		grid: setCells(setCells(state.grid, removeUpdates), addUpdates),
-		boats: replaceBoat(state.boats, boatId, updatedBoat),
+		boats: replaceBoat({ boats: state.boats, boatId, updatedBoat }),
 	};
 }
 
@@ -221,14 +263,26 @@ function toggleBoatOrientation(orientation: 'horizontal' | 'vertical'): 'horizon
 	return orientation === 'horizontal' ? 'vertical' : 'horizontal';
 }
 
-export function rotateBoat(state: PlacementState, boatId: string): PlacementState {
+interface RotateBoatPayload {
+	state: PlacementState;
+	boatId: string;
+}
+
+export function rotateBoat(payload: RotateBoatPayload): PlacementState {
+	const { state, boatId } = payload;
 	const boat = findBoat(state, boatId);
 	if (!boat) {
 		return state;
 	}
 
 	const newOrientation = toggleBoatOrientation(boat.orientation);
-	return moveBoat(state, boatId, boat.startX, boat.startY, newOrientation);
+	return moveBoat({
+		state,
+		boatId,
+		startX: boat.startX,
+		startY: boat.startY,
+		orientation: newOrientation,
+	});
 }
 
 function isStockComplete(stockItem: { placed: number; count: number }): boolean {
@@ -239,7 +293,14 @@ export function isPlacementComplete(state: PlacementState): boolean {
 	return state.stock.every(isStockComplete);
 }
 
-export function getBoatAt(state: PlacementState, x: number, y: number): Boat | null {
+interface GetBoatAtPayload {
+	state: PlacementState;
+	x: number;
+	y: number;
+}
+
+export function getBoatAt(payload: GetBoatAtPayload): Boat | null {
+	const { state, x, y } = payload;
 	const position = { x, y };
 	const cell = getCell(state.grid, position);
 	if (!cell?.boatId) {

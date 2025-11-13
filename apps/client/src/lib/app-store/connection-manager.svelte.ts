@@ -12,36 +12,64 @@ interface WebSocketError {
 	originalError?: unknown;
 }
 
-function createWebSocketError(
-	type: 'connection' | 'parse' | 'send' | 'reconnect',
-	message: string,
-	originalError?: unknown,
-): WebSocketError {
-	return { type, message, originalError };
+interface CreateWebSocketErrorPayload {
+	type: 'connection' | 'parse' | 'send' | 'reconnect';
+	message: string;
+	originalError?: unknown;
+}
+
+function createWebSocketError(payload: CreateWebSocketErrorPayload): WebSocketError {
+	return {
+		type: payload.type,
+		message: payload.message,
+		originalError: payload.originalError,
+	};
 }
 
 function createConnectionError(err: unknown): WebSocketError {
-	return createWebSocketError('connection', 'Failed to establish WebSocket connection', err);
+	return createWebSocketError({
+		type: 'connection',
+		message: 'Failed to establish WebSocket connection',
+		originalError: err,
+	});
 }
 
 function createParseError(err: unknown): WebSocketError {
-	return createWebSocketError('parse', 'Failed to parse WebSocket message', err);
+	return createWebSocketError({
+		type: 'parse',
+		message: 'Failed to parse WebSocket message',
+		originalError: err,
+	});
 }
 
 function createConnectionEventError(event: Event): WebSocketError {
-	return createWebSocketError('connection', 'WebSocket connection error', event);
+	return createWebSocketError({
+		type: 'connection',
+		message: 'WebSocket connection error',
+		originalError: event,
+	});
 }
 
 function createSendError(err: unknown): WebSocketError {
-	return createWebSocketError('send', 'Failed to send WebSocket message', err);
+	return createWebSocketError({
+		type: 'send',
+		message: 'Failed to send WebSocket message',
+		originalError: err,
+	});
 }
 
 function createNotConnectedError(): WebSocketError {
-	return createWebSocketError('send', 'WebSocket is not connected');
+	return createWebSocketError({
+		type: 'send',
+		message: 'WebSocket is not connected',
+	});
 }
 
 function createReconnectError(): WebSocketError {
-	return createWebSocketError('reconnect', 'Failed to reconnect after maximum attempts');
+	return createWebSocketError({
+		type: 'reconnect',
+		message: 'Failed to reconnect after maximum attempts',
+	});
 }
 
 export class ConnectionManager {
@@ -168,7 +196,7 @@ export class ConnectionManager {
 
 	onMessage(handler: MessageHandler): () => void {
 		this.messageHandlers.add(handler);
-		return this.createUnsubscriber(this.messageHandlers, handler);
+		return createUnsubscriber(this.messageHandlers, handler);
 	}
 
 	onError(handler: ErrorHandler): () => void {
@@ -176,20 +204,11 @@ export class ConnectionManager {
 		if (this.error) {
 			handler(this.error);
 		}
-		return this.createUnsubscriber(this.errorHandlers, handler);
-	}
-
-	private createUnsubscriber<T>(set: SvelteSet<T>, item: T) {
-		return function unsubscribe(): void {
-			set.delete(item);
-		};
+		return createUnsubscriber(this.errorHandlers, handler);
 	}
 
 	private notifyMessageHandlers(message: ServerMessage): void {
-		function callHandler(handler: MessageHandler): void {
-			handler(message);
-		}
-		this.messageHandlers.forEach(callHandler);
+		this.messageHandlers.forEach(callHandler(message));
 	}
 
 	private handleError(error: WebSocketError): void {
@@ -203,10 +222,7 @@ export class ConnectionManager {
 	}
 
 	private notifyErrorHandlers(error: WebSocketError): void {
-		function callHandler(handler: ErrorHandler): void {
-			handler(error);
-		}
-		this.errorHandlers.forEach(callHandler);
+		this.errorHandlers.forEach(callErrorHandler(error));
 	}
 
 	disconnect(): void {
@@ -230,6 +246,24 @@ export class ConnectionManager {
 	get readyState(): number | undefined {
 		return this.ws?.readyState;
 	}
+}
+
+function createUnsubscriber<T>(set: SvelteSet<T>, item: T) {
+	return function unsubscribe(): void {
+		set.delete(item);
+	};
+}
+
+function callHandler(message: ServerMessage) {
+	return function invoke(handler: MessageHandler): void {
+		handler(message);
+	};
+}
+
+function callErrorHandler(error: WebSocketError) {
+	return function invoke(handler: ErrorHandler): void {
+		handler(error);
+	};
 }
 
 let connectionManagerInstance: ConnectionManager | null = null;

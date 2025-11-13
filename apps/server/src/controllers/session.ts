@@ -19,9 +19,12 @@ export async function createSession(request: Request, response: Response) {
 	const { username } = result.data;
 	const session = await SessionService.createSession({ username });
 
-	setSessionCookie(response, {
-		sessionId: session.id,
-		playerId: session.owner.id,
+	setSessionCookie({
+		response,
+		payload: {
+			sessionId: session.id,
+			playerId: session.owner.id,
+		},
 	});
 
 	const mapped = mapToSessionResponse(session);
@@ -42,9 +45,12 @@ export async function joinSession(request: Request, response: Response) {
 	const { username } = result.data;
 	const session: SessionWaitingForBoats = await SessionService.joinSession({ slug, username });
 
-	setSessionCookie(response, {
-		sessionId: session.id,
-		playerId: session.friend.id,
+	setSessionCookie({
+		response,
+		payload: {
+			sessionId: session.id,
+			playerId: session.friend.id,
+		},
 	});
 
 	const mapped = mapToSessionResponse(session);

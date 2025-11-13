@@ -37,9 +37,15 @@ function createExponentialBackoff(config: ReconnectionConfig): ReconnectionStrat
 	};
 }
 
+interface CreateReconnectionStrategyPayload {
+	maxAttempts?: number;
+	baseDelay?: number;
+}
+
 export function createReconnectionStrategy(
-	maxAttempts = 5,
-	baseDelay = 1000,
+	payload: CreateReconnectionStrategyPayload = {},
 ): ReconnectionStrategy {
+	const maxAttempts = payload.maxAttempts ?? 5;
+	const baseDelay = payload.baseDelay ?? 1000;
 	return createExponentialBackoff({ maxAttempts, baseDelay });
 }

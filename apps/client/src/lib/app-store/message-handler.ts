@@ -10,38 +10,52 @@ function isStateReady(state: State): boolean {
 	return state.status === 'ready';
 }
 
-function createOpponentMeta(friend: { playerId: string; username: string }) {
+interface FriendData {
+	playerId: string;
+	username: string;
+}
+
+function createOpponentMeta(friend: FriendData) {
 	return {
 		id: friend.playerId,
 		username: friend.username,
 	};
 }
 
-function updateSessionStatus(status: string) {
+function updateSessionStatus(status: string): (state: State) => State {
 	return R.set(sessionStatusLens, status);
 }
 
-function updateOpponent(opponent: { id: string; username: string }) {
+interface OpponentMeta {
+	id: string;
+	username: string;
+}
+
+function updateOpponent(opponent: OpponentMeta): (state: State) => State {
 	return R.set(opponentLens, opponent);
 }
 
-function updateGame(game: unknown) {
+function updateGame(game: unknown): (state: State) => State {
 	return R.set(gameLens, game);
 }
 
 function handleFriendJoinedMessage(state: State, message: FriendJoinedMessage): State {
 	const opponentMeta = createOpponentMeta(message.data.friend);
-	const applyStatus = updateSessionStatus(message.data.session.status);
-	const applyOpponent = updateOpponent(opponentMeta);
+	const transformations = [
+		updateSessionStatus(message.data.session.status),
+		updateOpponent(opponentMeta),
+	] as const;
 
-	return R.pipe(applyStatus, applyOpponent)(state);
+	return R.pipe(...transformations)(state);
 }
 
 function handleNextTurnMessage(state: State, message: NextTurnMessage): State {
-	const applyGame = updateGame(message.data);
-	const applyStatus = updateSessionStatus(message.data.session.status);
+	const transformations = [
+		updateGame(message.data),
+		updateSessionStatus(message.data.session.status),
+	] as const;
 
-	return R.pipe(applyGame, applyStatus)(state);
+	return R.pipe(...transformations)(state);
 }
 
 type MessageHandler<T extends ServerMessage> = (state: State, message: T) => State;

@@ -8,7 +8,8 @@ interface JoinSessionRequestPayload {
 }
 
 export function joinSession(payload: JoinSessionRequestPayload): Promise<Result<Session, string>> {
-	return post<Session>(`${API_BASE_URL}/sessions/${payload.slug}/join`, {
-		username: payload.username,
+	return post<Session>({
+		url: `${API_BASE_URL}/sessions/${payload.slug}/join`,
+		body: { username: payload.username },
 	});
 }

@@ -11,6 +11,22 @@ export const SessionCookieSchema = z.object({
 
 export type SessionCookie = z.infer<typeof SessionCookieSchema>;
 
+interface CookieOptions {
+	httpOnly: boolean;
+	secure: boolean;
+	sameSite: 'strict' | 'lax' | 'none';
+	maxAge: number;
+}
+
+function getCookieOptions(): CookieOptions {
+	return {
+		httpOnly: true,
+		secure: process.env.NODE_ENV === 'production',
+		sameSite: 'strict',
+		maxAge: MAX_AGE,
+	};
+}
+
 function parseCookieString(acc: Record<string, string>, cookie: string): Record<string, string> {
 	const [key, value] = cookie.trim().split('=');
 	if (key && value) {
@@ -19,28 +35,55 @@ function parseCookieString(acc: Record<string, string>, cookie: string): Record<
 	return acc;
 }
 
-export function parseSessionCookie(cookieHeader: string | undefined): SessionCookie | null {
-	if (!cookieHeader) return null;
+function parseCookieHeader(cookieHeader: string): Record<string, string> {
+	return cookieHeader.split(';').reduce(parseCookieString, {} as Record<string, string>);
+}
 
-	const cookies = cookieHeader.split(';').reduce(parseCookieString, {} as Record<string, string>);
+function extractSessionCookie(cookies: Record<string, string>): string | undefined {
+	return cookies[COOKIE_NAME];
+}
+
+function parseJsonCookie(cookie: string): unknown {
+	return JSON.parse(cookie);
+}
+
+function validateSessionCookie(json: unknown): SessionCookie {
+	return SessionCookieSchema.parse(json);
+}
+
+function logParseError(error: unknown): void {
+	console.error('Failed to parse session cookie:', error);
+}
+
+export function parseSessionCookie(cookieHeader: string | undefined): SessionCookie | null {
+	if (!cookieHeader) {
+		return null;
+	}
+
+	const cookies = parseCookieHeader(cookieHeader);
+	const cookie = extractSessionCookie(cookies);
+
+	if (!cookie) {
+		return null;
+	}
 
 	try {
-		const cookie: string | undefined = cookies[COOKIE_NAME];
-		if (!cookie) return null;
-
-		const json: unknown = JSON.parse(cookies[COOKIE_NAME]);
-		return SessionCookieSchema.parse(json);
-	} catch (e) {
-		console.error('Failed to parse session cookie:', e);
+		const json = parseJsonCookie(cookie);
+		return validateSessionCookie(json);
+	} catch (error) {
+		logParseError(error);
 		return null;
 	}
 }
 
-export function setSessionCookie(response: Response, payload: SessionCookie) {
-	response.cookie(COOKIE_NAME, JSON.stringify(payload), {
-		httpOnly: true,
-		secure: process.env.NODE_ENV === 'production',
-		sameSite: 'strict',
-		maxAge: MAX_AGE,
-	});
+interface SetSessionCookiePayload {
+	response: Response;
+	payload: SessionCookie;
+}
+
+export function setSessionCookie(payload: SetSessionCookiePayload): void {
+	const { response, payload: cookiePayload } = payload;
+	const options = getCookieOptions();
+	const value = JSON.stringify(cookiePayload);
+	response.cookie(COOKIE_NAME, value, options);
 }

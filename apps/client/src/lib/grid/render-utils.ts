@@ -19,8 +19,14 @@ export function createEmptyCellGrid(size: number): CellState[][] {
 	return R.times(createRow(size), size);
 }
 
-function isValidGridPosition(x: number, y: number, size: number): boolean {
-	return x >= 0 && x < size && y >= 0 && y < size;
+interface IsValidGridPositionPayload {
+	x: number;
+	y: number;
+	size: number;
+}
+
+function isValidGridPosition(payload: IsValidGridPositionPayload): boolean {
+	return payload.x >= 0 && payload.x < payload.size && payload.y >= 0 && payload.y < payload.size;
 }
 
 function getBoatPosition(
@@ -33,55 +39,77 @@ function getBoatPosition(
 	};
 }
 
-function applyToBoatCell(
-	cells: CellState[][],
-	boat: { startX: number; startY: number; length: number; orientation: 'horizontal' | 'vertical' },
-	size: number,
-	index: number,
-	applyFn: (cell: CellState) => void,
-): void {
+interface ApplyToBoatCellPayload {
+	cells: CellState[][];
+	boat: { startX: number; startY: number; length: number; orientation: 'horizontal' | 'vertical' };
+	size: number;
+	index: number;
+	applyFn: (cell: CellState) => void;
+}
+
+function applyToBoatCell(payload: ApplyToBoatCellPayload): void {
+	const { cells, boat, size, index, applyFn } = payload;
 	const { x, y } = getBoatPosition(boat, index);
-	if (isValidGridPosition(x, y, size)) {
+	if (isValidGridPosition({ x, y, size })) {
 		applyFn(cells[y][x]);
 	}
 }
 
-function createCellApplier(
-	cells: CellState[][],
-	boat: { startX: number; startY: number; length: number; orientation: 'horizontal' | 'vertical' },
-	size: number,
-	applyFn: (cell: CellState) => void,
-) {
+interface CreateCellApplierPayload {
+	cells: CellState[][];
+	boat: { startX: number; startY: number; length: number; orientation: 'horizontal' | 'vertical' };
+	size: number;
+	applyFn: (cell: CellState) => void;
+}
+
+function createCellApplier(payload: CreateCellApplierPayload) {
 	return function applyAt(index: number): void {
-		applyToBoatCell(cells, boat, size, index, applyFn);
+		applyToBoatCell({
+			cells: payload.cells,
+			boat: payload.boat,
+			size: payload.size,
+			index,
+			applyFn: payload.applyFn,
+		});
 	};
 }
 
-export function applyBoatToCells(
-	cells: CellState[][],
-	boat: { startX: number; startY: number; length: number; orientation: 'horizontal' | 'vertical' },
-	size: number,
-	applyFn: (cell: CellState) => void,
-): void {
-	const cellApplier = createCellApplier(cells, boat, size, applyFn);
+interface ApplyBoatToCellsPayload {
+	cells: CellState[][];
+	boat: { startX: number; startY: number; length: number; orientation: 'horizontal' | 'vertical' };
+	size: number;
+	applyFn: (cell: CellState) => void;
+}
+
+export function applyBoatToCells(payload: ApplyBoatToCellsPayload): void {
+	const { cells, boat, size, applyFn } = payload;
+	const cellApplier = createCellApplier({ cells, boat, size, applyFn });
 	R.times(cellApplier, boat.length);
 }
 
-function applyShotToCell(cell: CellState, hit: boolean): CellState {
+interface ApplyShotToCellPayload {
+	cell: CellState;
+	hit: boolean;
+}
+
+function applyShotToCell(payload: ApplyShotToCellPayload): CellState {
 	return {
-		...cell,
+		...payload.cell,
 		shot: true,
-		hit,
-		miss: !hit,
+		hit: payload.hit,
+		miss: !payload.hit,
 	};
 }
 
-export function applyShotToCells(
-	cells: CellState[][],
-	shot: { x: number; y: number; hit: boolean },
-	size: number,
-): void {
-	if (isValidGridPosition(shot.x, shot.y, size)) {
-		cells[shot.y][shot.x] = applyShotToCell(cells[shot.y][shot.x], shot.hit);
+interface ApplyShotToCellsPayload {
+	cells: CellState[][];
+	shot: { x: number; y: number; hit: boolean };
+	size: number;
+}
+
+export function applyShotToCells(payload: ApplyShotToCellsPayload): void {
+	const { cells, shot, size } = payload;
+	if (isValidGridPosition({ x: shot.x, y: shot.y, size })) {
+		cells[shot.y][shot.x] = applyShotToCell({ cell: cells[shot.y][shot.x], hit: shot.hit });
 	}
 }

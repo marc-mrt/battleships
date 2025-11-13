@@ -18,118 +18,193 @@ export function compose(...transformers: GridTransformer[]): GridTransformer {
 	return transformers.reduce(applyTransformer, identity);
 }
 
-function matchesPosition(target: Position, current: Position): boolean {
-	return target.x === current.x && target.y === current.y;
+interface MatchesPositionPayload {
+	target: Position;
+	current: Position;
 }
 
-function transformCell(
-	cell: CellState,
-	x: number,
-	y: number,
-	predicate: (pos: Position) => boolean,
-	transform: (cell: CellState) => CellState,
-): CellState {
-	return predicate({ x, y }) ? transform(cell) : cell;
+function matchesPosition(payload: MatchesPositionPayload): boolean {
+	return payload.target.x === payload.current.x && payload.target.y === payload.current.y;
 }
 
-function createCellTransformer(
-	y: number,
-	predicate: (pos: Position) => boolean,
-	transform: (cell: CellState) => CellState,
-) {
+interface TransformCellPayload {
+	cell: CellState;
+	x: number;
+	y: number;
+	predicate: (pos: Position) => boolean;
+	transform: (cell: CellState) => CellState;
+}
+
+function transformCell(payload: TransformCellPayload): CellState {
+	return payload.predicate({ x: payload.x, y: payload.y })
+		? payload.transform(payload.cell)
+		: payload.cell;
+}
+
+interface CreateCellTransformerPayload {
+	y: number;
+	predicate: (pos: Position) => boolean;
+	transform: (cell: CellState) => CellState;
+}
+
+function createCellTransformer(payload: CreateCellTransformerPayload) {
 	return function transformCellAt(cell: CellState, x: number): CellState {
-		return transformCell(cell, x, y, predicate, transform);
+		return transformCell({
+			cell,
+			x,
+			y: payload.y,
+			predicate: payload.predicate,
+			transform: payload.transform,
+		});
 	};
 }
 
-function transformRow(
-	row: CellState[],
-	y: number,
-	predicate: (pos: Position) => boolean,
-	transform: (cell: CellState) => CellState,
-): CellState[] {
-	return row.map(createCellTransformer(y, predicate, transform));
+interface TransformRowPayload {
+	row: CellState[];
+	y: number;
+	predicate: (pos: Position) => boolean;
+	transform: (cell: CellState) => CellState;
 }
 
-function createRowTransformer(
-	predicate: (pos: Position) => boolean,
-	transform: (cell: CellState) => CellState,
-) {
+function transformRow(payload: TransformRowPayload): CellState[] {
+	return payload.row.map(
+		createCellTransformer({
+			y: payload.y,
+			predicate: payload.predicate,
+			transform: payload.transform,
+		}),
+	);
+}
+
+interface CreateRowTransformerPayload {
+	predicate: (pos: Position) => boolean;
+	transform: (cell: CellState) => CellState;
+}
+
+function createRowTransformer(payload: CreateRowTransformerPayload) {
 	return function transformRowAt(row: CellState[], y: number): CellState[] {
-		return transformRow(row, y, predicate, transform);
+		return transformRow({ row, y, predicate: payload.predicate, transform: payload.transform });
 	};
 }
 
-export function mapCell(
-	predicate: (pos: Position) => boolean,
-	transform: (cell: CellState) => CellState,
-): GridTransformer {
+interface MapCellPayload {
+	predicate: (pos: Position) => boolean;
+	transform: (cell: CellState) => CellState;
+}
+
+export function mapCell(payload: MapCellPayload): GridTransformer {
 	return function transformGrid(cells: CellState[][]): CellState[][] {
-		return cells.map(createRowTransformer(predicate, transform));
+		return cells.map(
+			createRowTransformer({ predicate: payload.predicate, transform: payload.transform }),
+		);
 	};
 }
 
-function mergeCell(cell: CellState, value: Partial<CellState>): CellState {
-	return { ...cell, ...value };
+interface MergeCellPayload {
+	cell: CellState;
+	value: Partial<CellState>;
+}
+
+function mergeCell(payload: MergeCellPayload): CellState {
+	return { ...payload.cell, ...payload.value };
 }
 
 function createMergeCellTransform(value: Partial<CellState>) {
 	return function mergeCellValue(cell: CellState): CellState {
-		return mergeCell(cell, value);
+		return mergeCell({ cell, value });
 	};
 }
 
 function createPositionMatcher(target: Position) {
 	return function matchPosition(p: Position): boolean {
-		return matchesPosition(target, p);
+		return matchesPosition({ target, current: p });
 	};
 }
 
-export function setCellAt(pos: Position, value: Partial<CellState>): GridTransformer {
-	return mapCell(createPositionMatcher(pos), createMergeCellTransform(value));
+interface SetCellAtPayload {
+	pos: Position;
+	value: Partial<CellState>;
 }
 
-function isPositionInList(positions: Position[], target: Position): boolean {
-	return positions.some(createPositionMatcher(target));
+export function setCellAt(payload: SetCellAtPayload): GridTransformer {
+	return mapCell({
+		predicate: createPositionMatcher(payload.pos),
+		transform: createMergeCellTransform(payload.value),
+	});
+}
+
+interface IsPositionInListPayload {
+	positions: Position[];
+	target: Position;
+}
+
+function isPositionInList(payload: IsPositionInListPayload): boolean {
+	return payload.positions.some(createPositionMatcher(payload.target));
 }
 
 function createPositionListMatcher(positions: Position[]) {
 	return function isInList(p: Position): boolean {
-		return isPositionInList(positions, p);
+		return isPositionInList({ positions, target: p });
 	};
 }
 
-export function setCellsAt(positions: Position[], value: Partial<CellState>): GridTransformer {
-	return mapCell(createPositionListMatcher(positions), createMergeCellTransform(value));
+interface SetCellsAtPayload {
+	positions: Position[];
+	value: Partial<CellState>;
 }
 
-export function updateCellAt(
-	pos: Position,
-	updater: (cell: CellState) => CellState,
-): GridTransformer {
-	return mapCell(createPositionMatcher(pos), updater);
+export function setCellsAt(payload: SetCellsAtPayload): GridTransformer {
+	return mapCell({
+		predicate: createPositionListMatcher(payload.positions),
+		transform: createMergeCellTransform(payload.value),
+	});
+}
+
+interface UpdateCellAtPayload {
+	pos: Position;
+	updater: (cell: CellState) => CellState;
+}
+
+export function updateCellAt(payload: UpdateCellAtPayload): GridTransformer {
+	return mapCell({ predicate: createPositionMatcher(payload.pos), transform: payload.updater });
 }
 
 export function markBoat(positions: Position[]): GridTransformer {
-	return setCellsAt(positions, { boat: true });
+	return setCellsAt({ positions, value: { boat: true } });
 }
 
-export function markShot(pos: Position, hit: boolean): GridTransformer {
-	return setCellAt(pos, { shot: true, hit, miss: !hit });
+interface MarkShotPayload {
+	pos: Position;
+	hit: boolean;
+}
+
+export function markShot(payload: MarkShotPayload): GridTransformer {
+	return setCellAt({
+		pos: payload.pos,
+		value: { shot: true, hit: payload.hit, miss: !payload.hit },
+	});
 }
 
 export function markSunk(positions: Position[]): GridTransformer {
-	return setCellsAt(positions, { sunk: true });
+	return setCellsAt({ positions, value: { sunk: true } });
 }
 
 export function markSelected(positions: Position[]): GridTransformer {
-	return setCellsAt(positions, { selected: true });
+	return setCellsAt({ positions, value: { selected: true } });
 }
 
-export function markPreview(positions: Position[], valid: boolean): GridTransformer {
-	return setCellsAt(positions, {
-		preview: true,
-		validDrop: valid,
-		invalidDrop: !valid,
+interface MarkPreviewPayload {
+	positions: Position[];
+	valid: boolean;
+}
+
+export function markPreview(payload: MarkPreviewPayload): GridTransformer {
+	return setCellsAt({
+		positions: payload.positions,
+		value: {
+			preview: true,
+			validDrop: payload.valid,
+			invalidDrop: !payload.valid,
+		},
 	});
 }

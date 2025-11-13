@@ -190,55 +190,85 @@ const SessionDatabaseSchema = z.object({
 	shots: z.array(ShotDatabaseSchema).optional().nullable(),
 });
 
-function mapper(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
-	if (parsed.friend_id == null || parsed.friend_username == null) {
-		return {
-			id: parsed.id,
-			slug: parsed.slug,
-			status: 'waiting_for_friend',
-			owner: {
-				id: parsed.owner_id,
-				username: parsed.owner_username,
-			},
-		};
-	} else if (parsed.owner_boats == null || parsed.friend_boats == null) {
-		return {
-			id: parsed.id,
-			slug: parsed.slug,
-			status: 'waiting_for_boat_placements',
-			owner: {
-				id: parsed.owner_id,
-				username: parsed.owner_username,
-			},
-			friend: { id: parsed.friend_id, username: parsed.friend_username },
-		};
-	} else if (parsed.current_turn_id == null) {
-		return {
-			id: parsed.id,
-			slug: parsed.slug,
-			status: 'ready_to_start',
-			owner: {
-				id: parsed.owner_id,
-				username: parsed.owner_username,
-			},
-			friend: { id: parsed.friend_id, username: parsed.friend_username },
-		};
-	} else {
-		return {
-			id: parsed.id,
-			slug: parsed.slug,
-			status: 'in_game',
-			owner: {
-				id: parsed.owner_id,
-				username: parsed.owner_username,
-			},
-			ownerBoats: parsed.owner_boats?.map(mapToBoat) ?? [],
-			friend: { id: parsed.friend_id, username: parsed.friend_username },
-			friendBoats: parsed.friend_boats?.map(mapToBoat) ?? [],
-			currentTurn: { id: parsed.current_turn_id },
-			shots: parsed.shots?.map(mapToShot) ?? [],
-		};
-	}
+function hasFriend(parsed: z.infer<typeof SessionDatabaseSchema>): boolean {
+	return parsed.friend_id != null && parsed.friend_username != null;
 }
 
-const mapToSession = generateMapperToDomainModel(SessionDatabaseSchema, mapper);
+function hasBoatPlacements(parsed: z.infer<typeof SessionDatabaseSchema>): boolean {
+	return parsed.owner_boats != null && parsed.friend_boats != null;
+}
+
+function hasStartedGame(parsed: z.infer<typeof SessionDatabaseSchema>): boolean {
+	return parsed.current_turn_id != null;
+}
+
+function createBaseSession(parsed: z.infer<typeof SessionDatabaseSchema>) {
+	return {
+		id: parsed.id,
+		slug: parsed.slug,
+		owner: {
+			id: parsed.owner_id,
+			username: parsed.owner_username,
+		},
+	};
+}
+
+function createFriendData(parsed: z.infer<typeof SessionDatabaseSchema>) {
+	return {
+		id: parsed.friend_id!,
+		username: parsed.friend_username!,
+	};
+}
+
+function mapToWaitingForFriend(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
+	return {
+		...createBaseSession(parsed),
+		status: 'waiting_for_friend',
+	};
+}
+
+function mapToWaitingForBoatPlacements(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
+	return {
+		...createBaseSession(parsed),
+		status: 'waiting_for_boat_placements',
+		friend: createFriendData(parsed),
+	};
+}
+
+function mapToReadyToStart(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
+	return {
+		...createBaseSession(parsed),
+		status: 'ready_to_start',
+		friend: createFriendData(parsed),
+	};
+}
+
+function mapToInGame(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
+	return {
+		...createBaseSession(parsed),
+		status: 'in_game',
+		ownerBoats: parsed.owner_boats?.map(mapToBoat) ?? [],
+		friend: createFriendData(parsed),
+		friendBoats: parsed.friend_boats?.map(mapToBoat) ?? [],
+		currentTurn: { id: parsed.current_turn_id! },
+		shots: parsed.shots?.map(mapToShot) ?? [],
+	};
+}
+
+function mapper(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
+	if (!hasFriend(parsed)) {
+		return mapToWaitingForFriend(parsed);
+	}
+	if (!hasBoatPlacements(parsed)) {
+		return mapToWaitingForBoatPlacements(parsed);
+	}
+	if (!hasStartedGame(parsed)) {
+		return mapToReadyToStart(parsed);
+	}
+	return mapToInGame(parsed);
+}
+
+const mapToSession = generateMapperToDomainModel({
+	schema: SessionDatabaseSchema,
+	mapper,
+});

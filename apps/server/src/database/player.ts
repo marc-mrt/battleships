@@ -25,4 +25,7 @@ function mapper(parsed: z.infer<typeof PlayerDatabaseSchema>): Player {
 	};
 }
 
-const mapToPlayer = generateMapperToDomainModel(PlayerDatabaseSchema, mapper);
+const mapToPlayer = generateMapperToDomainModel({
+	schema: PlayerDatabaseSchema,
+	mapper,
+});

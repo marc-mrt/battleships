@@ -37,20 +37,32 @@ function isStateReady(
 	return state.status === 'ready';
 }
 
-function getPlayerFromState(state: State) {
-	return isStateReady(state) ? state.meta.player : null;
+function getPlayerFromState(state: State): Metadata['player'] | null {
+	if (!isStateReady(state)) {
+		return null;
+	}
+	return state.meta.player;
 }
 
-function getOpponentFromState(state: State) {
-	return isStateReady(state) ? state.meta.opponent : null;
+function getOpponentFromState(state: State): Metadata['opponent'] | null {
+	if (!isStateReady(state)) {
+		return null;
+	}
+	return state.meta.opponent;
 }
 
-function getSessionFromState(state: State) {
-	return isStateReady(state) ? state.meta.session : null;
+function getSessionFromState(state: State): Metadata['session'] | null {
+	if (!isStateReady(state)) {
+		return null;
+	}
+	return state.meta.session;
 }
 
-function getGameFromState(state: State) {
-	return isStateReady(state) ? state.game : null;
+function getGameFromState(state: State): GameState | null {
+	if (!isStateReady(state)) {
+		return null;
+	}
+	return state.game;
 }
 
 class AppStore {
@@ -77,8 +89,7 @@ class AppStore {
 		private connectionManager: ConnectionManager = getConnectionManager(),
 		private api: typeof API = API,
 	) {
-		const boundHandler = this.handleIncomingMessage.bind(this);
-		this.unsubscribe = this.connectionManager.onMessage(boundHandler);
+		this.unsubscribe = this.connectionManager.onMessage(this.handleIncomingMessage.bind(this));
 	}
 
 	private async connectAndSetState(newState: State): Promise<void> {

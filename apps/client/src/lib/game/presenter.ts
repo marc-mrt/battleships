@@ -25,66 +25,106 @@ type Boat = {
 
 type Shot = { x: number; y: number; hit: boolean };
 
-function applyBoatToGrid(boat: Boat, cells: CellState[][]): void {
-	applyBoatToCellsUtil(cells, boat, GRID_SIZE, markAsBoat);
+interface ApplyBoatToGridPayload {
+	boat: Boat;
+	cells: CellState[][];
 }
 
-function applyShotToGrid(shot: Shot, cells: CellState[][]): void {
-	applyShotToCellsUtil(cells, shot, GRID_SIZE);
+function applyBoatToGrid(payload: ApplyBoatToGridPayload): void {
+	applyBoatToCellsUtil({
+		cells: payload.cells,
+		boat: payload.boat,
+		size: GRID_SIZE,
+		applyFn: markAsBoat,
+	});
 }
 
-function applySunkBoatToGrid(boat: Boat, cells: CellState[][]): void {
-	applyBoatToCellsUtil(cells, boat, GRID_SIZE, markAsSunk);
+interface ApplyShotToGridPayload {
+	shot: Shot;
+	cells: CellState[][];
+}
+
+function applyShotToGrid(payload: ApplyShotToGridPayload): void {
+	applyShotToCellsUtil({ cells: payload.cells, shot: payload.shot, size: GRID_SIZE });
+}
+
+interface ApplySunkBoatToGridPayload {
+	boat: Boat;
+	cells: CellState[][];
+}
+
+function applySunkBoatToGrid(payload: ApplySunkBoatToGridPayload): void {
+	applyBoatToCellsUtil({
+		cells: payload.cells,
+		boat: payload.boat,
+		size: GRID_SIZE,
+		applyFn: markAsSunk,
+	});
 }
 
 function createBoatApplier(cells: CellState[][]) {
 	return function applyBoat(boat: Boat): void {
-		applyBoatToGrid(boat, cells);
+		applyBoatToGrid({ boat, cells });
 	};
 }
 
 function createShotApplier(cells: CellState[][]) {
 	return function applyShot(shot: Shot): void {
-		applyShotToGrid(shot, cells);
+		applyShotToGrid({ shot, cells });
 	};
 }
 
 function createSunkBoatApplier(cells: CellState[][]) {
 	return function applySunkBoat(boat: Boat): void {
-		applySunkBoatToGrid(boat, cells);
+		applySunkBoatToGrid({ boat, cells });
 	};
 }
 
-function applyBoatsToGrid(cells: CellState[][], boats: Boat[]): CellState[][] {
-	R.forEach(createBoatApplier(cells), boats);
-	return cells;
+interface ApplyBoatsToGridPayload {
+	cells: CellState[][];
+	boats: Boat[];
 }
 
-function applyShotsToGrid(cells: CellState[][], shots: Shot[]): CellState[][] {
-	R.forEach(createShotApplier(cells), shots);
-	return cells;
+function applyBoatsToGrid(payload: ApplyBoatsToGridPayload): CellState[][] {
+	R.forEach(createBoatApplier(payload.cells), payload.boats);
+	return payload.cells;
 }
 
-function applySunkBoatsToGrid(cells: CellState[][], boats: Boat[]): CellState[][] {
-	R.forEach(createSunkBoatApplier(cells), boats);
-	return cells;
+interface ApplyShotsToGridPayload {
+	cells: CellState[][];
+	shots: Shot[];
+}
+
+function applyShotsToGrid(payload: ApplyShotsToGridPayload): CellState[][] {
+	R.forEach(createShotApplier(payload.cells), payload.shots);
+	return payload.cells;
+}
+
+interface ApplySunkBoatsToGridPayload {
+	cells: CellState[][];
+	boats: Boat[];
+}
+
+function applySunkBoatsToGrid(payload: ApplySunkBoatsToGridPayload): CellState[][] {
+	R.forEach(createSunkBoatApplier(payload.cells), payload.boats);
+	return payload.cells;
 }
 
 function applyBoats(boats: Boat[]) {
 	return function applyToGrid(cells: CellState[][]): CellState[][] {
-		return applyBoatsToGrid(cells, boats);
+		return applyBoatsToGrid({ cells, boats });
 	};
 }
 
 function applyShots(shots: Shot[]) {
 	return function applyToGrid(cells: CellState[][]): CellState[][] {
-		return applyShotsToGrid(cells, shots);
+		return applyShotsToGrid({ cells, shots });
 	};
 }
 
 function applySunkBoats(boats: Boat[]) {
 	return function applyToGrid(cells: CellState[][]): CellState[][] {
-		return applySunkBoatsToGrid(cells, boats);
+		return applySunkBoatsToGrid({ cells, boats });
 	};
 }
 

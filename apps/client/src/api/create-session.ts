@@ -9,5 +9,5 @@ interface CreateSessionRequestPayload {
 export function createSession(
 	payload: CreateSessionRequestPayload,
 ): Promise<Result<Session, string>> {
-	return post<Session>(`${API_BASE_URL}/sessions`, payload);
+	return post<Session>({ url: `${API_BASE_URL}/sessions`, body: payload });
 }

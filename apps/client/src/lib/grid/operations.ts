@@ -27,30 +27,50 @@ export function getCell(grid: GridState, pos: Position): Cell | null {
 	return grid.cells[pos.y][pos.x];
 }
 
-function shouldReplaceCell(x: number, y: number, posX: number, posY: number): boolean {
-	return x === posX && y === posY;
+interface ShouldReplaceCellPayload {
+	x: number;
+	y: number;
+	posX: number;
+	posY: number;
 }
 
-function replaceIfMatch(y: number, posX: number, posY: number, cell: Cell) {
+function shouldReplaceCell(payload: ShouldReplaceCellPayload): boolean {
+	return payload.x === payload.posX && payload.y === payload.posY;
+}
+
+interface ReplaceIfMatchPayload {
+	y: number;
+	posX: number;
+	posY: number;
+	cell: Cell;
+}
+
+function replaceIfMatch(payload: ReplaceIfMatchPayload) {
 	return function replace(c: Cell, currentX: number): Cell {
-		return shouldReplaceCell(currentX, y, posX, posY) ? cell : c;
+		return shouldReplaceCell({ x: currentX, y: payload.y, posX: payload.posX, posY: payload.posY })
+			? payload.cell
+			: c;
 	};
 }
 
-function updateCellInRow(
-	row: Cell[],
-	x: number,
-	y: number,
-	posX: number,
-	posY: number,
-	cell: Cell,
-): Cell[] {
-	return row.map(replaceIfMatch(y, posX, posY, cell));
+interface UpdateCellInRowPayload {
+	row: Cell[];
+	x: number;
+	y: number;
+	posX: number;
+	posY: number;
+	cell: Cell;
+}
+
+function updateCellInRow(payload: UpdateCellInRowPayload): Cell[] {
+	return payload.row.map(
+		replaceIfMatch({ y: payload.y, posX: payload.posX, posY: payload.posY, cell: payload.cell }),
+	);
 }
 
 function updateRow(pos: Position, cell: Cell) {
 	return function update(row: Cell[], y: number): Cell[] {
-		return updateCellInRow(row, pos.x, y, pos.x, pos.y, cell);
+		return updateCellInRow({ row, x: pos.x, y, posX: pos.x, posY: pos.y, cell });
 	};
 }
 
@@ -74,31 +94,35 @@ export function isValidPosition(pos: Position, size: number): boolean {
 	return pos.x >= 0 && pos.x < size && pos.y >= 0 && pos.y < size;
 }
 
-function calculateCellX(boat: { startX: number; orientation: Orientation }, index: number): number {
+interface BoatPositionInfo {
+	startX: number;
+	startY: number;
+	orientation: Orientation;
+}
+
+function calculateCellX(boat: BoatPositionInfo, index: number): number {
 	return boat.orientation === 'horizontal' ? boat.startX + index : boat.startX;
 }
 
-function calculateCellY(boat: { startY: number; orientation: Orientation }, index: number): number {
+function calculateCellY(boat: BoatPositionInfo, index: number): number {
 	return boat.orientation === 'vertical' ? boat.startY + index : boat.startY;
 }
 
-function createBoatCellPosition(
-	boat: {
-		startX: number;
-		startY: number;
-		orientation: Orientation;
-	},
-	index: number,
-): Position {
+interface CreateBoatCellPositionPayload {
+	boat: BoatPositionInfo;
+	index: number;
+}
+
+function createBoatCellPosition(payload: CreateBoatCellPositionPayload): Position {
 	return {
-		x: calculateCellX(boat, index),
-		y: calculateCellY(boat, index),
+		x: calculateCellX(payload.boat, payload.index),
+		y: calculateCellY(payload.boat, payload.index),
 	};
 }
 
-function createBoatCellAtIndex(boat: { startX: number; startY: number; orientation: Orientation }) {
+function createBoatCellAtIndex(boat: BoatPositionInfo) {
 	return function createCell(index: number): Position {
-		return createBoatCellPosition(boat, index);
+		return createBoatCellPosition({ boat, index });
 	};
 }
 
@@ -132,12 +156,21 @@ function isBoatWithId(boatId: string) {
 	};
 }
 
-function findBoatById(boats: Boat[], boatId: string): Boat | null {
-	return boats.find(isBoatWithId(boatId)) || null;
+function findBoatById(boatId: string) {
+	return function findInBoats(boats: Boat[]): Boat | null {
+		return boats.find(isBoatWithId(boatId)) || null;
+	};
 }
 
-export function getBoatAt(grid: GridState, boats: Boat[], pos: Position): Boat | null {
+interface GetBoatAtPayload {
+	grid: GridState;
+	boats: Boat[];
+	pos: Position;
+}
+
+export function getBoatAt(payload: GetBoatAtPayload): Boat | null {
+	const { grid, boats, pos } = payload;
 	const cell = getCell(grid, pos);
 	if (!cell?.boatId) return null;
-	return findBoatById(boats, cell.boatId);
+	return findBoatById(cell.boatId)(boats);
 }

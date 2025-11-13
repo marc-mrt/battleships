@@ -59,8 +59,8 @@
 		placement.deleteSelected();
 	}
 
-	function createStockDragStartHandler(length: number) {
-		return function handleStockDragStart() {
+	function handleStockDragStart(length: number) {
+		return function onDragStart() {
 			handleDragStartFromStock(length);
 		};
 	}
@@ -83,7 +83,7 @@
 							<div
 								class="boat-visual"
 								draggable={isAvailable}
-								ondragstart={createStockDragStartHandler(stock.length)}
+								ondragstart={handleStockDragStart(stock.length)}
 								ondragend={handleDragEnd}
 								class:depleted={!isAvailable}
 								role="presentation"

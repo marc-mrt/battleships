@@ -92,7 +92,10 @@ export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
 			playerId: firstPlayerId,
 		});
 
-		GameStateManager.broadcastNextTurn(updatedSession, firstPlayerId);
+		GameStateManager.broadcastNextTurn({
+			session: updatedSession,
+			nextTurnPlayerId: firstPlayerId,
+		});
 	}
 }
 
@@ -106,5 +109,5 @@ export async function handleShotFired(payload: ProcessShotPayload): Promise<void
 	const session = await getSessionByPlayerId(payload.playerId);
 	const playerId = payload.playerId;
 	const coordinates: Coordinates = { x: payload.x, y: payload.y };
-	await GameStateManager.handleShotFired(session, playerId, coordinates);
+	await GameStateManager.handleShotFired({ session, playerId, coordinates });
 }

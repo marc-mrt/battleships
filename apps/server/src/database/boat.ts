@@ -16,6 +16,29 @@ interface SaveBoatsPayload {
 	}>;
 }
 
+function createBoatConfigurationRow(playerId: string) {
+	return function mapBoat(boat: {
+		id: string;
+		startX: number;
+		startY: number;
+		length: number;
+		orientation: 'horizontal' | 'vertical';
+	}): (string | number)[] {
+		return [boat.id, playerId, boat.startX, boat.startY, boat.length, boat.orientation];
+	};
+}
+
+function createPlaceholder(rowLength: number, rowIndex: number) {
+	return function mapToPlaceholder(_: string | number, colIndex: number): string {
+		return `$${rowLength * rowIndex + 1 + colIndex}`;
+	};
+}
+
+function createValueRow(row: (string | number)[], rowIndex: number): string {
+	const values = row.map(createPlaceholder(row.length, rowIndex));
+	return `(${values.join(', ')})`;
+}
+
 export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
 	if (payload.boats.length !== TOTAL_BOATS_COUNT) {
 		throw new InvalidQueryPayloadError(
@@ -28,19 +51,9 @@ export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
 	await deleteBoats(playerId);
 
 	const { boats } = payload;
-	const boatsConfiguration = boats.map((boat) => [
-		boat.id,
-		playerId,
-		boat.startX,
-		boat.startY,
-		boat.length,
-		boat.orientation,
-	]);
+	const boatsConfiguration = boats.map(createBoatConfigurationRow(playerId));
 
-	const valueRows = boatsConfiguration.map((row, rowIndex) => {
-		const values = row.map((_, colIndex) => `$${row.length * rowIndex + 1 + colIndex}`);
-		return `(${values.join(', ')})`;
-	});
+	const valueRows = boatsConfiguration.map(createValueRow);
 
 	const insertQuery = `
 		INSERT INTO boats (id, player_id, start_x, start_y, length, orientation)
@@ -79,4 +92,7 @@ function mapper(parsed: z.infer<typeof BoatDatabaseSchema>): Boat {
 	};
 }
 
-export const mapToBoat = generateMapperToDomainModel(BoatDatabaseSchema, mapper);
+export const mapToBoat = generateMapperToDomainModel({
+	schema: BoatDatabaseSchema,
+	mapper,
+});

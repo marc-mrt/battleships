@@ -54,4 +54,7 @@ function mapper(parsed: z.infer<typeof ShotDatabaseSchema>): Shot {
 	};
 }
 
-export const mapToShot = generateMapperToDomainModel(ShotDatabaseSchema, mapper);
+export const mapToShot = generateMapperToDomainModel({
+	schema: ShotDatabaseSchema,
+	mapper,
+});

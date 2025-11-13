@@ -67,18 +67,26 @@ async function executeRequest<T>(url: string, options: RequestInit): Promise<Res
 	}
 }
 
-export async function request<T>(
-	baseUrl: string,
-	config: RequestConfig,
-): Promise<Result<T, string>> {
+interface RequestPayload {
+	baseUrl: string;
+	config: RequestConfig;
+}
+
+export async function request<T>(payload: RequestPayload): Promise<Result<T, string>> {
+	const { baseUrl, config } = payload;
 	const options = createRequestOptions(config);
 	return executeRequest<T>(baseUrl, options);
 }
 
 export function get<T>(url: string): Promise<Result<T, string>> {
-	return request<T>(url, { method: 'GET' });
+	return request<T>({ baseUrl: url, config: { method: 'GET' } });
 }
 
-export function post<T, B = unknown>(url: string, body?: B): Promise<Result<T, string>> {
-	return request<T>(url, { method: 'POST', body });
+interface PostPayload<B> {
+	url: string;
+	body?: B;
+}
+
+export function post<T, B = unknown>(payload: PostPayload<B>): Promise<Result<T, string>> {
+	return request<T>({ baseUrl: payload.url, config: { method: 'POST', body: payload.body } });
 }

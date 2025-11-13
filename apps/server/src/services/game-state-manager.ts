@@ -15,19 +15,42 @@ function validateSessionInGame(session: Session): SessionInGame {
 	return session;
 }
 
-function validatePlayerTurn(session: SessionInGame, playerId: string): void {
+interface ValidatePlayerTurnPayload {
+	session: SessionInGame;
+	playerId: string;
+}
+
+function validatePlayerTurn(payload: ValidatePlayerTurnPayload): void {
+	const { session, playerId } = payload;
 	if (session.currentTurn.id !== playerId) {
 		throw new Error('Cannot shoot at this time');
 	}
 }
 
-function hasAlreadyShot(shots: Shot[], playerId: string, coordinates: Coordinates): boolean {
-	return shots.some(
-		(shot) => shot.x === coordinates.x && shot.y === coordinates.y && shot.shooterId === playerId,
-	);
+function isShotAtCoordinates(playerId: string, coordinates: Coordinates) {
+	return function checkShot(shot: Shot): boolean {
+		return shot.x === coordinates.x && shot.y === coordinates.y && shot.shooterId === playerId;
+	};
 }
 
-function getOpponentId(session: SessionInGame, playerId: string): string {
+interface HasAlreadyShotPayload {
+	shots: Shot[];
+	playerId: string;
+	coordinates: Coordinates;
+}
+
+function hasAlreadyShot(payload: HasAlreadyShotPayload): boolean {
+	const { shots, playerId, coordinates } = payload;
+	return shots.some(isShotAtCoordinates(playerId, coordinates));
+}
+
+interface GetOpponentIdPayload {
+	session: SessionInGame;
+	playerId: string;
+}
+
+function getOpponentId(payload: GetOpponentIdPayload): string {
+	const { session, playerId } = payload;
 	return playerId === session.owner.id ? session.friend.id : session.owner.id;
 }
 
@@ -44,43 +67,69 @@ function isCoordinateOnBoat(coordinates: Coordinates) {
 	};
 }
 
-function getTargetBoats(session: SessionInGame, targetId: string): Boat[] {
+interface GetTargetBoatsPayload {
+	session: SessionInGame;
+	targetId: string;
+}
+
+function getTargetBoats(payload: GetTargetBoatsPayload): Boat[] {
+	const { session, targetId } = payload;
 	return session.owner.id === targetId ? session.ownerBoats : session.friendBoats;
 }
 
-function countPreviousHits(shots: Shot[], targetId: string, boat: Boat): number {
-	const isHitOnBoat = (shot: Shot): boolean =>
-		shot.hit && shot.targetId === targetId && isCoordinateOnBoat({ x: shot.x, y: shot.y })(boat);
+function isHitOnBoat(targetId: string, boat: Boat) {
+	return function checkHit(shot: Shot): boolean {
+		return (
+			shot.hit && shot.targetId === targetId && isCoordinateOnBoat({ x: shot.x, y: shot.y })(boat)
+		);
+	};
+}
 
-	return shots.filter(isHitOnBoat).length;
+interface CountPreviousHitsPayload {
+	shots: Shot[];
+	targetId: string;
+	boat: Boat;
+}
+
+function countPreviousHits(payload: CountPreviousHitsPayload): number {
+	const { shots, targetId, boat } = payload;
+	return shots.filter(isHitOnBoat(targetId, boat)).length;
+}
+
+interface CheckShotResultPayload {
+	session: SessionInGame;
+	targetId: string;
+	coordinates: Coordinates;
 }
 
 function checkShotResult(
-	session: SessionInGame,
-	targetId: string,
-	coordinates: Coordinates,
+	payload: CheckShotResultPayload,
 ): { hit: false } | { hit: true; sunk: boolean; boatId: string } {
-	const targetBoats = getTargetBoats(session, targetId);
+	const { session, targetId, coordinates } = payload;
+	const targetBoats = getTargetBoats({ session, targetId });
 	const hitBoat = targetBoats.find(isCoordinateOnBoat(coordinates));
 
 	if (!hitBoat) {
 		return { hit: false };
 	}
 
-	const previousHits = countPreviousHits(session.shots, targetId, hitBoat);
+	const previousHits = countPreviousHits({ shots: session.shots, targetId, boat: hitBoat });
 	const totalHits = previousHits + 1;
 	const sunk = totalHits === hitBoat.length;
 
 	return { hit: true, sunk, boatId: hitBoat.id };
 }
 
-async function recordShot(
-	sessionId: string,
-	shooterId: string,
-	targetId: string,
-	coordinates: Coordinates,
-	hit: boolean,
-): Promise<Shot> {
+interface RecordShotPayload {
+	sessionId: string;
+	shooterId: string;
+	targetId: string;
+	coordinates: Coordinates;
+	hit: boolean;
+}
+
+async function recordShot(payload: RecordShotPayload): Promise<Shot> {
+	const { sessionId, shooterId, targetId, coordinates, hit } = payload;
 	return await ShotDB.recordShot({
 		sessionId,
 		shooterId,
@@ -91,11 +140,14 @@ async function recordShot(
 	});
 }
 
-function determineNextTurnPlayer(
-	shooterId: string,
-	targetId: string,
-	result: { hit: boolean; sunk?: boolean },
-): string {
+interface DetermineNextTurnPlayerPayload {
+	shooterId: string;
+	targetId: string;
+	result: { hit: boolean; sunk?: boolean };
+}
+
+function determineNextTurnPlayer(payload: DetermineNextTurnPlayerPayload): string {
+	const { shooterId, targetId, result } = payload;
 	if (!result.hit) {
 		return targetId;
 	}
@@ -105,81 +157,126 @@ function determineNextTurnPlayer(
 	return shooterId;
 }
 
-function getPlayerBoats(session: SessionInGame, playerId: string): Boat[] {
-	return playerId === session.owner.id ? session.ownerBoats : session.friendBoats;
+function getPlayerBoats(playerId: string) {
+	return function extractBoats(session: SessionInGame): Boat[] {
+		return playerId === session.owner.id ? session.ownerBoats : session.friendBoats;
+	};
 }
 
-function getPlayerShots(shots: Shot[], playerId: string): Shot[] {
-	return shots.filter(R.propEq(playerId, 'shooterId'));
+function isShooter(playerId: string) {
+	return R.propEq(playerId, 'shooterId');
 }
 
-function getOpponentShotsAgainstPlayer(shots: Shot[], playerId: string): Shot[] {
-	return shots.filter(R.propEq(playerId, 'targetId'));
+function isTarget(playerId: string) {
+	return R.propEq(playerId, 'targetId');
 }
 
-function getSunkOpponentBoats(session: SessionInGame, playerId: string): Boat[] {
-	const opponentBoats = playerId === session.owner.id ? session.friendBoats : session.ownerBoats;
-	return opponentBoats.filter(R.prop('sunk'));
+function getPlayerShots(playerId: string) {
+	return function filterShots(shots: Shot[]): Shot[] {
+		return shots.filter(isShooter(playerId));
+	};
 }
 
-function createGameState(
-	turn: GameState['turn'],
-	session: SessionInGame,
-	playerId: string,
-	lastShot: LastShot | null,
-): GameState {
+function getOpponentShotsAgainstPlayer(playerId: string) {
+	return function filterShots(shots: Shot[]): Shot[] {
+		return shots.filter(isTarget(playerId));
+	};
+}
+
+function getSunkOpponentBoats(playerId: string) {
+	return function filterBoats(session: SessionInGame): Boat[] {
+		const opponentBoats = playerId === session.owner.id ? session.friendBoats : session.ownerBoats;
+		return opponentBoats.filter(R.prop('sunk'));
+	};
+}
+
+interface CreateGameStatePayload {
+	turn: GameState['turn'];
+	session: SessionInGame;
+	playerId: string;
+	lastShot: LastShot | null;
+}
+
+function createGameState(payload: CreateGameStatePayload): GameState {
+	const { turn, session, playerId, lastShot } = payload;
 	return {
 		turn,
 		session: { status: session.status },
 		lastShot,
 		player: {
-			boats: getPlayerBoats(session, playerId),
-			shots: getPlayerShots(session.shots, playerId),
+			boats: getPlayerBoats(playerId)(session),
+			shots: getPlayerShots(playerId)(session.shots),
 		},
 		opponent: {
-			sunkBoats: getSunkOpponentBoats(session, playerId),
-			shotsAgainstPlayer: getOpponentShotsAgainstPlayer(session.shots, playerId),
+			sunkBoats: getSunkOpponentBoats(playerId)(session),
+			shotsAgainstPlayer: getOpponentShotsAgainstPlayer(playerId)(session.shots),
 		},
 	};
 }
 
-export function broadcastNextTurn(
-	session: SessionInGame,
-	nextTurnPlayerId: string,
-	lastShot?: LastShot,
-): void {
-	const opponentId = getOpponentId(session, nextTurnPlayerId);
+interface BroadcastNextTurnPayload {
+	session: SessionInGame;
+	nextTurnPlayerId: string;
+	lastShot?: LastShot;
+}
 
-	const nextTurnState = createGameState('player_turn', session, nextTurnPlayerId, lastShot ?? null);
+export function broadcastNextTurn(payload: BroadcastNextTurnPayload): void {
+	const { session, nextTurnPlayerId, lastShot } = payload;
+	const opponentId = getOpponentId({ session, playerId: nextTurnPlayerId });
 
-	const opponentState = createGameState('opponent_turn', session, opponentId, lastShot ?? null);
+	const nextTurnState = createGameState({
+		turn: 'player_turn',
+		session,
+		playerId: nextTurnPlayerId,
+		lastShot: lastShot ?? null,
+	});
+
+	const opponentState = createGameState({
+		turn: 'opponent_turn',
+		session,
+		playerId: opponentId,
+		lastShot: lastShot ?? null,
+	});
 
 	sendNextTurnMessage(nextTurnPlayerId, nextTurnState);
 	sendNextTurnMessage(opponentId, opponentState);
 }
 
-export async function handleShotFired(
-	session: Session,
-	playerId: string,
-	coordinates: Coordinates,
-): Promise<void> {
-	const gameSession = validateSessionInGame(session);
-	validatePlayerTurn(gameSession, playerId);
+interface HandleShotFiredPayload {
+	session: Session;
+	playerId: string;
+	coordinates: Coordinates;
+}
 
-	if (hasAlreadyShot(gameSession.shots, playerId, coordinates)) {
+export async function handleShotFired(payload: HandleShotFiredPayload): Promise<void> {
+	const { session, playerId, coordinates } = payload;
+	const gameSession = validateSessionInGame(session);
+	validatePlayerTurn({ session: gameSession, playerId });
+
+	if (hasAlreadyShot({ shots: gameSession.shots, playerId, coordinates })) {
 		throw new Error('Cannot shoot twice at the same coordinates');
 	}
 
-	const targetId = getOpponentId(gameSession, playerId);
-	const result = checkShotResult(gameSession, targetId, coordinates);
+	const targetId = getOpponentId({ session: gameSession, playerId });
+	const result = checkShotResult({ session: gameSession, targetId, coordinates });
 
-	const shot = await recordShot(gameSession.id, playerId, targetId, coordinates, result.hit);
+	const shot = await recordShot({
+		sessionId: gameSession.id,
+		shooterId: playerId,
+		targetId,
+		coordinates,
+		hit: result.hit,
+	});
 
 	if (result.hit && result.sunk) {
 		await BoatDB.markBoatAsSunk(result.boatId);
 	}
 
-	const nextTurnPlayerId = determineNextTurnPlayer(playerId, targetId, result);
+	const nextTurnPlayerId = determineNextTurnPlayer({
+		shooterId: playerId,
+		targetId,
+		result,
+	});
 
 	const updatedSession = await SessionDB.setCurrentTurn({
 		sessionId: gameSession.id,
@@ -191,5 +288,9 @@ export async function handleShotFired(
 		sunkBoat: result.hit && result.sunk,
 	};
 
-	broadcastNextTurn(updatedSession, nextTurnPlayerId, lastShot);
+	broadcastNextTurn({
+		session: updatedSession,
+		nextTurnPlayerId,
+		lastShot,
+	});
 }
