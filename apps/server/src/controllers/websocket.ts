@@ -9,14 +9,14 @@ import {
 } from 'game-messages';
 import { InternalServerError } from './errors';
 import * as SessionService from '../services/session.ts';
-
 import { parseSessionCookie } from '../middlwares/cookies.ts';
+import { createGameState } from '../services/game-state-manager.ts';
 
 type PlayerId = string;
 const connections = new Map<PlayerId, WebSocket>();
 
 export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
-	webSocketServer.on('connection', (webSocket: WebSocket, request: IncomingMessage) => {
+	webSocketServer.on('connection', async (webSocket: WebSocket, request: IncomingMessage) => {
 		const session = parseSessionCookie(request.headers.cookie);
 
 		if (!session) {
@@ -27,6 +27,8 @@ export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
 
 		const { playerId } = session;
 		connections.set(playerId, webSocket);
+
+		await sendGameStateOnReconnection(playerId);
 
 		webSocket.on('message', async (data: Buffer) => {
 			try {
@@ -100,4 +102,28 @@ export function sendFriendJoinedMessage(playerId: string, data: FriendJoinedMess
 		data,
 	};
 	sendMessageToPlayer(playerId, message);
+}
+
+async function sendGameStateOnReconnection(playerId: string): Promise<void> {
+	try {
+		const session = await SessionService.getSessionByPlayerId(playerId);
+
+		if (session.status !== 'in_game') {
+			return;
+		}
+
+		const isPlayerTurn = session.currentTurn.id === playerId;
+		const turn = isPlayerTurn ? 'player_turn' : 'opponent_turn';
+
+		const gameState = createGameState({
+			turn,
+			session,
+			playerId,
+			lastShot: null,
+		});
+
+		sendNextTurnMessage(playerId, gameState);
+	} catch (error) {
+		console.error(`Failed to send game state on reconnection for player ${playerId}:`, error);
+	}
 }

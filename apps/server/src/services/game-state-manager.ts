@@ -190,14 +190,14 @@ function getSunkOpponentBoats(playerId: string) {
 	};
 }
 
-interface CreateGameStatePayload {
+export interface CreateGameStatePayload {
 	turn: GameState['turn'];
 	session: SessionInGame;
 	playerId: string;
 	lastShot: LastShot | null;
 }
 
-function createGameState(payload: CreateGameStatePayload): GameState {
+export function createGameState(payload: CreateGameStatePayload): GameState {
 	const { turn, session, playerId, lastShot } = payload;
 	return {
 		turn,
