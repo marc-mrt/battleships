@@ -1,3 +1,6 @@
+const DEFAULT_MAX_RECONNECTION_ATTEMPTS = 5;
+const DEFAULT_RECONNECTION_BASE_DELAY_MS = 1000;
+
 interface ReconnectionConfig {
 	maxAttempts: number;
 	baseDelay: number;
@@ -45,7 +48,7 @@ interface CreateReconnectionStrategyPayload {
 export function createReconnectionStrategy(
 	payload: CreateReconnectionStrategyPayload = {},
 ): ReconnectionStrategy {
-	const maxAttempts = payload.maxAttempts ?? 5;
-	const baseDelay = payload.baseDelay ?? 1000;
+	const maxAttempts = payload.maxAttempts ?? DEFAULT_MAX_RECONNECTION_ATTEMPTS;
+	const baseDelay = payload.baseDelay ?? DEFAULT_RECONNECTION_BASE_DELAY_MS;
 	return createExponentialBackoff({ maxAttempts, baseDelay });
 }

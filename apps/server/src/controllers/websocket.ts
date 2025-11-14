@@ -12,6 +12,8 @@ import * as SessionService from '../services/session.ts';
 import { parseSessionCookie } from '../middlwares/cookies.ts';
 import { createGameState } from '../services/game-state-manager.ts';
 
+const WEBSOCKET_CLOSE_CODE_POLICY_VIOLATION = 1008;
+
 type PlayerId = string;
 const connections = new Map<PlayerId, WebSocket>();
 
@@ -21,7 +23,7 @@ export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
 
 		if (!session) {
 			console.log('WebSocket connection rejected: No session cookie');
-			webSocket.close(1008, 'No session cookie');
+			webSocket.close(WEBSOCKET_CLOSE_CODE_POLICY_VIOLATION, 'No session cookie');
 			return;
 		}
 
@@ -73,8 +75,10 @@ async function handleIncomingClientMessage(
 			await SessionService.handleShotFired({ playerId, ...message.data });
 			break;
 		}
-		default:
-			console.error(`Unknown message type: ${(message as { type: string }).type}`);
+		default: {
+			const _exhaustive: never = message;
+			console.error(`Unknown message type: ${(_exhaustive as { type: string }).type}`);
+		}
 	}
 }
 

@@ -1,12 +1,11 @@
 import * as SessionDB from '../database/session.ts';
-import { Session, SessionInGame, SessionWaitingForBoats } from '../models/session.ts';
+import { Session, SessionWaitingForBoats } from '../models/session.ts';
 import { Player } from '../models/player.ts';
 import { sendFriendJoinedMessage } from '../controllers/websocket.ts';
-import * as PlayerDB from '../database/player.ts';
-import * as BoatDB from '../database/boat.ts';
 import { NotFoundError } from '../controllers/errors.ts';
 import { Coordinates } from '../models/shot.ts';
 import * as GameStateManager from './game-state-manager.ts';
+import * as PlayerService from './player.ts';
 
 interface CreateSessionPayload {
 	username: string;
@@ -14,7 +13,7 @@ interface CreateSessionPayload {
 
 export async function createSession(payload: CreateSessionPayload): Promise<Session> {
 	const { username } = payload;
-	const playerOwner: Player = await createPlayer({ username });
+	const playerOwner: Player = await PlayerService.createPlayer({ username });
 	const session: Session = await SessionDB.createSession({ owner: { playerId: playerOwner.id } });
 	return session;
 }
@@ -27,7 +26,7 @@ interface JoinSessionPayload {
 export async function joinSession(payload: JoinSessionPayload): Promise<SessionWaitingForBoats> {
 	const { slug, username } = payload;
 
-	const player: Player = await createPlayer({ username });
+	const player: Player = await PlayerService.createPlayer({ username });
 	const session: SessionWaitingForBoats = await SessionDB.assignFriendToSession({
 		slug,
 		friend: { playerId: player.id },
@@ -55,16 +54,6 @@ export async function getSessionByPlayerId(playerId: string): Promise<Session> {
 	return session;
 }
 
-interface CreatePlayerPayload {
-	username: string;
-}
-
-export async function createPlayer(payload: CreatePlayerPayload): Promise<Player> {
-	const { username } = payload;
-	const player: Player = await PlayerDB.createPlayer({ username });
-	return player;
-}
-
 interface SaveBoatsPayload {
 	playerId: string;
 	boats: Array<{
@@ -78,23 +67,17 @@ interface SaveBoatsPayload {
 
 export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
 	const { playerId, boats } = payload;
-	await BoatDB.saveBoats({
+	await GameStateManager.saveBoatsAndCheckGameStart({
 		playerId,
 		boats,
 	});
 
 	const session: Session = await getSessionByPlayerId(playerId);
 	if (session.status === 'ready_to_start') {
-		const firstPlayerId = Math.random() < 0.5 ? session.owner.id : session.friend!.id;
-
-		const updatedSession: SessionInGame = await SessionDB.setCurrentTurn({
+		await GameStateManager.startGame({
 			sessionId: session.id,
-			playerId: firstPlayerId,
-		});
-
-		GameStateManager.broadcastNextTurn({
-			session: updatedSession,
-			nextTurnPlayerId: firstPlayerId,
+			ownerId: session.owner.id,
+			friendId: session.friend!.id,
 		});
 	}
 }

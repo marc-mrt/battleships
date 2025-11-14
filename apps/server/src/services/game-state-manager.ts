@@ -1,9 +1,9 @@
 import { Session, SessionInGame } from '../models/session';
 import { GameState, LastShot } from 'game-messages';
 import { sendNextTurnMessage } from '../controllers/websocket.ts';
-import * as BoatDB from '../database/boat.ts';
 import * as SessionDB from '../database/session.ts';
 import * as ShotDB from '../database/shot';
+import * as BoatService from './boat.ts';
 import { Boat } from '../models/boat';
 import { Coordinates, Shot } from '../models/shot';
 import * as R from 'ramda';
@@ -269,7 +269,7 @@ export async function handleShotFired(payload: HandleShotFiredPayload): Promise<
 	});
 
 	if (result.hit && result.sunk) {
-		await BoatDB.markBoatAsSunk(result.boatId);
+		await BoatService.markBoatAsSunk(result.boatId);
 	}
 
 	const nextTurnPlayerId = determineNextTurnPlayer({
@@ -292,5 +292,55 @@ export async function handleShotFired(payload: HandleShotFiredPayload): Promise<
 		session: updatedSession,
 		nextTurnPlayerId,
 		lastShot,
+	});
+}
+
+interface DetermineFirstPlayerPayload {
+	ownerId: string;
+	friendId: string;
+}
+
+function determineFirstPlayer(payload: DetermineFirstPlayerPayload): string {
+	const { ownerId, friendId } = payload;
+	return Math.random() < 0.5 ? ownerId : friendId;
+}
+
+interface StartGamePayload {
+	sessionId: string;
+	ownerId: string;
+	friendId: string;
+}
+
+export async function startGame(payload: StartGamePayload): Promise<void> {
+	const { sessionId, ownerId, friendId } = payload;
+	const firstPlayerId = determineFirstPlayer({ ownerId, friendId });
+
+	const updatedSession: SessionInGame = await SessionDB.setCurrentTurn({
+		sessionId,
+		playerId: firstPlayerId,
+	});
+
+	broadcastNextTurn({
+		session: updatedSession,
+		nextTurnPlayerId: firstPlayerId,
+	});
+}
+
+interface SaveBoatsPayload {
+	playerId: string;
+	boats: Array<{
+		id: string;
+		startX: number;
+		startY: number;
+		length: number;
+		orientation: 'horizontal' | 'vertical';
+	}>;
+}
+
+export async function saveBoatsAndCheckGameStart(payload: SaveBoatsPayload): Promise<void> {
+	const { playerId, boats } = payload;
+	await BoatService.saveBoats({
+		playerId,
+		boats,
 	});
 }

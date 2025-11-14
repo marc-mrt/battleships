@@ -27,67 +27,36 @@ export function getCell(grid: GridState, pos: Position): Cell | null {
 	return grid.cells[pos.y][pos.x];
 }
 
-interface ShouldReplaceCellPayload {
-	x: number;
-	y: number;
-	posX: number;
-	posY: number;
+function createUpdateMap(updates: { pos: Position; cell: Cell }[]): Map<string, Cell> {
+	const map = new Map<string, Cell>();
+	updates.forEach((update) => {
+		const key = `${update.pos.x},${update.pos.y}`;
+		map.set(key, update.cell);
+	});
+	return map;
 }
 
-function shouldReplaceCell(payload: ShouldReplaceCellPayload): boolean {
-	return payload.x === payload.posX && payload.y === payload.posY;
+function applyCellUpdatesInRow(row: Cell[], y: number, updateMap: Map<string, Cell>): Cell[] {
+	return row.map((cell, x) => {
+		const key = `${x},${y}`;
+		return updateMap.get(key) ?? cell;
+	});
 }
 
-interface ReplaceIfMatchPayload {
-	y: number;
-	posX: number;
-	posY: number;
-	cell: Cell;
-}
-
-function replaceIfMatch(payload: ReplaceIfMatchPayload) {
-	return function replace(c: Cell, currentX: number): Cell {
-		return shouldReplaceCell({ x: currentX, y: payload.y, posX: payload.posX, posY: payload.posY })
-			? payload.cell
-			: c;
-	};
-}
-
-interface UpdateCellInRowPayload {
-	row: Cell[];
-	x: number;
-	y: number;
-	posX: number;
-	posY: number;
-	cell: Cell;
-}
-
-function updateCellInRow(payload: UpdateCellInRowPayload): Cell[] {
-	return payload.row.map(
-		replaceIfMatch({ y: payload.y, posX: payload.posX, posY: payload.posY, cell: payload.cell }),
-	);
-}
-
-function updateRow(pos: Position, cell: Cell) {
-	return function update(row: Cell[], y: number): Cell[] {
-		return updateCellInRow({ row, x: pos.x, y, posX: pos.x, posY: pos.y, cell });
-	};
-}
-
-function setCell(grid: GridState, pos: Position, cell: Cell): GridState {
-	if (!isValidPosition(pos, grid.size)) return grid;
-
-	const newCells = grid.cells.map(updateRow(pos, cell));
-
-	return { ...grid, cells: newCells };
-}
-
-function applyCellUpdate(grid: GridState, update: { pos: Position; cell: Cell }): GridState {
-	return setCell(grid, update.pos, update.cell);
+function applyBatchUpdates(cells: Cell[][], updateMap: Map<string, Cell>): Cell[][] {
+	return cells.map((row, y) => applyCellUpdatesInRow(row, y, updateMap));
 }
 
 export function setCells(grid: GridState, updates: { pos: Position; cell: Cell }[]): GridState {
-	return R.reduce(applyCellUpdate, grid, updates);
+	if (updates.length === 0) return grid;
+
+	const validUpdates = updates.filter((update) => isValidPosition(update.pos, grid.size));
+	if (validUpdates.length === 0) return grid;
+
+	const updateMap = createUpdateMap(validUpdates);
+	const newCells = applyBatchUpdates(grid.cells, updateMap);
+
+	return { ...grid, cells: newCells };
 }
 
 export function isValidPosition(pos: Position, size: number): boolean {
@@ -139,15 +108,18 @@ export function toggleOrientation(orientation: Orientation): Orientation {
 	return orientation === 'horizontal' ? 'vertical' : 'horizontal';
 }
 
-function generateRandomArray(): Uint32Array {
-	const array = new Uint32Array(10);
+const BOAT_ID_BYTE_LENGTH = 10;
+const BOAT_ID_PREFIX = 'boat';
+
+function generateRandomBytes(length: number): Uint32Array {
+	const array = new Uint32Array(length);
 	self.crypto.getRandomValues(array);
 	return array;
 }
 
 export function generateBoatId(): string {
-	const array = generateRandomArray();
-	return `boat-${array}`;
+	const array = generateRandomBytes(BOAT_ID_BYTE_LENGTH);
+	return `${BOAT_ID_PREFIX}-${array}`;
 }
 
 function isBoatWithId(boatId: string) {

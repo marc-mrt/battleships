@@ -11,8 +11,11 @@ interface CreateSessionPayload {
 	owner: { playerId: string };
 }
 
-function generateSlug(prefix = 's') {
-	const id = crypto.randomBytes(3).toString('hex');
+const SESSION_SLUG_PREFIX = 's';
+const SESSION_SLUG_BYTE_LENGTH = 3;
+
+function generateSlug(prefix: string = SESSION_SLUG_PREFIX): string {
+	const id = crypto.randomBytes(SESSION_SLUG_BYTE_LENGTH).toString('hex');
 	return `${prefix}_${id}`;
 }
 
@@ -86,6 +89,31 @@ interface SetCurrentTurnPayload {
 	playerId: string;
 }
 
+function buildFullSessionSelectQuery(): string {
+	return `
+		SELECT s.*,
+					 owner_player.id                        AS owner_id,
+					 owner_player.username                  AS owner_username,
+					 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
+																							b.length,
+																							'orientation', b.orientation, 'sunk', b.sunk))
+						FROM boats b
+						WHERE owner_player.id = b.player_id)  AS owner_boats,
+					 friend_player.id                       AS friend_id,
+					 friend_player.username                 AS friend_username,
+					 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
+																							b.length,
+																							'orientation', b.orientation, 'sunk', b.sunk))
+						FROM boats b
+						WHERE friend_player.id = b.player_id) AS friend_boats,
+					 (SELECT json_agg(json_build_object('id', shots.id, 'created_at', shots.created_at, 'shooter_id', shots.shooter_id, 'target_id',
+																							shots.target_id,
+																							'x', shots.x, 'y', shots.y, 'hit', shots.hit))
+						FROM shots
+						WHERE shots.session_id = s.id)        AS shots
+	`;
+}
+
 export async function setCurrentTurn(payload: SetCurrentTurnPayload): Promise<SessionInGame> {
 	const { sessionId, playerId } = payload;
 
@@ -96,26 +124,7 @@ export async function setCurrentTurn(payload: SetCurrentTurnPayload): Promise<Se
 			SET current_turn_id = $1
 			WHERE id = $2 RETURNING *
 			)
-			SELECT s.*,
-						 owner_player.id                        AS owner_id,
-						 owner_player.username                  AS owner_username,
-						 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
-																								b.length,
-																								'orientation', b.orientation, 'sunk', b.sunk))
-							FROM boats b
-							WHERE owner_player.id = b.player_id)  AS owner_boats,
-						 friend_player.id                       AS friend_id,
-						 friend_player.username                 AS friend_username,
-						 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
-																								b.length,
-																								'orientation', b.orientation, 'sunk', b.sunk))
-							FROM boats b
-							WHERE friend_player.id = b.player_id) AS friend_boats,
-						 (SELECT json_agg(json_build_object('id', shots.id, 'created_at', shots.created_at, 'shooter_id', shots.shooter_id, 'target_id',
-																								shots.target_id,
-																								'x', shots.x, 'y', shots.y, 'hit', shots.hit))
-							FROM shots
-							WHERE shots.session_id = s.id)        AS shots
+			${buildFullSessionSelectQuery()}
 			FROM updated_session s
 						 JOIN players owner_player ON s.owner_id = owner_player.id
 						 LEFT JOIN players friend_player ON s.friend_id = friend_player.id;
@@ -140,26 +149,7 @@ export async function setCurrentTurn(payload: SetCurrentTurnPayload): Promise<Se
 export async function getSessionByPlayerId(playerId: string): Promise<Session | null> {
 	const result = await query(
 		`
-			SELECT s.*,
-						 owner_player.id                        AS owner_id,
-						 owner_player.username                  AS owner_username,
-						 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
-																								b.length,
-																								'orientation', b.orientation, 'sunk', b.sunk))
-							FROM boats b
-							WHERE owner_player.id = b.player_id)  AS owner_boats,
-						 friend_player.id                       AS friend_id,
-						 friend_player.username                 AS friend_username,
-						 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
-																								b.length,
-																								'orientation', b.orientation, 'sunk', b.sunk))
-							FROM boats b
-							WHERE friend_player.id = b.player_id) AS friend_boats,
-						 (SELECT json_agg(json_build_object('id', shots.id, 'created_at', shots.created_at, 'shooter_id', shots.shooter_id, 'target_id',
-																								shots.target_id,
-																								'x', shots.x, 'y', shots.y, 'hit', shots.hit))
-							FROM shots
-							WHERE shots.session_id = s.id)        AS shots
+			${buildFullSessionSelectQuery()}
 			FROM sessions s
 						 JOIN players owner_player ON s.owner_id = owner_player.id
 						 LEFT JOIN players friend_player ON s.friend_id = friend_player.id

@@ -12,65 +12,27 @@ interface WebSocketError {
 	originalError?: unknown;
 }
 
-interface CreateWebSocketErrorPayload {
-	type: 'connection' | 'parse' | 'send' | 'reconnect';
-	message: string;
-	originalError?: unknown;
-}
+const ERROR_MESSAGES = {
+	connection: 'Failed to establish WebSocket connection',
+	connectionEvent: 'WebSocket connection error',
+	parse: 'Failed to parse WebSocket message',
+	send: 'Failed to send WebSocket message',
+	notConnected: 'WebSocket is not connected',
+	reconnect: 'Failed to reconnect after maximum attempts',
+} as const;
 
-function createWebSocketError(payload: CreateWebSocketErrorPayload): WebSocketError {
-	return {
-		type: payload.type,
-		message: payload.message,
-		originalError: payload.originalError,
+function createErrorFactory(type: WebSocketError['type'], message: string) {
+	return function createError(originalError?: unknown): WebSocketError {
+		return { type, message, originalError };
 	};
 }
 
-function createConnectionError(err: unknown): WebSocketError {
-	return createWebSocketError({
-		type: 'connection',
-		message: 'Failed to establish WebSocket connection',
-		originalError: err,
-	});
-}
-
-function createParseError(err: unknown): WebSocketError {
-	return createWebSocketError({
-		type: 'parse',
-		message: 'Failed to parse WebSocket message',
-		originalError: err,
-	});
-}
-
-function createConnectionEventError(event: Event): WebSocketError {
-	return createWebSocketError({
-		type: 'connection',
-		message: 'WebSocket connection error',
-		originalError: event,
-	});
-}
-
-function createSendError(err: unknown): WebSocketError {
-	return createWebSocketError({
-		type: 'send',
-		message: 'Failed to send WebSocket message',
-		originalError: err,
-	});
-}
-
-function createNotConnectedError(): WebSocketError {
-	return createWebSocketError({
-		type: 'send',
-		message: 'WebSocket is not connected',
-	});
-}
-
-function createReconnectError(): WebSocketError {
-	return createWebSocketError({
-		type: 'reconnect',
-		message: 'Failed to reconnect after maximum attempts',
-	});
-}
+const createConnectionError = createErrorFactory('connection', ERROR_MESSAGES.connection);
+const createConnectionEventError = createErrorFactory('connection', ERROR_MESSAGES.connectionEvent);
+const createParseError = createErrorFactory('parse', ERROR_MESSAGES.parse);
+const createSendError = createErrorFactory('send', ERROR_MESSAGES.send);
+const createNotConnectedError = createErrorFactory('send', ERROR_MESSAGES.notConnected);
+const createReconnectError = createErrorFactory('reconnect', ERROR_MESSAGES.reconnect);
 
 export class ConnectionManager {
 	private ws: WebSocket | null = null;
