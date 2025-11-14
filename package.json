@@ -1,11 +1,20 @@
 {
-  "name": "battleships",
-  "version": "0.0.0",
-  "author": "Marc Morant",
-  "license": "MIT",
-  "description": "A 2-player battleship game for the web.",
-  "engines": {
-    "node": "^24.11.0",
-    "pnpm": "^10.22.0"
-  }
+	"name": "battleships",
+	"version": "0.0.0",
+	"type": "module",
+	"author": "Marc Morant",
+	"license": "MIT",
+	"description": "A 2-player battleship game for the web.",
+	"engines": {
+		"node": "^24.11.0",
+		"pnpm": "^10.22.0"
+	},
+	"devDependencies": {
+		"@eslint/js": "catalog:",
+		"eslint": "catalog:",
+		"globals": "catalog:",
+		"prettier": "catalog:",
+		"typescript": "catalog:",
+		"typescript-eslint": "catalog:"
+	}
 }

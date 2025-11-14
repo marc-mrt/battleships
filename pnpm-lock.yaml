@@ -39,7 +39,26 @@ catalogs:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 9.37.0
+      eslint:
+        specifier: 'catalog:'
+        version: 9.37.0
+      globals:
+        specifier: 'catalog:'
+        version: 16.4.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.4.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      typescript-eslint:
+        specifier: 'catalog:'
+        version: 8.45.0(eslint@9.37.0)(typescript@5.9.3)
 
   apps/client:
     dependencies:
@@ -186,8 +205,46 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.1.11
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 9.37.0
+      eslint:
+        specifier: 'catalog:'
+        version: 9.37.0
+      globals:
+        specifier: 'catalog:'
+        version: 16.4.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.4.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      typescript-eslint:
+        specifier: 'catalog:'
+        version: 8.45.0(eslint@9.37.0)(typescript@5.9.3)
 
-  packages/game-rules: {}
+  packages/game-rules:
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 9.37.0
+      eslint:
+        specifier: 'catalog:'
+        version: 9.37.0
+      globals:
+        specifier: 'catalog:'
+        version: 16.4.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.4.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      typescript-eslint:
+        specifier: 'catalog:'
+        version: 8.45.0(eslint@9.37.0)(typescript@5.9.3)
 
 packages:
 

@@ -1,20 +1,12 @@
 {
+	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
 		"tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-		"target": "ESNext",
 		"module": "CommonJS",
-		"skipLibCheck": true,
 		"noEmit": true,
 		"allowImportingTsExtensions": true,
-		"moduleDetection": "force",
 		"outDir": "./dist",
 		"rootDir": "./src",
-		"esModuleInterop": true,
-		"strict": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"erasableSyntaxOnly": true,
-		"noFallthroughCasesInSwitch": true,
-		"noUncheckedSideEffectImports": true
+		"erasableSyntaxOnly": true
 	}
 }
