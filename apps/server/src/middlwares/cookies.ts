@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { Response } from 'express';
+import { signJwt, verifyJwt } from '../utils/jwt.ts';
+import { config } from '../config.ts';
 
 const COOKIE_NAME = 'session';
 const MAX_AGE = 24 * 60 * 60 * 1000;
@@ -43,12 +45,8 @@ function extractSessionCookie(cookies: Record<string, string>): string | undefin
 	return cookies[COOKIE_NAME];
 }
 
-function parseJsonCookie(cookie: string): unknown {
-	return JSON.parse(cookie);
-}
-
-function validateSessionCookie(json: unknown): SessionCookie {
-	return SessionCookieSchema.parse(json);
+function validateSessionCookie(payload: unknown): SessionCookie {
+	return SessionCookieSchema.parse(payload);
 }
 
 function logParseError(error: unknown): void {
@@ -61,15 +59,20 @@ export function parseSessionCookie(cookieHeader: string | undefined): SessionCoo
 	}
 
 	const cookies = parseCookieHeader(cookieHeader);
-	const cookie = extractSessionCookie(cookies);
+	const token = extractSessionCookie(cookies);
 
-	if (!cookie) {
+	if (!token) {
 		return null;
 	}
 
 	try {
-		const json = parseJsonCookie(cookie);
-		return validateSessionCookie(json);
+		const result = verifyJwt({ token, secret: config.jwtSecret });
+
+		if (!result.valid || !result.payload) {
+			return null;
+		}
+
+		return validateSessionCookie(result.payload);
 	} catch (error) {
 		logParseError(error);
 		return null;
@@ -84,6 +87,11 @@ interface SetSessionCookiePayload {
 export function setSessionCookie(payload: SetSessionCookiePayload): void {
 	const { response, payload: cookiePayload } = payload;
 	const options = getCookieOptions();
-	const value = JSON.stringify(cookiePayload);
-	response.cookie(COOKIE_NAME, value, options);
+
+	const token = signJwt({
+		payload: cookiePayload,
+		secret: config.jwtSecret,
+	});
+
+	response.cookie(COOKIE_NAME, token, options);
 }

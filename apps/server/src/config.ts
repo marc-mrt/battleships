@@ -4,6 +4,7 @@ interface Config {
 	allowedOrigins: string[];
 	port: number;
 	databaseConnectionString: string;
+	jwtSecret: string;
 }
 
 interface EnvVariable {
@@ -57,11 +58,13 @@ function initConfig(): Config {
 	const allowedOriginsRaw = getRequiredEnvVariable('ALLOWED_ORIGINS');
 	const portRaw = getRequiredEnvVariable('PORT');
 	const databaseConnectionString = getRequiredEnvVariable('DATABASE_CONNECTION_STRING');
+	const jwtSecret = getRequiredEnvVariable('JWT_SECRET');
 
 	return {
 		allowedOrigins: parseAllowedOrigins(allowedOriginsRaw),
 		port: parsePort(portRaw),
 		databaseConnectionString: validateDatabaseConnectionString(databaseConnectionString),
+		jwtSecret,
 	};
 }
 

@@ -84,14 +84,16 @@ server/src/
 
 - Environment variables loaded via `dotenv/config`
 - Config validation at startup (fails fast if missing)
-- Required vars: `ALLOWED_ORIGINS`, `PORT`, `DATABASE_CONNECTION_STRING`
+- Required vars: `ALLOWED_ORIGINS`, `PORT`, `DATABASE_CONNECTION_STRING`, `JWT_SECRET`
 
-**6. Cookie-Based Sessions**
+**6. JWT-Based Session Cookies**
 
 - Cookie name: `session`
-- Contains: `{ sessionId, playerId }`
+- Contains: JWT-signed token with `{ sessionId, playerId, iat }`
+- Signed with `JWT_SECRET` environment variable using HMAC SHA-256
 - Used for both HTTP and WebSocket authentication
 - Helper functions: `parseSessionCookie()`, `setSessionCookie()`
+- JWT utilities: `signJwt()`, `verifyJwt()` in `utils/jwt.ts`
 
 ### Frontend (Svelte 5)
 
@@ -372,6 +374,7 @@ cd apps/server && pnpm build
 - `PORT`: Server port
 - `ALLOWED_ORIGINS`: Comma-separated CORS origins
 - `DATABASE_CONNECTION_STRING`: PostgreSQL connection string
+- `JWT_SECRET`: Secret key for signing session JWTs (min 32 characters recommended)
 
 ---
 
