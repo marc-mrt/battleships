@@ -181,6 +181,49 @@ export async function setWinner(payload: SetWinnerPayload): Promise<Session> {
 	return mapToSession(result.rows[0]);
 }
 
+export async function resetSessionToBoatPlacement(
+	sessionId: string,
+): Promise<SessionWaitingForBoats> {
+	await query(
+		'DELETE FROM boats WHERE player_id IN (SELECT owner_id FROM sessions WHERE id = $1 UNION SELECT friend_id FROM sessions WHERE id = $1)',
+		[sessionId],
+	);
+	await query('DELETE FROM shots WHERE session_id = $1', [sessionId]);
+
+	const result = await query(
+		`
+			WITH updated_session AS (
+				UPDATE sessions
+				SET winner_id = NULL, current_turn_id = NULL
+				WHERE id = $1
+				RETURNING *
+			)
+			SELECT s.*,
+						 o.id       AS owner_id,
+						 o.username AS owner_username,
+						 f.id       AS friend_id,
+						 f.username AS friend_username
+			FROM updated_session s
+						 JOIN players o ON s.owner_id = o.id
+						 JOIN players f ON s.friend_id = f.id
+		`,
+		[sessionId],
+	);
+
+	if (result.rows.length === 0) {
+		throw new RecordNotFoundError(`Session not found: ${sessionId}`);
+	}
+
+	const session: Session = mapToSession(result.rows[0]);
+	if (session.status !== 'waiting_for_boat_placements') {
+		throw new UnexpectedDatabaseError(
+			`Session is in unexpected '${session.status}' status after reset: ${sessionId}`,
+		);
+	}
+
+	return session;
+}
+
 export async function getSessionByPlayerId(playerId: string): Promise<Session | null> {
 	const result = await query(
 		buildFullSessionSelectQuery('sessions', 'WHERE s.owner_id = $1 OR s.friend_id = $1'),

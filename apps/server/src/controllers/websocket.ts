@@ -7,6 +7,7 @@ import {
 	GameState,
 	type NextTurnMessage,
 	type ServerMessage,
+	type NewGameStartedMessage,
 } from 'game-messages';
 import { InternalServerError } from './errors';
 import * as SessionService from '../services/session.ts';
@@ -80,6 +81,10 @@ async function handleIncomingClientMessage(
 			await SessionService.handleShotFired({ playerId, ...message.data });
 			break;
 		}
+		case 'request_new_game': {
+			await handleRequestNewGame(playerId);
+			break;
+		}
 		default: {
 			const _exhaustive: never = message;
 			console.error(`Unknown message type: ${(_exhaustive as { type: string }).type}`);
@@ -111,6 +116,27 @@ export function sendFriendJoinedMessage(playerId: string, data: FriendJoinedMess
 		data,
 	};
 	sendMessageToPlayer(playerId, message);
+}
+
+function sendNewGameStartedMessage(playerId: string, data: NewGameStartedMessage['data']): void {
+	const message: NewGameStartedMessage = {
+		type: 'new_game_started',
+		data,
+	};
+	sendMessageToPlayer(playerId, message);
+}
+
+async function handleRequestNewGame(playerId: string): Promise<void> {
+	const resetSession = await SessionService.requestNewGame(playerId);
+
+	const messageData: NewGameStartedMessage['data'] = {
+		session: {
+			status: 'waiting_for_boat_placements',
+		},
+	};
+
+	sendNewGameStartedMessage(resetSession.owner.id, messageData);
+	sendNewGameStartedMessage(resetSession.friend.id, messageData);
 }
 
 async function sendGameStateOnReconnection(playerId: string): Promise<void> {

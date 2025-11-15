@@ -77,8 +77,19 @@ export const NextTurnMessageSchema = z.object({
 });
 export type NextTurnMessage = z.infer<typeof NextTurnMessageSchema>;
 
+export const NewGameStartedMessageSchema = z.object({
+	type: z.literal('new_game_started'),
+	data: z.object({
+		session: z.object({
+			status: z.literal('waiting_for_boat_placements'),
+		}),
+	}),
+});
+export type NewGameStartedMessage = z.infer<typeof NewGameStartedMessageSchema>;
+
 export const ServerMessageSchema = z.discriminatedUnion('type', [
 	FriendJoinedMessageSchema,
 	NextTurnMessageSchema,
+	NewGameStartedMessageSchema,
 ]);
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;

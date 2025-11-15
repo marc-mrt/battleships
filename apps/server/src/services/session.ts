@@ -94,3 +94,13 @@ export async function handleShotFired(payload: ProcessShotPayload): Promise<void
 	const coordinates: Coordinates = { x: payload.x, y: payload.y };
 	await GameStateManager.handleShotFired({ session, playerId, coordinates });
 }
+
+export async function requestNewGame(playerId: string): Promise<SessionWaitingForBoats> {
+	const session = await getSessionByPlayerId(playerId);
+
+	if (session.owner.id !== playerId) {
+		throw new NotFoundError('Only the session owner can request a new game');
+	}
+
+	return await SessionDB.resetSessionToBoatPlacement(session.id);
+}

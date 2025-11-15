@@ -1,4 +1,9 @@
-import type { FriendJoinedMessage, NextTurnMessage, ServerMessage } from 'game-messages';
+import type {
+	FriendJoinedMessage,
+	NextTurnMessage,
+	NewGameStartedMessage,
+	ServerMessage,
+} from 'game-messages';
 import type { State } from './store.svelte';
 
 function isStateReady(state: State): boolean {
@@ -54,6 +59,24 @@ function handleNextTurnMessage(state: State, message: NextTurnMessage): State {
 	};
 }
 
+function handleNewGameStartedMessage(state: State, message: NewGameStartedMessage): State {
+	if (state.status !== 'ready') {
+		return state;
+	}
+
+	return {
+		...state,
+		meta: {
+			...state.meta,
+			session: {
+				...state.meta.session,
+				status: message.data.session.status,
+			},
+		},
+		game: null,
+	};
+}
+
 type MessageHandler<T extends ServerMessage> = (state: State, message: T) => State;
 
 type MessageHandlers = {
@@ -63,6 +86,7 @@ type MessageHandlers = {
 const MESSAGE_HANDLERS: MessageHandlers = {
 	friend_joined: handleFriendJoinedMessage,
 	next_turn: handleNextTurnMessage,
+	new_game_started: handleNewGameStartedMessage,
 };
 
 export function handleMessage(state: State, message: ServerMessage): State {

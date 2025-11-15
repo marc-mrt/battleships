@@ -16,19 +16,12 @@ export function createLoadingState(): State {
 interface SessionMeta {
 	slug: string;
 	status: SessionStatus;
+	ownerId: string;
 }
 
 interface PlayerMeta {
 	id: string;
 	username: string;
-}
-
-function createSessionMeta(slug: string, status: SessionStatus): SessionMeta {
-	return { slug, status };
-}
-
-function createPlayerMeta(id: string, username: string): PlayerMeta {
-	return { id, username };
 }
 
 interface CreateReadyStatePayload {
@@ -49,12 +42,19 @@ export function createReadyState(payload: CreateReadyStatePayload): State {
 	};
 }
 
-export function extractSessionMeta(session: Session) {
-	return createSessionMeta(session.slug, session.status);
+export function extractSessionMeta(session: Session): SessionMeta {
+	return {
+		slug: session.slug,
+		status: session.status,
+		ownerId: session.owner.id,
+	};
 }
 
 export function extractPlayerMeta(player: { id: string; username: string }): PlayerMeta {
-	return createPlayerMeta(player.id, player.username);
+	return {
+		id: player.id,
+		username: player.username,
+	};
 }
 
 function getPlayer(isOwner: boolean) {

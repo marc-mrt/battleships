@@ -28,8 +28,14 @@ export const FireShotMessageSchema = z.object({
 });
 export type FireShotMessage = z.infer<typeof FireShotMessageSchema>;
 
+export const RequestNewGameMessageSchema = z.object({
+	type: z.literal('request_new_game'),
+});
+export type RequestNewGameMessage = z.infer<typeof RequestNewGameMessageSchema>;
+
 export type ClientMessage = z.infer<typeof ClientMessageSchema>;
 export const ClientMessageSchema = z.discriminatedUnion('type', [
 	PlaceBoatsMessageSchema,
 	FireShotMessageSchema,
+	RequestNewGameMessageSchema,
 ]);

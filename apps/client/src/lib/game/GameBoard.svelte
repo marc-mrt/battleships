@@ -10,6 +10,8 @@
 	import { GRID_SIZE } from 'game-rules';
 	import { createEffectManager } from './effect-manager.svelte';
 
+	const isOwner = $derived(appStore.isOwner);
+
 	function shouldResetGame(rawGame: GameState | null): boolean {
 		return !rawGame;
 	}
@@ -177,6 +179,10 @@
 		sendFireShotAction(x, y);
 	}
 
+	function handleNewGameClick(): void {
+		appStore.requestNewGame();
+	}
+
 	function cleanup(): void {
 		effectManager.reset();
 	}
@@ -218,7 +224,14 @@
 			</div>
 		{/if}
 	{:else if game.status === 'over'}
-		<h1>{game.winner === 'player' ? '🎉 Victory!' : '💔 Defeat'}</h1>
+		<div class="game-over">
+			<h1>{game.winner === 'player' ? '🎉 Victory!' : '💔 Defeat'}</h1>
+			{#if isOwner}
+				<button class="new-game-button" onclick={handleNewGameClick}>Start New Game</button>
+			{:else}
+				<p class="waiting-message">Waiting for game owner to start a new game...</p>
+			{/if}
+		</div>
 	{/if}
 </main>
 
@@ -282,5 +295,45 @@
 	footer {
 		margin-top: 1rem;
 		text-align: center;
+	}
+
+	.game-over {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2rem;
+		padding: 2rem;
+	}
+
+	.game-over h1 {
+		font-size: 2.5rem;
+		margin: 0;
+	}
+
+	.new-game-button {
+		padding: 1rem 2rem;
+		font-size: 1.2rem;
+		font-weight: 600;
+		color: white;
+		background-color: var(--color-accent);
+		border: none;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.new-game-button:hover {
+		transform: scale(1.05);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+	}
+
+	.new-game-button:active {
+		transform: scale(0.98);
+	}
+
+	.waiting-message {
+		font-size: 1.1rem;
+		color: var(--color-text-subtle);
+		margin: 0;
 	}
 </style>

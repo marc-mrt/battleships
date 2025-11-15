@@ -15,6 +15,7 @@ export interface Metadata {
 	session: {
 		slug: string;
 		status: SessionStatus;
+		ownerId: string;
 	};
 	player: {
 		id: string;
@@ -83,6 +84,15 @@ class AppStore {
 
 	get game() {
 		return getGameFromState(this.state);
+	}
+
+	get isOwner(): boolean {
+		const session = this.session;
+		const player = this.player;
+		if (!session || !player) {
+			return false;
+		}
+		return session.ownerId === player.id;
 	}
 
 	constructor(
@@ -178,6 +188,12 @@ class AppStore {
 
 	sendAction(action: ClientMessage): void {
 		this.connectionManager.send(action);
+	}
+
+	requestNewGame(): void {
+		this.sendAction({
+			type: 'request_new_game',
+		});
 	}
 
 	destroy(): void {
