@@ -1,5 +1,5 @@
-import type { State } from './store.svelte';
-import type { Session, SessionStatus } from '../../models/session';
+import type { State, PlayerMetadata, SessionMetadata } from './state-types';
+import type { Session } from '../../models/session';
 
 export function createUninitializedState(): State {
 	return {
@@ -13,21 +13,10 @@ export function createLoadingState(): State {
 	};
 }
 
-interface SessionMeta {
-	slug: string;
-	status: SessionStatus;
-	ownerId: string;
-}
-
-interface PlayerMeta {
-	id: string;
-	username: string;
-}
-
 interface CreateReadyStatePayload {
-	session: SessionMeta;
-	player: PlayerMeta;
-	opponent: PlayerMeta | null;
+	session: SessionMetadata;
+	player: PlayerMetadata;
+	opponent: PlayerMetadata | null;
 }
 
 export function createReadyState(payload: CreateReadyStatePayload): State {
@@ -42,82 +31,37 @@ export function createReadyState(payload: CreateReadyStatePayload): State {
 	};
 }
 
-export function extractSessionMeta(session: Session): SessionMeta {
+export function extractSessionMetadata(session: Session): SessionMetadata {
 	return {
 		slug: session.slug,
 		status: session.status,
-		ownerId: session.owner.id,
 	};
 }
 
-export function extractPlayerMeta(player: { id: string; username: string }): PlayerMeta {
-	return {
-		id: player.id,
-		username: player.username,
-	};
-}
-
-function getPlayer(isOwner: boolean) {
-	return function extractPlayer(session: Session) {
-		return isOwner ? session.owner : session.friend;
-	};
-}
-
-function getOpponent(isOwner: boolean) {
-	return function extractOpponent(session: Session) {
-		return isOwner ? session.friend : session.owner;
-	};
-}
-
-function extractOpponentMeta(opponent: { id: string; username: string } | null): PlayerMeta | null {
-	return opponent ? extractPlayerMeta(opponent) : null;
-}
-
-interface BuildStateFromSessionPayload {
-	session: Session;
+interface PlayerMetadataPayload {
+	id: string;
+	username: string;
 	isOwner: boolean;
 }
 
-export function buildStateFromSession(payload: BuildStateFromSessionPayload): State {
-	const { session, isOwner } = payload;
-	const player = getPlayer(isOwner)(session);
-	const opponent = getOpponent(isOwner)(session);
-
-	if (!player) {
-		return createUninitializedState();
-	}
-
-	return createReadyState({
-		session: extractSessionMeta(session),
-		player: extractPlayerMeta(player),
-		opponent: extractOpponentMeta(opponent),
-	});
+export function extractPlayerMetadata(payload: PlayerMetadataPayload): PlayerMetadata {
+	return {
+		id: payload.id,
+		username: payload.username,
+		isOwner: payload.isOwner,
+	};
 }
 
-export function buildStateFromCreatedSession(session: Session): State {
-	return createReadyState({
-		session: extractSessionMeta(session),
-		player: extractPlayerMeta(session.owner),
-		opponent: null,
-	});
+export function extractOpponentMetadata(
+	opponent: PlayerMetadataPayload | null,
+): PlayerMetadata | null {
+	return opponent ? extractPlayerMetadata(opponent) : null;
 }
 
-export function buildStateFromJoinedSession(session: Session): State {
-	if (!session.friend) {
-		return createUninitializedState();
-	}
-
+export function buildStateFromSession(session: Session): State {
 	return createReadyState({
-		session: extractSessionMeta(session),
-		player: extractPlayerMeta(session.friend),
-		opponent: extractPlayerMeta(session.owner),
-	});
-}
-
-export function buildStateFromReconnection(session: Session): State {
-	return createReadyState({
-		session: extractSessionMeta(session),
-		player: extractPlayerMeta(session.owner),
-		opponent: extractOpponentMeta(session.friend),
+		session: extractSessionMetadata(session),
+		player: extractPlayerMetadata(session.player),
+		opponent: extractOpponentMetadata(session.opponent),
 	});
 }

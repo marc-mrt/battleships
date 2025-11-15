@@ -1,36 +1,13 @@
 import * as API from '../../api';
 import type { ClientMessage, ServerMessage, GameState } from 'game-messages';
-import type { SessionStatus } from '../../models/session';
+import type { State, Metadata, PlayerMetadata, SessionMetadata } from './state-types';
 import { getConnectionManager, type ConnectionManager } from './connection-manager.svelte';
 import { handleMessage } from './message-handler';
 import {
 	createUninitializedState,
 	createLoadingState,
-	buildStateFromCreatedSession,
-	buildStateFromJoinedSession,
-	buildStateFromReconnection,
+	buildStateFromSession,
 } from './state-builder';
-
-export interface Metadata {
-	session: {
-		slug: string;
-		status: SessionStatus;
-		ownerId: string;
-	};
-	player: {
-		id: string;
-		username: string;
-	};
-	opponent: {
-		id: string;
-		username: string;
-	} | null;
-}
-
-export type State =
-	| { status: 'uninitialized' }
-	| { status: 'loading' }
-	| { status: 'ready'; meta: Metadata; game: GameState | null };
 
 function isStateReady(
 	state: State,
@@ -38,21 +15,21 @@ function isStateReady(
 	return state.status === 'ready';
 }
 
-function getPlayerFromState(state: State): Metadata['player'] | null {
+function getPlayerFromState(state: State): PlayerMetadata | null {
 	if (!isStateReady(state)) {
 		return null;
 	}
 	return state.meta.player;
 }
 
-function getOpponentFromState(state: State): Metadata['opponent'] | null {
+function getOpponentFromState(state: State): PlayerMetadata | null {
 	if (!isStateReady(state)) {
 		return null;
 	}
 	return state.meta.opponent;
 }
 
-function getSessionFromState(state: State): Metadata['session'] | null {
+function getSessionFromState(state: State): SessionMetadata | null {
 	if (!isStateReady(state)) {
 		return null;
 	}
@@ -87,12 +64,12 @@ class AppStore {
 	}
 
 	get isOwner(): boolean {
-		const session = this.session;
 		const player = this.player;
-		if (!session || !player) {
+		if (!player) {
 			return false;
 		}
-		return session.ownerId === player.id;
+
+		return player.isOwner;
 	}
 
 	constructor(
@@ -127,7 +104,7 @@ class AppStore {
 		}
 
 		try {
-			const newState = buildStateFromCreatedSession(result.value);
+			const newState = buildStateFromSession(result.value);
 			await this.connectAndSetState(newState);
 		} catch (error) {
 			this.handleConnectionError(error);
@@ -143,7 +120,7 @@ class AppStore {
 			this.handleApiError(result.error);
 		}
 
-		const newState = buildStateFromJoinedSession(result.value);
+		const newState = buildStateFromSession(result.value);
 		if (newState.status === 'uninitialized') {
 			this.state = newState;
 			throw new Error('Failed to find player in session');
@@ -174,7 +151,7 @@ class AppStore {
 				return;
 			}
 
-			const newState = buildStateFromReconnection(session);
+			const newState = buildStateFromSession(session);
 			await this.connectAndSetState(newState);
 		} catch (error) {
 			this.logReconnectionError(error);

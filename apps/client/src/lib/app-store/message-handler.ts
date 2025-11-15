@@ -1,33 +1,22 @@
 import type {
-	FriendJoinedMessage,
+	OpponentJoinedMessage,
 	NextTurnMessage,
 	NewGameStartedMessage,
 	ServerMessage,
 } from 'game-messages';
-import type { State } from './store.svelte';
+import type { State } from './state-types';
+import { extractOpponentMetadata } from './state-builder';
 
 function isStateReady(state: State): boolean {
 	return state.status === 'ready';
 }
 
-interface FriendData {
-	playerId: string;
-	username: string;
-}
-
-function createOpponentMeta(friend: FriendData) {
-	return {
-		id: friend.playerId,
-		username: friend.username,
-	};
-}
-
-function handleFriendJoinedMessage(state: State, message: FriendJoinedMessage): State {
+function handleOpponentJoinedMessage(state: State, message: OpponentJoinedMessage): State {
 	if (state.status !== 'ready') {
 		return state;
 	}
 
-	const opponentMeta = createOpponentMeta(message.data.friend);
+	const opponentMeta = extractOpponentMetadata(message.data.opponent);
 
 	return {
 		...state,
@@ -84,7 +73,7 @@ type MessageHandlers = {
 };
 
 const MESSAGE_HANDLERS: MessageHandlers = {
-	friend_joined: handleFriendJoinedMessage,
+	opponent_joined: handleOpponentJoinedMessage,
 	next_turn: handleNextTurnMessage,
 	new_game_started: handleNewGameStartedMessage,
 };

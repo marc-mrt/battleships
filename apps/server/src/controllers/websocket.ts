@@ -3,7 +3,7 @@ import { IncomingMessage } from 'node:http';
 import {
 	type ClientMessage,
 	ClientMessageSchema,
-	type FriendJoinedMessage,
+	type OpponentJoinedMessage,
 	GameState,
 	type NextTurnMessage,
 	type ServerMessage,
@@ -110,9 +110,12 @@ export function sendNextTurnMessage(playerId: string, data: NextTurnMessage['dat
 	sendMessageToPlayer(playerId, message);
 }
 
-export function sendFriendJoinedMessage(playerId: string, data: FriendJoinedMessage['data']): void {
-	const message: FriendJoinedMessage = {
-		type: 'friend_joined',
+export function sendOpponentJoinedMessage(
+	playerId: string,
+	data: OpponentJoinedMessage['data'],
+): void {
+	const message: OpponentJoinedMessage = {
+		type: 'opponent_joined',
 		data,
 	};
 	sendMessageToPlayer(playerId, message);

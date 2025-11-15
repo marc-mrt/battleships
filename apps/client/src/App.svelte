@@ -40,7 +40,7 @@
 		</div>
 	</main>
 {:else if status !== null}
-	{#if status === 'waiting_for_friend'}
+	{#if status === 'waiting_for_opponent'}
 		<WaitForPlayerToJoin />
 	{:else if status === 'waiting_for_boat_placements'}
 		<PlaceBoats />

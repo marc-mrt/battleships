@@ -1,19 +1,20 @@
 import { z } from 'zod';
 import { CoordinateSchema } from './shared';
 
-export const FriendJoinedMessageSchema = z.object({
-	type: z.literal('friend_joined'),
+export const OpponentJoinedMessageSchema = z.object({
+	type: z.literal('opponent_joined'),
 	data: z.object({
 		session: z.object({
 			status: z.literal('waiting_for_boat_placements'),
 		}),
-		friend: z.object({
-			playerId: z.string(),
+		opponent: z.object({
+			id: z.string(),
 			username: z.string(),
+			isOwner: z.boolean(),
 		}),
 	}),
 });
-export type FriendJoinedMessage = z.infer<typeof FriendJoinedMessageSchema>;
+export type OpponentJoinedMessage = z.infer<typeof OpponentJoinedMessageSchema>;
 
 export const BoatSchema = z.object({
 	startX: CoordinateSchema,
@@ -88,7 +89,7 @@ export const NewGameStartedMessageSchema = z.object({
 export type NewGameStartedMessage = z.infer<typeof NewGameStartedMessageSchema>;
 
 export const ServerMessageSchema = z.discriminatedUnion('type', [
-	FriendJoinedMessageSchema,
+	OpponentJoinedMessageSchema,
 	NextTurnMessageSchema,
 	NewGameStartedMessageSchema,
 ]);

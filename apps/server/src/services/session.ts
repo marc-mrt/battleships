@@ -1,7 +1,7 @@
 import * as SessionDB from '../database/session.ts';
 import { Session, SessionWaitingForBoats } from '../models/session.ts';
 import { Player } from '../models/player.ts';
-import { sendFriendJoinedMessage } from '../controllers/websocket.ts';
+import { sendOpponentJoinedMessage } from '../controllers/websocket.ts';
 import { NotFoundError } from '../controllers/errors.ts';
 import { Coordinates } from '../models/shot.ts';
 import * as GameStateManager from './game-state-manager.ts';
@@ -32,13 +32,14 @@ export async function joinSession(payload: JoinSessionPayload): Promise<SessionW
 		friend: { playerId: player.id },
 	});
 
-	sendFriendJoinedMessage(session.owner.id, {
+	sendOpponentJoinedMessage(session.owner.id, {
 		session: {
-			status: 'waiting_for_boat_placements',
+			status: session.status,
 		},
-		friend: {
-			playerId: player.id,
+		opponent: {
+			id: player.id,
 			username: player.username,
+			isOwner: false,
 		},
 	});
 
