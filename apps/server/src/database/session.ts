@@ -1,5 +1,12 @@
 import * as crypto from 'node:crypto';
-import type { Session, SessionInGame, SessionWaitingForBoats } from '../models/session';
+import type {
+	Session,
+	SessionCreated,
+	SessionPlaying,
+	SessionGameOver,
+	SessionReadyToStart,
+	SessionWaitingForBoats,
+} from '../models/session';
 import { query } from './db';
 import { z } from 'zod';
 import { generateMapperToDomainModel } from './mapper';
@@ -89,7 +96,7 @@ interface SetCurrentTurnPayload {
 	playerId: string;
 }
 
-function buildFullSessionSelectQuery(): string {
+function buildFullSessionSelectQuery(source: string, whereClause?: string): string {
 	return `
 		SELECT s.*,
 					 owner_player.id                        AS owner_id,
@@ -111,23 +118,24 @@ function buildFullSessionSelectQuery(): string {
 																							'x', shots.x, 'y', shots.y, 'hit', shots.hit))
 						FROM shots
 						WHERE shots.session_id = s.id)        AS shots
+		FROM ${source} s
+  		JOIN players owner_player ON s.owner_id = owner_player.id
+      LEFT JOIN players friend_player ON s.friend_id = friend_player.id
+    ${whereClause || ''}
 	`;
 }
 
-export async function setCurrentTurn(payload: SetCurrentTurnPayload): Promise<SessionInGame> {
+export async function setCurrentTurn(payload: SetCurrentTurnPayload): Promise<SessionPlaying> {
 	const { sessionId, playerId } = payload;
 
 	const result = await query(
 		`
 			WITH updated_session AS (
-			UPDATE sessions
-			SET current_turn_id = $1
-			WHERE id = $2 RETURNING *
+  			UPDATE sessions
+  			SET current_turn_id = $1
+  			WHERE id = $2 RETURNING *
 			)
-			${buildFullSessionSelectQuery()}
-			FROM updated_session s
-						 JOIN players owner_player ON s.owner_id = owner_player.id
-						 LEFT JOIN players friend_player ON s.friend_id = friend_player.id;
+			${buildFullSessionSelectQuery('updated_session')}
 		`,
 		[playerId, sessionId],
 	);
@@ -137,7 +145,7 @@ export async function setCurrentTurn(payload: SetCurrentTurnPayload): Promise<Se
 	}
 
 	const session: Session = mapToSession(result.rows[0]);
-	if (session.status !== 'in_game') {
+	if (session.status !== 'playing') {
 		throw new UnexpectedDatabaseError(
 			`Session is in unexpected '${session.status}' status: ${sessionId}`,
 		);
@@ -146,16 +154,36 @@ export async function setCurrentTurn(payload: SetCurrentTurnPayload): Promise<Se
 	return session;
 }
 
-export async function getSessionByPlayerId(playerId: string): Promise<Session | null> {
+interface SetWinnerPayload {
+	sessionId: string;
+	winnerId: string;
+}
+
+export async function setWinner(payload: SetWinnerPayload): Promise<Session> {
+	const { sessionId, winnerId } = payload;
+
 	const result = await query(
 		`
-			${buildFullSessionSelectQuery()}
-			FROM sessions s
-						 JOIN players owner_player ON s.owner_id = owner_player.id
-						 LEFT JOIN players friend_player ON s.friend_id = friend_player.id
-			WHERE s.owner_id = $1
-				 OR s.friend_id = $1;
+			WITH updated_session AS (
+  			UPDATE sessions
+  			SET winner_id = $1, current_turn_id = NULL
+  			WHERE id = $2 RETURNING *
+			)
+			${buildFullSessionSelectQuery('updated_session')}
 		`,
+		[winnerId, sessionId],
+	);
+
+	if (result.rows.length === 0) {
+		throw new RecordNotFoundError(`Session not found: ${sessionId}`);
+	}
+
+	return mapToSession(result.rows[0]);
+}
+
+export async function getSessionByPlayerId(playerId: string): Promise<Session | null> {
+	const result = await query(
+		buildFullSessionSelectQuery('sessions', 'WHERE s.owner_id = $1 OR s.friend_id = $1'),
 		[playerId],
 	);
 
@@ -188,7 +216,7 @@ function hasBoatPlacements(parsed: z.infer<typeof SessionDatabaseSchema>): boole
 	return parsed.owner_boats != null && parsed.friend_boats != null;
 }
 
-function hasStartedGame(parsed: z.infer<typeof SessionDatabaseSchema>): boolean {
+function hasCurrentTurnSet(parsed: z.infer<typeof SessionDatabaseSchema>): boolean {
 	return parsed.current_turn_id != null;
 }
 
@@ -210,14 +238,16 @@ function createFriendData(parsed: z.infer<typeof SessionDatabaseSchema>) {
 	};
 }
 
-function mapToWaitingForFriend(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
+function mapToWaitingForFriend(parsed: z.infer<typeof SessionDatabaseSchema>): SessionCreated {
 	return {
 		...createBaseSession(parsed),
 		status: 'waiting_for_friend',
 	};
 }
 
-function mapToWaitingForBoatPlacements(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
+function mapToWaitingForBoatPlacements(
+	parsed: z.infer<typeof SessionDatabaseSchema>,
+): SessionWaitingForBoats {
 	return {
 		...createBaseSession(parsed),
 		status: 'waiting_for_boat_placements',
@@ -225,7 +255,7 @@ function mapToWaitingForBoatPlacements(parsed: z.infer<typeof SessionDatabaseSch
 	};
 }
 
-function mapToReadyToStart(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
+function mapToReadyToStart(parsed: z.infer<typeof SessionDatabaseSchema>): SessionReadyToStart {
 	return {
 		...createBaseSession(parsed),
 		status: 'ready_to_start',
@@ -233,16 +263,27 @@ function mapToReadyToStart(parsed: z.infer<typeof SessionDatabaseSchema>): Sessi
 	};
 }
 
-function mapToInGame(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
+function mapToPlaying(parsed: z.infer<typeof SessionDatabaseSchema>): SessionPlaying {
 	return {
 		...createBaseSession(parsed),
-		status: 'in_game',
+		status: 'playing',
 		ownerBoats: parsed.owner_boats?.map(mapToBoat) ?? [],
 		friend: createFriendData(parsed),
 		friendBoats: parsed.friend_boats?.map(mapToBoat) ?? [],
 		currentTurn: { id: parsed.current_turn_id! },
 		shots: parsed.shots?.map(mapToShot) ?? [],
 	};
+}
+
+function mapToGameOver(parsed: z.infer<typeof SessionDatabaseSchema>): SessionGameOver {
+	return {
+		...mapToPlaying(parsed),
+		winner: { id: parsed.winner_id! },
+	};
+}
+
+function hasWinner(parsed: z.infer<typeof SessionDatabaseSchema>): boolean {
+	return parsed.winner_id != null;
 }
 
 function mapper(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
@@ -252,10 +293,13 @@ function mapper(parsed: z.infer<typeof SessionDatabaseSchema>): Session {
 	if (!hasBoatPlacements(parsed)) {
 		return mapToWaitingForBoatPlacements(parsed);
 	}
-	if (!hasStartedGame(parsed)) {
+	if (hasWinner(parsed)) {
+		return mapToGameOver(parsed);
+	}
+	if (!hasCurrentTurnSet(parsed)) {
 		return mapToReadyToStart(parsed);
 	}
-	return mapToInGame(parsed);
+	return mapToPlaying(parsed);
 }
 
 const mapToSession = generateMapperToDomainModel({

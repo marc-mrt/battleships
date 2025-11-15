@@ -47,15 +47,28 @@ export const OpponentGameStateSchema = z.object({
 });
 export type OpponentGameState = z.infer<typeof OpponentGameStateSchema>;
 
-export const GameStateSchema = z.object({
-	turn: z.enum(['player_turn', 'opponent_turn']),
-	session: z.object({
-		status: z.enum(['in_game', 'game_over']),
-	}),
-	lastShot: LastShotSchema.nullable(),
+const BaseGameStateSchema = z.object({
 	player: PlayerGameStateSchema,
 	opponent: OpponentGameStateSchema,
+	lastShot: LastShotSchema.nullable(),
 });
+
+export const GameInProgressStateSchema = BaseGameStateSchema.extend({
+	status: z.literal('in_progress'),
+	turn: z.enum(['player', 'opponent']),
+});
+export type GameInProgressState = z.infer<typeof GameInProgressStateSchema>;
+
+export const GameOverStateSchema = BaseGameStateSchema.extend({
+	status: z.literal('over'),
+	winner: z.enum(['player', 'opponent']),
+});
+export type GameOverState = z.infer<typeof GameOverStateSchema>;
+
+export const GameStateSchema = z.discriminatedUnion('status', [
+	GameInProgressStateSchema,
+	GameOverStateSchema,
+]);
 export type GameState = z.infer<typeof GameStateSchema>;
 
 export const NextTurnMessageSchema = z.object({

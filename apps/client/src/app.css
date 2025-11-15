@@ -1,13 +1,19 @@
 :root {
 	--color-white: #ffffff;
 
+	--color-text: #213547;
 	--color-text-basic: #213547;
 	--color-text-subtle: lightgray;
 	--color-text-error: #ff3e00;
 	--color-text-success: #4ade80;
 
 	--color-accent: #2196f3;
+	--color-accent-hover: #1976d2;
 	--color-accent-active: #0059ffff;
+
+	--color-bg-secondary: #e8e8e8;
+	--color-bg-tertiary: #d0d0d0;
+	--color-border: #c0c0c0;
 
 	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 	line-height: 1.5;

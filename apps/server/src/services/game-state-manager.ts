@@ -1,5 +1,5 @@
-import { Session, SessionInGame } from '../models/session';
-import { GameState, LastShot } from 'game-messages';
+import { Session, SessionPlaying, SessionGameOver } from '../models/session';
+import { GameOverState, GameInProgressState, LastShot } from 'game-messages';
 import { sendNextTurnMessage } from '../controllers/websocket.ts';
 import * as SessionDB from '../database/session.ts';
 import * as ShotDB from '../database/shot';
@@ -7,16 +7,17 @@ import * as BoatService from './boat.ts';
 import { Boat } from '../models/boat';
 import { Coordinates, Shot } from '../models/shot';
 import * as R from 'ramda';
+import { TOTAL_BOATS_COUNT } from 'game-rules';
 
-function validateSessionInGame(session: Session): SessionInGame {
-	if (session.status !== 'in_game') {
+function validateSessionPlaying(session: Session): SessionPlaying {
+	if (session.status !== 'playing') {
 		throw new Error('Game not in progress');
 	}
 	return session;
 }
 
 interface ValidatePlayerTurnPayload {
-	session: SessionInGame;
+	session: SessionPlaying;
 	playerId: string;
 }
 
@@ -45,7 +46,7 @@ function hasAlreadyShot(payload: HasAlreadyShotPayload): boolean {
 }
 
 interface GetOpponentIdPayload {
-	session: SessionInGame;
+	session: SessionPlaying;
 	playerId: string;
 }
 
@@ -68,7 +69,7 @@ function isCoordinateOnBoat(coordinates: Coordinates) {
 }
 
 interface GetTargetBoatsPayload {
-	session: SessionInGame;
+	session: SessionPlaying;
 	targetId: string;
 }
 
@@ -97,7 +98,7 @@ function countPreviousHits(payload: CountPreviousHitsPayload): number {
 }
 
 interface CheckShotResultPayload {
-	session: SessionInGame;
+	session: SessionPlaying;
 	targetId: string;
 	coordinates: Coordinates;
 }
@@ -158,7 +159,7 @@ function determineNextTurnPlayer(payload: DetermineNextTurnPlayerPayload): strin
 }
 
 function getPlayerBoats(playerId: string) {
-	return function extractBoats(session: SessionInGame): Boat[] {
+	return function extractBoats(session: SessionPlaying | SessionGameOver): Boat[] {
 		return playerId === session.owner.id ? session.ownerBoats : session.friendBoats;
 	};
 }
@@ -184,24 +185,24 @@ function getOpponentShotsAgainstPlayer(playerId: string) {
 }
 
 function getSunkOpponentBoats(playerId: string) {
-	return function filterBoats(session: SessionInGame): Boat[] {
+	return function filterBoats(session: SessionPlaying | SessionGameOver): Boat[] {
 		const opponentBoats = playerId === session.owner.id ? session.friendBoats : session.ownerBoats;
 		return opponentBoats.filter(R.prop('sunk'));
 	};
 }
 
-export interface CreateGameStatePayload {
-	turn: GameState['turn'];
-	session: SessionInGame;
+interface CreateInGameStatePayload {
+	turn: 'player' | 'opponent';
+	session: SessionPlaying;
 	playerId: string;
 	lastShot: LastShot | null;
 }
 
-export function createGameState(payload: CreateGameStatePayload): GameState {
+function createInGameState(payload: CreateInGameStatePayload): GameInProgressState {
 	const { turn, session, playerId, lastShot } = payload;
 	return {
+		status: 'in_progress',
 		turn,
-		session: { status: session.status },
 		lastShot,
 		player: {
 			boats: getPlayerBoats(playerId)(session),
@@ -214,8 +215,60 @@ export function createGameState(payload: CreateGameStatePayload): GameState {
 	};
 }
 
+interface CreateGameOverStatePayload {
+	winner: 'player' | 'opponent';
+	session: SessionPlaying | SessionGameOver;
+	playerId: string;
+	lastShot: LastShot | null;
+}
+
+function createGameOverState(payload: CreateGameOverStatePayload): GameOverState {
+	const { winner, session, playerId, lastShot } = payload;
+	return {
+		status: 'over',
+		winner,
+		lastShot,
+		player: {
+			boats: getPlayerBoats(playerId)(session),
+			shots: getPlayerShots(playerId)(session.shots),
+		},
+		opponent: {
+			sunkBoats: getSunkOpponentBoats(playerId)(session),
+			shotsAgainstPlayer: getOpponentShotsAgainstPlayer(playerId)(session.shots),
+		},
+	};
+}
+
+export function createInGameStateForPlayer(payload: CreateInGameStatePayload): GameInProgressState {
+	return createInGameState(payload);
+}
+
+export function createGameOverStateForPlayer(payload: CreateGameOverStatePayload): GameOverState {
+	return createGameOverState(payload);
+}
+
+function areAllBoatsSunk(boats: Boat[]): boolean {
+	return boats.length === TOTAL_BOATS_COUNT && boats.every(R.prop('sunk'));
+}
+
+interface CheckForWinnerPayload {
+	session: SessionPlaying;
+	targetId: string;
+}
+
+function checkForWinner(payload: CheckForWinnerPayload): string | null {
+	const { session, targetId } = payload;
+	const targetBoats = getTargetBoats({ session, targetId });
+
+	if (areAllBoatsSunk(targetBoats)) {
+		return getOpponentId({ session, playerId: targetId });
+	}
+
+	return null;
+}
+
 interface BroadcastNextTurnPayload {
-	session: SessionInGame;
+	session: SessionPlaying;
 	nextTurnPlayerId: string;
 	lastShot?: LastShot;
 }
@@ -224,15 +277,15 @@ export function broadcastNextTurn(payload: BroadcastNextTurnPayload): void {
 	const { session, nextTurnPlayerId, lastShot } = payload;
 	const opponentId = getOpponentId({ session, playerId: nextTurnPlayerId });
 
-	const nextTurnState = createGameState({
-		turn: 'player_turn',
+	const nextTurnState = createInGameState({
+		turn: 'player',
 		session,
 		playerId: nextTurnPlayerId,
 		lastShot: lastShot ?? null,
 	});
 
-	const opponentState = createGameState({
-		turn: 'opponent_turn',
+	const opponentState = createInGameState({
+		turn: 'opponent',
 		session,
 		playerId: opponentId,
 		lastShot: lastShot ?? null,
@@ -240,6 +293,48 @@ export function broadcastNextTurn(payload: BroadcastNextTurnPayload): void {
 
 	sendNextTurnMessage(nextTurnPlayerId, nextTurnState);
 	sendNextTurnMessage(opponentId, opponentState);
+}
+
+interface BroadcastGameOverPayload {
+	session: Session;
+	winnerId: string;
+	lastShot: LastShot;
+}
+
+function broadcastGameOver(payload: BroadcastGameOverPayload): void {
+	const { session, winnerId, lastShot } = payload;
+
+	if (session.status !== 'playing') {
+		throw new Error('Session must be in playing status');
+	}
+
+	const sessionInGameFormat: SessionPlaying = {
+		...session,
+		status: 'playing',
+		currentTurn: { id: winnerId },
+	};
+
+	const loserId = getOpponentId({
+		session: sessionInGameFormat,
+		playerId: winnerId,
+	});
+
+	const winnerState = createGameOverState({
+		winner: 'player',
+		session: sessionInGameFormat,
+		playerId: winnerId,
+		lastShot,
+	});
+
+	const loserState = createGameOverState({
+		winner: 'opponent',
+		session: sessionInGameFormat,
+		playerId: loserId,
+		lastShot,
+	});
+
+	sendNextTurnMessage(winnerId, winnerState);
+	sendNextTurnMessage(loserId, loserState);
 }
 
 interface HandleShotFiredPayload {
@@ -250,7 +345,7 @@ interface HandleShotFiredPayload {
 
 export async function handleShotFired(payload: HandleShotFiredPayload): Promise<void> {
 	const { session, playerId, coordinates } = payload;
-	const gameSession = validateSessionInGame(session);
+	const gameSession = validateSessionPlaying(session);
 	validatePlayerTurn({ session: gameSession, playerId });
 
 	if (hasAlreadyShot({ shots: gameSession.shots, playerId, coordinates })) {
@@ -272,6 +367,36 @@ export async function handleShotFired(payload: HandleShotFiredPayload): Promise<
 		await BoatService.markBoatAsSunk(result.boatId);
 	}
 
+	const lastShot: LastShot = {
+		...shot,
+		sunkBoat: result.hit && result.sunk,
+	};
+
+	const updatedSessionAfterShot = await SessionDB.getSessionByPlayerId(playerId);
+	if (!updatedSessionAfterShot || updatedSessionAfterShot.status !== 'playing') {
+		throw new Error('Session not found or not in game');
+	}
+
+	const winnerId = checkForWinner({
+		session: updatedSessionAfterShot,
+		targetId,
+	});
+
+	if (winnerId) {
+		const gameOverSession = await SessionDB.setWinner({
+			sessionId: gameSession.id,
+			winnerId,
+		});
+
+		broadcastGameOver({
+			session: gameOverSession,
+			winnerId,
+			lastShot,
+		});
+
+		return;
+	}
+
 	const nextTurnPlayerId = determineNextTurnPlayer({
 		shooterId: playerId,
 		targetId,
@@ -282,11 +407,6 @@ export async function handleShotFired(payload: HandleShotFiredPayload): Promise<
 		sessionId: gameSession.id,
 		playerId: nextTurnPlayerId,
 	});
-
-	const lastShot: LastShot = {
-		...shot,
-		sunkBoat: result.hit && result.sunk,
-	};
 
 	broadcastNextTurn({
 		session: updatedSession,
@@ -315,7 +435,7 @@ export async function startGame(payload: StartGamePayload): Promise<void> {
 	const { sessionId, ownerId, friendId } = payload;
 	const firstPlayerId = determineFirstPlayer({ ownerId, friendId });
 
-	const updatedSession: SessionInGame = await SessionDB.setCurrentTurn({
+	const updatedSession: SessionPlaying = await SessionDB.setCurrentTurn({
 		sessionId,
 		playerId: firstPlayerId,
 	});

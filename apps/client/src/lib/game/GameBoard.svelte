@@ -27,11 +27,11 @@
 	}
 
 	function isPlayerTurn(turn: string): boolean {
-		return turn === 'player_turn';
+		return turn === 'player';
 	}
 
 	function isOpponentTurn(turn: string): boolean {
-		return turn === 'opponent_turn';
+		return turn === 'opponent';
 	}
 
 	function canFireShot(
@@ -145,6 +145,8 @@
 	}
 
 	async function handleGameStateChange(oldGame: GameState, newGame: GameState) {
+		if (oldGame.status !== 'in_progress') return;
+
 		const previousTurn = oldGame.turn;
 		const lastShot = newGame.lastShot;
 		if (!lastShot) {
@@ -192,27 +194,31 @@
 		<div class="loading">
 			<p>Loading game...</p>
 		</div>
-	{:else if isOpponentTurn(game.turn)}
-		<div class="turn-view">
-			<p class="status-message opponent-turn">Opponent is taking their shot...</p>
+	{:else if game.status === 'in_progress'}
+		{#if isOpponentTurn(game.turn)}
+			<div class="turn-view">
+				<p class="status-message opponent-turn">Opponent is taking their shot...</p>
 
-			<div class="grid-container">
-				<WaitingGrid cells={opponentTurnCells} animationState={effectManager.state} />
+				<div class="grid-container">
+					<WaitingGrid cells={opponentTurnCells} animationState={effectManager.state} />
+				</div>
 			</div>
-		</div>
-	{:else}
-		<div class="turn-view">
-			<p class="status-message your-turn">Your turn - Click to fire!</p>
+		{:else}
+			<div class="turn-view">
+				<p class="status-message your-turn">Your turn - Click to fire!</p>
 
-			<div class="grid-container">
-				<ShootingGrid
-					cells={yourTurnCells}
-					onCellClick={handleCellClick}
-					getCellAriaLabel={buildCellAriaLabel}
-					animationState={effectManager.state}
-				/>
+				<div class="grid-container">
+					<ShootingGrid
+						cells={yourTurnCells}
+						onCellClick={handleCellClick}
+						getCellAriaLabel={buildCellAriaLabel}
+						animationState={effectManager.state}
+					/>
+				</div>
 			</div>
-		</div>
+		{/if}
+	{:else if game.status === 'over'}
+		<h1>{game.winner === 'player' ? '🎉 Victory!' : '💔 Defeat'}</h1>
 	{/if}
 </main>
 

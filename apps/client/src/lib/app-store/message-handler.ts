@@ -1,10 +1,5 @@
-import * as R from 'ramda';
 import type { FriendJoinedMessage, NextTurnMessage, ServerMessage } from 'game-messages';
 import type { State } from './store.svelte';
-
-const sessionStatusLens = R.lensPath(['meta', 'session', 'status']);
-const opponentLens = R.lensPath(['meta', 'opponent']);
-const gameLens = R.lensPath(['game']);
 
 function isStateReady(state: State): boolean {
 	return state.status === 'ready';
@@ -22,40 +17,41 @@ function createOpponentMeta(friend: FriendData) {
 	};
 }
 
-function updateSessionStatus(status: string): (state: State) => State {
-	return R.set(sessionStatusLens, status);
-}
-
-interface OpponentMeta {
-	id: string;
-	username: string;
-}
-
-function updateOpponent(opponent: OpponentMeta): (state: State) => State {
-	return R.set(opponentLens, opponent);
-}
-
-function updateGame(game: unknown): (state: State) => State {
-	return R.set(gameLens, game);
-}
-
 function handleFriendJoinedMessage(state: State, message: FriendJoinedMessage): State {
-	const opponentMeta = createOpponentMeta(message.data.friend);
-	const transformations = [
-		updateSessionStatus(message.data.session.status),
-		updateOpponent(opponentMeta),
-	] as const;
+	if (state.status !== 'ready') {
+		return state;
+	}
 
-	return R.pipe(...transformations)(state);
+	const opponentMeta = createOpponentMeta(message.data.friend);
+
+	return {
+		...state,
+		meta: {
+			...state.meta,
+			session: {
+				...state.meta.session,
+				status: message.data.session.status,
+			},
+			opponent: opponentMeta,
+		},
+	};
 }
 
 function handleNextTurnMessage(state: State, message: NextTurnMessage): State {
-	const transformations = [
-		updateGame(message.data),
-		updateSessionStatus(message.data.session.status),
-	] as const;
+	if (state.status !== 'ready') {
+		return state;
+	}
 
-	return R.pipe(...transformations)(state);
+	return {
+		...state,
+		meta: {
+			...state.meta,
+			session: {
+				...state.meta.session,
+			},
+		},
+		game: message.data,
+	};
 }
 
 type MessageHandler<T extends ServerMessage> = (state: State, message: T) => State;

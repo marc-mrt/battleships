@@ -4,13 +4,18 @@ import {
 	type ClientMessage,
 	ClientMessageSchema,
 	type FriendJoinedMessage,
+	GameState,
 	type NextTurnMessage,
 	type ServerMessage,
 } from 'game-messages';
 import { InternalServerError } from './errors';
 import * as SessionService from '../services/session.ts';
 import { parseSessionCookie } from '../middlwares/cookies.ts';
-import { createGameState } from '../services/game-state-manager.ts';
+import {
+	createInGameStateForPlayer,
+	createGameOverStateForPlayer,
+} from '../services/game-state-manager.ts';
+import { SessionGameOver } from '../models/session.ts';
 
 const WEBSOCKET_CLOSE_CODE_POLICY_VIOLATION = 1008;
 
@@ -112,21 +117,31 @@ async function sendGameStateOnReconnection(playerId: string): Promise<void> {
 	try {
 		const session = await SessionService.getSessionByPlayerId(playerId);
 
-		if (session.status !== 'in_game') {
+		if (session.status === 'playing') {
+			let gameState: GameState;
+			if ((session as SessionGameOver).winner != null) {
+				const winner = (session as SessionGameOver).winner.id === playerId ? 'player' : 'opponent';
+				gameState = createGameOverStateForPlayer({
+					winner,
+					session,
+					playerId,
+					lastShot: null,
+				});
+			} else {
+				const isPlayerTurn = session.currentTurn.id === playerId;
+				const turn = isPlayerTurn ? 'player' : 'opponent';
+				gameState = createInGameStateForPlayer({
+					turn,
+					session,
+					playerId,
+					lastShot: null,
+				});
+			}
+
+			sendNextTurnMessage(playerId, gameState);
+		} else {
 			return;
 		}
-
-		const isPlayerTurn = session.currentTurn.id === playerId;
-		const turn = isPlayerTurn ? 'player_turn' : 'opponent_turn';
-
-		const gameState = createGameState({
-			turn,
-			session,
-			playerId,
-			lastShot: null,
-		});
-
-		sendNextTurnMessage(playerId, gameState);
 	} catch (error) {
 		console.error(`Failed to send game state on reconnection for player ${playerId}:`, error);
 	}

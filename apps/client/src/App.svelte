@@ -5,21 +5,18 @@
 	import { appStore } from './lib/app-store/store.svelte';
 	import PlaceBoats from './lib/placement/PlaceBoats.svelte';
 	import GameBoard from './lib/game/GameBoard.svelte';
+	import type { SessionStatus } from './models/session';
 
 	function getSharedSlugFromUrl(): string | null {
 		const urlParams = new URLSearchParams(window.location.search);
 		return urlParams.has('s') ? urlParams.get('s') : null;
 	}
 
-	function getSessionStatus(): string | null {
-		return appStore.session?.status ?? null;
-	}
-
 	const querySharedSlug = getSharedSlugFromUrl();
 
 	let initializing = $state(true);
 
-	const status = $derived(getSessionStatus());
+	const status: SessionStatus | null = $derived(appStore.session?.status ?? null);
 
 	function finishInitializing(): void {
 		initializing = false;
@@ -47,7 +44,7 @@
 		<WaitForPlayerToJoin />
 	{:else if status === 'waiting_for_boat_placements'}
 		<PlaceBoats />
-	{:else if status === 'in_game'}
+	{:else if status === 'playing'}
 		<GameBoard />
 	{:else}
 		<div class="error">

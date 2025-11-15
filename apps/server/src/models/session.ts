@@ -6,8 +6,7 @@ export type SessionStatus =
 	| 'waiting_for_friend'
 	| 'waiting_for_boat_placements'
 	| 'ready_to_start'
-	| 'in_game'
-	| 'game_over';
+	| 'playing';
 
 interface SessionBase {
 	id: string;
@@ -30,8 +29,8 @@ export interface SessionReadyToStart extends SessionBase {
 	friend: Player;
 }
 
-export interface SessionInGame extends SessionBase {
-	status: 'in_game';
+export interface SessionPlaying extends SessionBase {
+	status: 'playing';
 	ownerBoats: Boat[];
 	friend: Player;
 	friendBoats: Boat[];
@@ -39,10 +38,7 @@ export interface SessionInGame extends SessionBase {
 	shots: Shot[];
 }
 
-export interface SessionGameOver extends SessionBase {
-	status: 'game_over';
-	friend: Player;
-	currentTurn: null;
+export interface SessionGameOver extends SessionPlaying {
 	winner: Pick<Player, 'id'>;
 }
 
@@ -50,5 +46,5 @@ export type Session =
 	| SessionCreated
 	| SessionWaitingForBoats
 	| SessionReadyToStart
-	| SessionInGame
+	| SessionPlaying
 	| SessionGameOver;
