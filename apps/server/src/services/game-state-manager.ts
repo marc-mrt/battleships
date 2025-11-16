@@ -47,13 +47,7 @@ function hasAlreadyShot(payload: HasAlreadyShotPayload): boolean {
 	return shots.some(isShotAtCoordinates(playerId, coordinates));
 }
 
-interface GetOpponentIdPayload {
-	session: SessionPlaying;
-	playerId: string;
-}
-
-function getOpponentId(payload: GetOpponentIdPayload): string {
-	const { session, playerId } = payload;
+function getOpponentId(session: SessionPlaying, playerId: string): string {
 	return playerId === session.owner.id ? session.friend.id : session.owner.id;
 }
 
@@ -68,16 +62,6 @@ function isCoordinateOnBoat(coordinates: Coordinates) {
 		}
 		return false;
 	};
-}
-
-interface GetTargetBoatsPayload {
-	session: SessionPlaying;
-	targetId: string;
-}
-
-function getTargetBoats(payload: GetTargetBoatsPayload): Boat[] {
-	const { session, targetId } = payload;
-	return session.owner.id === targetId ? session.ownerBoats : session.friendBoats;
 }
 
 function isHitOnBoat(targetId: string, boat: Boat) {
@@ -101,22 +85,26 @@ function countPreviousHits(payload: CountPreviousHitsPayload): number {
 
 interface CheckShotResultPayload {
 	session: SessionPlaying;
-	targetId: string;
+	opponentId: string;
 	coordinates: Coordinates;
 }
 
-function checkShotResult(
-	payload: CheckShotResultPayload,
-): { hit: false } | { hit: true; sunk: boolean; boatId: string } {
-	const { session, targetId, coordinates } = payload;
-	const targetBoats = getTargetBoats({ session, targetId });
-	const hitBoat = targetBoats.find(isCoordinateOnBoat(coordinates));
+type CheckShotResult = { hit: false } | { hit: true; sunk: boolean; boatId: string };
+
+function checkShotResult(payload: CheckShotResultPayload): CheckShotResult {
+	const { session, opponentId, coordinates } = payload;
+	const opponentBoats = getPlayerBoats(opponentId)(session);
+	const hitBoat = opponentBoats.find(isCoordinateOnBoat(coordinates));
 
 	if (!hitBoat) {
 		return { hit: false };
 	}
 
-	const previousHits = countPreviousHits({ shots: session.shots, targetId, boat: hitBoat });
+	const previousHits = countPreviousHits({
+		shots: session.shots,
+		targetId: opponentId,
+		boat: hitBoat,
+	});
 	const totalHits = previousHits + 1;
 	const sunk = totalHits === hitBoat.length;
 
@@ -125,39 +113,61 @@ function checkShotResult(
 
 interface RecordShotPayload {
 	sessionId: string;
-	shooterId: string;
-	targetId: string;
+	playerId: string;
+	opponentId: string;
 	coordinates: Coordinates;
-	hit: boolean;
+	result: CheckShotResult;
 }
 
-async function recordShot(payload: RecordShotPayload): Promise<Shot> {
-	const { sessionId, shooterId, targetId, coordinates, hit } = payload;
-	return await ShotDB.recordShot({
+async function recordShot(
+	payload: RecordShotPayload,
+): Promise<{ updatedSessionAfterShot: SessionPlaying; lastShot: LastShot }> {
+	const { sessionId, playerId, opponentId, coordinates, result } = payload;
+
+	const shot = await ShotDB.recordShot({
 		sessionId,
-		shooterId,
-		targetId,
+		shooterId: playerId,
+		targetId: opponentId,
 		x: coordinates.x,
 		y: coordinates.y,
-		hit,
+		hit: result.hit,
 	});
+
+	if (result.hit && result.sunk) {
+		await BoatService.markBoatAsSunk(result.boatId);
+	}
+
+	const lastShot: LastShot = {
+		...shot,
+		sunkBoat: result.hit && result.sunk,
+	};
+
+	const updatedSessionAfterShot = await SessionDB.getSessionByPlayerId(playerId);
+	if (!updatedSessionAfterShot || updatedSessionAfterShot.status !== 'playing') {
+		throw new Error('Session not found or not in game');
+	}
+
+	return {
+		updatedSessionAfterShot,
+		lastShot,
+	};
 }
 
 interface DetermineNextTurnPlayerPayload {
-	shooterId: string;
-	targetId: string;
+	playerId: string;
+	opponentId: string;
 	result: { hit: boolean; sunk?: boolean };
 }
 
 function determineNextTurnPlayer(payload: DetermineNextTurnPlayerPayload): string {
-	const { shooterId, targetId, result } = payload;
+	const { playerId, opponentId, result } = payload;
 	if (!result.hit) {
-		return targetId;
+		return opponentId;
 	}
 	if (result.sunk) {
-		return targetId;
+		return opponentId;
 	}
-	return shooterId;
+	return playerId;
 }
 
 function getPlayerBoats(playerId: string) {
@@ -253,17 +263,11 @@ function areAllBoatsSunk(boats: Boat[]): boolean {
 	return boats.length === TOTAL_BOATS_COUNT && boats.every(R.prop('sunk'));
 }
 
-interface CheckForWinnerPayload {
-	session: SessionPlaying;
-	targetId: string;
-}
+function checkForWinner(session: SessionPlaying, opponentId: string): string | null {
+	const opponentBoats = getPlayerBoats(opponentId)(session);
 
-function checkForWinner(payload: CheckForWinnerPayload): string | null {
-	const { session, targetId } = payload;
-	const targetBoats = getTargetBoats({ session, targetId });
-
-	if (areAllBoatsSunk(targetBoats)) {
-		return getOpponentId({ session, playerId: targetId });
+	if (areAllBoatsSunk(opponentBoats)) {
+		return getOpponentId(session, opponentId);
 	}
 
 	return null;
@@ -277,7 +281,7 @@ interface BroadcastNextTurnPayload {
 
 export function broadcastNextTurn(payload: BroadcastNextTurnPayload): void {
 	const { session, nextTurnPlayerId, lastShot } = payload;
-	const opponentId = getOpponentId({ session, playerId: nextTurnPlayerId });
+	const opponentId = getOpponentId(session, nextTurnPlayerId);
 
 	const nextTurnState = createInGameState({
 		turn: 'player',
@@ -316,10 +320,7 @@ function broadcastGameOver(payload: BroadcastGameOverPayload): void {
 		currentTurn: { id: winnerId },
 	};
 
-	const loserId = getOpponentId({
-		session: sessionInGameFormat,
-		playerId: winnerId,
-	});
+	const loserId = getOpponentId(sessionInGameFormat, winnerId);
 
 	const winnerState = createGameOverState({
 		winner: 'player',
@@ -339,6 +340,56 @@ function broadcastGameOver(payload: BroadcastGameOverPayload): void {
 	sendNextTurnMessage(loserId, loserState);
 }
 
+interface HandleNextTurnPayload {
+	sessionId: string;
+	playerId: string;
+	opponentId: string;
+	result: CheckShotResult;
+	lastShot: LastShot;
+}
+
+async function handleNextTurn(payload: HandleNextTurnPayload): Promise<void> {
+	const { sessionId, playerId, opponentId, result, lastShot } = payload;
+
+	const nextTurnPlayerId = determineNextTurnPlayer({
+		playerId,
+		opponentId,
+		result,
+	});
+
+	const updatedSession = await SessionDB.setCurrentTurn({
+		sessionId,
+		playerId: nextTurnPlayerId,
+	});
+
+	broadcastNextTurn({
+		session: updatedSession,
+		nextTurnPlayerId,
+		lastShot,
+	});
+}
+
+interface HandleGameOverPayload {
+	sessionId: string;
+	winnerId: string;
+	lastShot: LastShot;
+}
+
+async function handleGameOver(payload: HandleGameOverPayload): Promise<void> {
+	const { sessionId, winnerId, lastShot } = payload;
+
+	const gameOverSession = await SessionDB.setWinner({
+		sessionId,
+		winnerId,
+	});
+
+	broadcastGameOver({
+		session: gameOverSession,
+		winnerId,
+		lastShot,
+	});
+}
+
 interface HandleShotFiredPayload {
 	session: Session;
 	playerId: string;
@@ -354,67 +405,34 @@ export async function handleShotFired(payload: HandleShotFiredPayload): Promise<
 		throw new Error('Cannot shoot twice at the same coordinates');
 	}
 
-	const targetId = getOpponentId({ session: gameSession, playerId });
-	const result = checkShotResult({ session: gameSession, targetId, coordinates });
+	const opponentId = getOpponentId(gameSession, playerId);
+	const result = checkShotResult({ session: gameSession, opponentId, coordinates });
 
-	const shot = await recordShot({
+	const { lastShot, updatedSessionAfterShot } = await recordShot({
 		sessionId: gameSession.id,
-		shooterId: playerId,
-		targetId,
+		playerId,
+		opponentId,
 		coordinates,
-		hit: result.hit,
-	});
-
-	if (result.hit && result.sunk) {
-		await BoatService.markBoatAsSunk(result.boatId);
-	}
-
-	const lastShot: LastShot = {
-		...shot,
-		sunkBoat: result.hit && result.sunk,
-	};
-
-	const updatedSessionAfterShot = await SessionDB.getSessionByPlayerId(playerId);
-	if (!updatedSessionAfterShot || updatedSessionAfterShot.status !== 'playing') {
-		throw new Error('Session not found or not in game');
-	}
-
-	const winnerId = checkForWinner({
-		session: updatedSessionAfterShot,
-		targetId,
-	});
-
-	if (winnerId) {
-		const gameOverSession = await SessionDB.setWinner({
-			sessionId: gameSession.id,
-			winnerId,
-		});
-
-		broadcastGameOver({
-			session: gameOverSession,
-			winnerId,
-			lastShot,
-		});
-
-		return;
-	}
-
-	const nextTurnPlayerId = determineNextTurnPlayer({
-		shooterId: playerId,
-		targetId,
 		result,
 	});
 
-	const updatedSession = await SessionDB.setCurrentTurn({
-		sessionId: gameSession.id,
-		playerId: nextTurnPlayerId,
-	});
+	const winnerId = checkForWinner(updatedSessionAfterShot, opponentId);
 
-	broadcastNextTurn({
-		session: updatedSession,
-		nextTurnPlayerId,
-		lastShot,
-	});
+	if (winnerId) {
+		await handleGameOver({
+			sessionId: gameSession.id,
+			winnerId,
+			lastShot,
+		});
+	} else {
+		await handleNextTurn({
+			sessionId: gameSession.id,
+			playerId,
+			opponentId,
+			result,
+			lastShot,
+		});
+	}
 }
 
 interface DetermineFirstPlayerPayload {
