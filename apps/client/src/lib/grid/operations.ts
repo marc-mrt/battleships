@@ -36,7 +36,14 @@ function createUpdateMap(updates: { pos: Position; cell: Cell }[]): Map<string, 
 	return map;
 }
 
-function applyCellUpdatesInRow(row: Cell[], y: number, updateMap: Map<string, Cell>): Cell[] {
+interface ApplyCellUpdatesInRowPayload {
+	row: Cell[];
+	y: number;
+	updateMap: Map<string, Cell>;
+}
+
+function applyCellUpdatesInRow(payload: ApplyCellUpdatesInRowPayload): Cell[] {
+	const { row, y, updateMap } = payload;
 	return row.map((cell, x) => {
 		const key = `${x},${y}`;
 		return updateMap.get(key) ?? cell;
@@ -44,7 +51,7 @@ function applyCellUpdatesInRow(row: Cell[], y: number, updateMap: Map<string, Ce
 }
 
 function applyBatchUpdates(cells: Cell[][], updateMap: Map<string, Cell>): Cell[][] {
-	return cells.map((row, y) => applyCellUpdatesInRow(row, y, updateMap));
+	return cells.map((row, y) => applyCellUpdatesInRow({ row, y, updateMap }));
 }
 
 export function setCells(grid: GridState, updates: { pos: Position; cell: Cell }[]): GridState {

@@ -25,13 +25,16 @@ function hasBoat(
 	return cell?.occupied === true && !isBoatDragged(cell, draggedBoatId);
 }
 
-function createCellState(
-	cell: { occupied: boolean; boatId: string | null } | null,
-	selectedBoatId: string | null,
-	drag: DragState,
-	draggedBoatId: string | null,
-	previewInfo: { isPreview: boolean; isValid: boolean },
-): CellState {
+interface CreateCellStatePayload {
+	cell: { occupied: boolean; boatId: string | null } | null;
+	selectedBoatId: string | null;
+	drag: DragState;
+	draggedBoatId: string | null;
+	previewInfo: { isPreview: boolean; isValid: boolean };
+}
+
+function createCellState(payload: CreateCellStatePayload): CellState {
+	const { cell, selectedBoatId, drag, draggedBoatId, previewInfo } = payload;
 	const boat = hasBoat(cell, draggedBoatId);
 	const selected = isBoatSelected(cell, selectedBoatId, drag.isDragging);
 	const preview = previewInfo.isPreview;
@@ -71,12 +74,15 @@ function isPositionInCells(pos: Position, cells: Position[]): boolean {
 	return cells.some(isPositionMatch(pos));
 }
 
-function getPreviewInfo(
-	pos: Position,
-	state: PlacementState,
-	drag: DragState,
-	draggedBoatId: string | null,
-): { isPreview: boolean; isValid: boolean } {
+interface GetPreviewInfoPayload {
+	pos: Position;
+	state: PlacementState;
+	drag: DragState;
+	draggedBoatId: string | null;
+}
+
+function getPreviewInfo(payload: GetPreviewInfoPayload): { isPreview: boolean; isValid: boolean } {
+	const { pos, state, drag, draggedBoatId } = payload;
 	if (!drag.isDragging || !drag.boatLength || !drag.hoveredCell) {
 		return { isPreview: false, isValid: false };
 	}
@@ -93,66 +99,81 @@ function getPreviewInfo(
 	return { isPreview, isValid };
 }
 
-function renderCell(
-	state: PlacementState,
-	selectedBoatId: string | null,
-	drag: DragState,
-	draggedBoatId: string | null,
-	pos: Position,
-): CellState {
+interface RenderCellPayload {
+	state: PlacementState;
+	selectedBoatId: string | null;
+	drag: DragState;
+	draggedBoatId: string | null;
+	pos: Position;
+}
+
+function renderCell(payload: RenderCellPayload): CellState {
+	const { state, selectedBoatId, drag, draggedBoatId, pos } = payload;
 	const cell = getCell(state.grid, pos);
-	const previewInfo = getPreviewInfo(pos, state, drag, draggedBoatId);
-	return createCellState(cell, selectedBoatId, drag, draggedBoatId, previewInfo);
+	const previewInfo = getPreviewInfo({ pos, state, drag, draggedBoatId });
+	return createCellState({ cell, selectedBoatId, drag, draggedBoatId, previewInfo });
 }
 
 function createPosition(x: number, y: number): Position {
 	return { x, y };
 }
 
-function createCellRenderer(
-	state: PlacementState,
-	selectedBoatId: string | null,
-	drag: DragState,
-	draggedBoatId: string | null,
-	y: number,
-) {
+interface CreateCellRendererPayload {
+	state: PlacementState;
+	selectedBoatId: string | null;
+	drag: DragState;
+	draggedBoatId: string | null;
+	y: number;
+}
+
+function createCellRenderer(payload: CreateCellRendererPayload) {
+	const { state, selectedBoatId, drag, draggedBoatId, y } = payload;
 	return function renderCellAtX(x: number): CellState {
 		const position = createPosition(x, y);
-		return renderCell(state, selectedBoatId, drag, draggedBoatId, position);
+		return renderCell({ state, selectedBoatId, drag, draggedBoatId, pos: position });
 	};
 }
 
-function renderRow(
-	state: PlacementState,
-	selectedBoatId: string | null,
-	drag: DragState,
-	draggedBoatId: string | null,
-	y: number,
-	size: number,
-): CellState[] {
-	const cellRenderer = createCellRenderer(state, selectedBoatId, drag, draggedBoatId, y);
+interface RenderRowPayload {
+	state: PlacementState;
+	selectedBoatId: string | null;
+	drag: DragState;
+	draggedBoatId: string | null;
+	y: number;
+	size: number;
+}
+
+function renderRow(payload: RenderRowPayload): CellState[] {
+	const { state, selectedBoatId, drag, draggedBoatId, y, size } = payload;
+	const cellRenderer = createCellRenderer({ state, selectedBoatId, drag, draggedBoatId, y });
 	return R.times(cellRenderer, size);
 }
 
-function createRowRenderer(
-	state: PlacementState,
-	selectedBoatId: string | null,
-	drag: DragState,
-	draggedBoatId: string | null,
-	size: number,
-) {
+interface CreateRowRendererPayload {
+	state: PlacementState;
+	selectedBoatId: string | null;
+	drag: DragState;
+	draggedBoatId: string | null;
+	size: number;
+}
+
+function createRowRenderer(payload: CreateRowRendererPayload) {
+	const { state, selectedBoatId, drag, draggedBoatId, size } = payload;
 	return function renderRowAtY(y: number): CellState[] {
-		return renderRow(state, selectedBoatId, drag, draggedBoatId, y, size);
+		return renderRow({ state, selectedBoatId, drag, draggedBoatId, y, size });
 	};
 }
 
-export function renderPlacementCells(
-	state: PlacementState,
-	selectedBoatId: string | null,
-	drag: DragState,
-	draggedBoatId: string | null,
-): CellState[][] {
+interface RenderPlacementCellsPayload {
+	state: PlacementState;
+	selectedBoatId: string | null;
+	drag: DragState;
+	draggedBoatId: string | null;
+}
+
+export function renderPlacementCells(payload: RenderPlacementCellsPayload): CellState[][] {
+	const { state, selectedBoatId, drag, draggedBoatId } = payload;
 	const size = state.grid.size;
-	const rowRenderer = createRowRenderer(state, selectedBoatId, drag, draggedBoatId, size);
+	const rowRenderer = createRowRenderer({ state, selectedBoatId, drag, draggedBoatId, size });
 	return R.times(rowRenderer, size);
 }

@@ -39,14 +39,14 @@ export class PlacementStore {
 	}
 
 	get cells() {
-		return renderPlacementCells(
-			{
+		return renderPlacementCells({
+			state: {
 				grid: this.placementState.grid,
 				boats: this.placementState.boats,
 				stock: this.placementState.stock,
 			},
-			this.placementState.selectedBoatId,
-			{
+			selectedBoatId: this.placementState.selectedBoatId,
+			drag: {
 				isDragging: this.dragState.isDragging,
 				boatLength: this.dragState.boatLength,
 				orientation: this.dragState.orientation,
@@ -54,8 +54,8 @@ export class PlacementStore {
 				offset: this.dragState.offset,
 				originalBoat: this.dragState.originalBoat,
 			},
-			this.dragState.draggedBoatId,
-		);
+			draggedBoatId: this.dragState.draggedBoatId,
+		});
 	}
 
 	startDragFromStock(length: number): void {

@@ -9,6 +9,8 @@ import { Coordinates, Shot } from '../models/shot';
 import * as R from 'ramda';
 import { TOTAL_BOATS_COUNT } from 'game-rules';
 
+const COIN_FLIP_PROBABILITY = 0.5;
+
 function validateSessionPlaying(session: Session): SessionPlaying {
 	if (session.status !== 'playing') {
 		throw new Error('Game not in progress');
@@ -422,7 +424,7 @@ interface DetermineFirstPlayerPayload {
 
 function determineFirstPlayer(payload: DetermineFirstPlayerPayload): string {
 	const { ownerId, friendId } = payload;
-	return Math.random() < 0.5 ? ownerId : friendId;
+	return Math.random() < COIN_FLIP_PROBABILITY ? ownerId : friendId;
 }
 
 interface StartGamePayload {
