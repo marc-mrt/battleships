@@ -38,8 +38,16 @@ export interface SessionPlaying extends SessionBase {
 	shots: Shot[];
 }
 
+export function isSessionPlaying(session: Session): session is SessionPlaying {
+	return session.status === 'playing' && (session as SessionGameOver).winner == null;
+}
+
 export interface SessionGameOver extends SessionPlaying {
 	winner: Pick<Player, 'id'>;
+}
+
+export function isSessionGameOver(session: Session): session is SessionGameOver {
+	return session.status === 'playing' && (session as SessionGameOver).winner != null;
 }
 
 export type Session =

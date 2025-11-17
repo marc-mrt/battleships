@@ -11,11 +11,8 @@ import {
 } from 'game-messages';
 import { InternalServerError } from './errors';
 import * as SessionService from '../services/session.ts';
+import * as GameStateManager from '../services/game-state-manager.ts';
 import { parseSessionCookie } from '../middlwares/cookies.ts';
-import {
-	createInGameStateForPlayer,
-	createGameOverStateForPlayer,
-} from '../services/game-state-manager.ts';
 import { SessionGameOver } from '../models/session.ts';
 
 const WEBSOCKET_CLOSE_CODE_POLICY_VIOLATION = 1008;
@@ -71,18 +68,18 @@ async function handleIncomingClientMessage(
 	message: ClientMessage,
 ): Promise<void> {
 	switch (message.type) {
-		case 'place_boats':
-			await SessionService.saveBoats({
-				playerId,
-				...message.data,
-			});
+		case 'place_boats': {
+			const { boats } = message.data;
+			await GameStateManager.handlePlaceBoats(playerId, boats);
 			break;
+		}
 		case 'fire_shot': {
-			await SessionService.handleShotFired({ playerId, ...message.data });
+			const { x, y } = message.data;
+			await GameStateManager.handleShotFired(playerId, x, y);
 			break;
 		}
 		case 'request_new_game': {
-			await handleRequestNewGame(playerId);
+			await GameStateManager.handleRequestNewGame(playerId);
 			break;
 		}
 		default: {
@@ -121,25 +118,15 @@ export function sendOpponentJoinedMessage(
 	sendMessageToPlayer(playerId, message);
 }
 
-function sendNewGameStartedMessage(playerId: string, data: NewGameStartedMessage['data']): void {
+export function sendNewGameStartedMessage(
+	playerId: string,
+	data: NewGameStartedMessage['data'],
+): void {
 	const message: NewGameStartedMessage = {
 		type: 'new_game_started',
 		data,
 	};
 	sendMessageToPlayer(playerId, message);
-}
-
-async function handleRequestNewGame(playerId: string): Promise<void> {
-	const resetSession = await SessionService.requestNewGame(playerId);
-
-	const messageData: NewGameStartedMessage['data'] = {
-		session: {
-			status: 'waiting_for_boat_placements',
-		},
-	};
-
-	sendNewGameStartedMessage(resetSession.owner.id, messageData);
-	sendNewGameStartedMessage(resetSession.friend.id, messageData);
 }
 
 async function sendGameStateOnReconnection(playerId: string): Promise<void> {
@@ -150,7 +137,7 @@ async function sendGameStateOnReconnection(playerId: string): Promise<void> {
 			let gameState: GameState;
 			if ((session as SessionGameOver).winner != null) {
 				const winner = (session as SessionGameOver).winner.id === playerId ? 'player' : 'opponent';
-				gameState = createGameOverStateForPlayer({
+				gameState = GameStateManager.createGameOverState({
 					winner,
 					session,
 					playerId,
@@ -159,7 +146,7 @@ async function sendGameStateOnReconnection(playerId: string): Promise<void> {
 			} else {
 				const isPlayerTurn = session.currentTurn.id === playerId;
 				const turn = isPlayerTurn ? 'player' : 'opponent';
-				gameState = createInGameStateForPlayer({
+				gameState = GameStateManager.createInGameState({
 					turn,
 					session,
 					playerId,

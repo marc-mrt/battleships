@@ -37,7 +37,6 @@ interface ErrorHandlerPayload {
 
 function handleError(payload: ErrorHandlerPayload): void {
 	const { error, response } = payload;
-
 	if (isDatabaseError(error)) {
 		handleDatabaseError(error, response);
 		return;

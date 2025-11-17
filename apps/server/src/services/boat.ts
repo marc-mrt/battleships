@@ -1,4 +1,6 @@
 import * as BoatDB from '../database/boat.ts';
+import { Boat } from '../models/boat.ts';
+import { Coordinates } from '../models/coordinates.ts';
 
 interface SaveBoatsPayload {
 	playerId: string;
@@ -21,4 +23,17 @@ export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
 
 export async function markBoatAsSunk(boatId: string): Promise<void> {
 	await BoatDB.markBoatAsSunk(boatId);
+}
+
+export function isCoordinateOnBoat(coordinates: Coordinates) {
+	return function checkBoat(boat: Boat): boolean {
+		const { x, y } = coordinates;
+		if (boat.orientation === 'horizontal') {
+			return y === boat.startY && x >= boat.startX && x < boat.startX + boat.length;
+		}
+		if (boat.orientation === 'vertical') {
+			return x === boat.startX && y >= boat.startY && y < boat.startY + boat.length;
+		}
+		return false;
+	};
 }

@@ -1,10 +1,14 @@
 import * as SessionDB from '../database/session.ts';
-import { Session, SessionWaitingForBoats } from '../models/session.ts';
+import {
+	isSessionPlaying,
+	Session,
+	SessionGameOver,
+	SessionPlaying,
+	SessionWaitingForBoats,
+} from '../models/session.ts';
 import { Player } from '../models/player.ts';
 import { sendOpponentJoinedMessage } from '../controllers/websocket.ts';
-import { NotFoundError } from '../controllers/errors.ts';
-import { Coordinates } from '../models/shot.ts';
-import * as GameStateManager from './game-state-manager.ts';
+import { BadRequestError, NotFoundError } from '../controllers/errors.ts';
 import * as PlayerService from './player.ts';
 
 interface CreateSessionPayload {
@@ -55,53 +59,37 @@ export async function getSessionByPlayerId(playerId: string): Promise<Session> {
 	return session;
 }
 
-interface SaveBoatsPayload {
-	playerId: string;
-	boats: Array<{
-		id: string;
-		startX: number;
-		startY: number;
-		length: number;
-		orientation: 'horizontal' | 'vertical';
-	}>;
-}
-
-export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
-	const { playerId, boats } = payload;
-	await GameStateManager.saveBoatsAndCheckGameStart({
+export async function setCurrentTurn(sessionId: string, playerId: string): Promise<SessionPlaying> {
+	const session: SessionPlaying = await SessionDB.setCurrentTurn({
+		sessionId,
 		playerId,
-		boats,
 	});
 
+	return session;
+}
+
+export async function setWinner(sessionId: string, winnerId: string): Promise<SessionGameOver> {
+	const session: SessionGameOver = await SessionDB.setWinner({
+		sessionId,
+		winnerId,
+	});
+
+	return session;
+}
+
+export async function resetSessionForPlayer(playerId: string): Promise<SessionWaitingForBoats> {
 	const session: Session = await getSessionByPlayerId(playerId);
-	if (session.status === 'ready_to_start') {
-		await GameStateManager.startGame({
-			sessionId: session.id,
-			ownerId: session.owner.id,
-			friendId: session.friend!.id,
-		});
-	}
-}
-
-interface ProcessShotPayload {
-	playerId: string;
-	x: number;
-	y: number;
-}
-
-export async function handleShotFired(payload: ProcessShotPayload): Promise<void> {
-	const session = await getSessionByPlayerId(payload.playerId);
-	const playerId = payload.playerId;
-	const coordinates: Coordinates = { x: payload.x, y: payload.y };
-	await GameStateManager.handleShotFired({ session, playerId, coordinates });
-}
-
-export async function requestNewGame(playerId: string): Promise<SessionWaitingForBoats> {
-	const session = await getSessionByPlayerId(playerId);
 
 	if (session.owner.id !== playerId) {
-		throw new NotFoundError('Only the session owner can request a new game');
+		throw new BadRequestError('Only the session owner can request a new game');
 	}
 
-	return await SessionDB.resetSessionToBoatPlacement(session.id);
+	if (isSessionPlaying(session)) {
+		throw new BadRequestError('Session is still in progress');
+	}
+
+	const updatedSession: SessionWaitingForBoats = await SessionDB.resetSessionToBoatPlacement(
+		session.id,
+	);
+	return updatedSession;
 }

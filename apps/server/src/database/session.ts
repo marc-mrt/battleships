@@ -159,7 +159,7 @@ interface SetWinnerPayload {
 	winnerId: string;
 }
 
-export async function setWinner(payload: SetWinnerPayload): Promise<Session> {
+export async function setWinner(payload: SetWinnerPayload): Promise<SessionGameOver> {
 	const { sessionId, winnerId } = payload;
 
 	const result = await query(
@@ -178,7 +178,8 @@ export async function setWinner(payload: SetWinnerPayload): Promise<Session> {
 		throw new RecordNotFoundError(`Session not found: ${sessionId}`);
 	}
 
-	return mapToSession(result.rows[0]);
+	const mapped = mapToSession(result.rows[0]);
+	return mapped as SessionGameOver;
 }
 
 export async function resetSessionToBoatPlacement(

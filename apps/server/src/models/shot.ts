@@ -1,7 +1,4 @@
-export interface Coordinates {
-	x: number;
-	y: number;
-}
+import { Coordinates } from './coordinates';
 
 export interface Shot extends Coordinates {
 	id: string;
