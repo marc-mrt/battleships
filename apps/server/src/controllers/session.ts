@@ -27,7 +27,7 @@ export async function createSession(request: Request, response: Response) {
 		},
 	});
 
-	const mapped = mapToSessionResponse(session);
+	const mapped = mapToSessionResponse(session, session.owner);
 	return response.status(201).send(mapped);
 }
 
@@ -53,7 +53,7 @@ export async function joinSession(request: Request, response: Response) {
 		},
 	});
 
-	const mapped = mapToSessionResponse(session);
+	const mapped = mapToSessionResponse(session, session.friend);
 	return response.status(200).send(mapped);
 }
 
@@ -68,37 +68,58 @@ export async function getCurrentSession(request: Request, response: Response) {
 	if (!session) {
 		return response.status(204).send();
 	}
-	const mapped = mapToSessionResponse(session);
+	const mapped = mapToSessionResponse(
+		session,
+		sessionCookie.playerId === session.owner.id
+			? session.owner
+			: (session as SessionPlaying).friend,
+	);
 	return response.status(200).send(mapped);
+}
+
+interface PlayerResponse {
+	id: string;
+	username: string;
+	isOwner: boolean;
 }
 
 interface SessionResponse {
 	slug: string;
 	status: SessionStatus;
-	owner: {
-		id: string;
-		username: string;
-	};
-	friend: {
-		id: string;
-		username: string;
-	} | null;
+	player: PlayerResponse;
+	opponent: PlayerResponse | null;
 }
 
-function mapToSessionResponse(session: Session): SessionResponse {
-	return {
-		slug: session.slug,
-		status: session.status,
-		owner: {
-			id: session.owner.id,
-			username: session.owner.username,
-		},
-		friend:
-			session.status !== 'waiting_for_friend'
+function mapToSessionResponse(
+	session: Session,
+	player: Pick<PlayerResponse, 'id' | 'username'>,
+): SessionResponse {
+	let opponent: PlayerResponse | null = null;
+
+	if (player.id === session.owner.id) {
+		opponent =
+			session.status === 'waiting_for_boat_placements' || session.status === 'playing'
 				? {
 						id: session.friend.id,
 						username: session.friend.username,
+						isOwner: false,
 					}
-				: null,
+				: null;
+	} else {
+		opponent = {
+			id: session.owner.id,
+			username: session.owner.username,
+			isOwner: true,
+		};
+	}
+
+	return {
+		slug: session.slug,
+		status: session.status,
+		player: {
+			...player,
+			isOwner: player.id === session.owner.id,
+		},
+		opponent,
 	};
 }

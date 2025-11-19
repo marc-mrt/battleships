@@ -3,7 +3,7 @@ import { type Player } from './player';
 import { type Shot } from './shot';
 
 export type SessionStatus =
-	| 'waiting_for_friend'
+	| 'waiting_for_opponent'
 	| 'waiting_for_boat_placements'
 	| 'ready_to_start'
 	| 'playing';
@@ -16,7 +16,7 @@ interface SessionBase {
 }
 
 export interface SessionCreated extends SessionBase {
-	status: 'waiting_for_friend';
+	status: 'waiting_for_opponent';
 }
 
 export interface SessionWaitingForBoats extends SessionBase {

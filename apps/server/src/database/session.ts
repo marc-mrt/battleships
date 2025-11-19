@@ -285,7 +285,7 @@ function createFriendData(parsed: z.infer<typeof SessionDatabaseSchema>) {
 function mapToWaitingForFriend(parsed: z.infer<typeof SessionDatabaseSchema>): SessionCreated {
 	return {
 		...createBaseSession(parsed),
-		status: 'waiting_for_friend',
+		status: 'waiting_for_opponent',
 	};
 }
 
