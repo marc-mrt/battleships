@@ -4,7 +4,7 @@ import * as SessionService from '../services/session';
 import { BadRequestError } from './errors';
 import { parseSessionCookie, setSessionCookie } from '../middlwares/cookies';
 import { getSessionByPlayerId } from '../database/session';
-import { Session, SessionPlaying, SessionStatus, SessionWaitingForBoats } from '../models/session';
+import { Session, SessionStatus, SessionWaitingForBoats } from '../models/session';
 
 const CreateSessionRequestBody = z.object({
 	username: z.string(),
@@ -18,16 +18,17 @@ export async function createSession(request: Request, response: Response) {
 
 	const { username } = result.data;
 	const session = await SessionService.createSession({ username });
+	const playerId = session.owner.id;
 
 	setSessionCookie({
 		response,
 		payload: {
 			sessionId: session.id,
-			playerId: session.owner.id,
+			playerId,
 		},
 	});
 
-	const mapped = mapToSessionResponse(session, session.owner);
+	const mapped = mapToSessionResponse(session, playerId);
 	return response.status(201).send(mapped);
 }
 
@@ -44,16 +45,17 @@ export async function joinSession(request: Request, response: Response) {
 	const { slug } = request.params;
 	const { username } = result.data;
 	const session: SessionWaitingForBoats = await SessionService.joinSession({ slug, username });
+	const playerId = session.friend.id;
 
 	setSessionCookie({
 		response,
 		payload: {
 			sessionId: session.id,
-			playerId: session.friend.id,
+			playerId,
 		},
 	});
 
-	const mapped = mapToSessionResponse(session, session.friend);
+	const mapped = mapToSessionResponse(session, playerId);
 	return response.status(200).send(mapped);
 }
 
@@ -68,12 +70,7 @@ export async function getCurrentSession(request: Request, response: Response) {
 	if (!session) {
 		return response.status(204).send();
 	}
-	const mapped = mapToSessionResponse(
-		session,
-		sessionCookie.playerId === session.owner.id
-			? session.owner
-			: (session as SessionPlaying).friend,
-	);
+	const mapped = mapToSessionResponse(session, sessionCookie.playerId);
 	return response.status(200).send(mapped);
 }
 
@@ -90,36 +87,42 @@ interface SessionResponse {
 	opponent: PlayerResponse | null;
 }
 
-function mapToSessionResponse(
-	session: Session,
-	player: Pick<PlayerResponse, 'id' | 'username'>,
-): SessionResponse {
-	let opponent: PlayerResponse | null = null;
+function isPlayerOwner(session: Session, playerId: string): boolean {
+	return playerId === session.owner.id;
+}
 
-	if (player.id === session.owner.id) {
-		opponent =
-			session.status === 'waiting_for_boat_placements' || session.status === 'playing'
-				? {
-						id: session.friend.id,
-						username: session.friend.username,
-						isOwner: false,
-					}
-				: null;
-	} else {
-		opponent = {
-			id: session.owner.id,
-			username: session.owner.username,
-			isOwner: true,
-		};
+function getOpponent(session: Session, playerId: string): PlayerResponse | null {
+	if (session.status === 'waiting_for_opponent') {
+		return null;
 	}
 
+	const playerIsOwner = isPlayerOwner(session, playerId);
+	const player = playerIsOwner ? session.friend : session.owner;
+	const opponentIsOwner = !playerIsOwner;
+
+	return { id: player.id, username: player.username, isOwner: opponentIsOwner };
+}
+
+function getPlayer(session: Session, playerId: string): PlayerResponse {
+	const playerIsOwner = isPlayerOwner(session, playerId);
+	let username: string;
+	if (playerIsOwner) {
+		username = session.owner.username;
+	} else {
+		if (session.status === 'waiting_for_opponent') {
+			throw new Error('Invalid session state for player mapping');
+		}
+		username = session.friend.username;
+	}
+
+	return { id: playerId, username, isOwner: playerIsOwner };
+}
+
+function mapToSessionResponse(session: Session, playerId: string): SessionResponse {
 	return {
 		slug: session.slug,
 		status: session.status,
-		player: {
-			...player,
-			isOwner: player.id === session.owner.id,
-		},
-		opponent,
+		player: getPlayer(session, playerId),
+		opponent: getOpponent(session, playerId),
 	};
 }
