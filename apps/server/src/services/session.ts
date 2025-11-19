@@ -1,15 +1,15 @@
-import * as SessionDB from '../database/session.ts';
+import * as SessionDB from '../database/session';
 import {
 	isSessionPlaying,
 	Session,
 	SessionGameOver,
 	SessionPlaying,
 	SessionWaitingForBoats,
-} from '../models/session.ts';
-import { Player } from '../models/player.ts';
-import { sendOpponentJoinedMessage } from '../controllers/websocket.ts';
-import { BadRequestError, NotFoundError } from '../controllers/errors.ts';
-import * as PlayerService from './player.ts';
+} from '../models/session';
+import { Player } from '../models/player';
+import { sendOpponentJoinedMessage } from '../controllers/websocket';
+import { BadRequestError, NotFoundError } from '../controllers/errors';
+import * as PlayerService from './player';
 
 interface CreateSessionPayload {
 	username: string;

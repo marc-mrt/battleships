@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import * as SessionService from '../services/session.ts';
+import * as SessionService from '../services/session';
 import { BadRequestError } from './errors';
-import { parseSessionCookie, setSessionCookie } from '../middlwares/cookies.ts';
-import { getSessionByPlayerId } from '../database/session.ts';
-import { Session, SessionStatus, SessionWaitingForBoats } from '../models/session.ts';
+import { parseSessionCookie, setSessionCookie } from '../middlwares/cookies';
+import { getSessionByPlayerId } from '../database/session';
+import { Session, SessionPlaying, SessionStatus, SessionWaitingForBoats } from '../models/session';
 
 const CreateSessionRequestBody = z.object({
 	username: z.string(),

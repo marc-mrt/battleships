@@ -41,8 +41,8 @@ function trimString(value: string): string {
 
 function parsePort(portString: string): number {
 	const port = parseInt(portString, 10);
-	if (isNaN(port) || port <= 0 || port > 65535) {
-		throw new Error(`Invalid PORT value: ${portString}. Must be a number between 1 and 65535`);
+	if (isNaN(port)) {
+		throw new Error(`Invalid PORT value: ${portString}.`);
 	}
 	return port;
 }

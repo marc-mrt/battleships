@@ -1,5 +1,5 @@
-import * as PlayerDB from '../database/player.ts';
-import { Player } from '../models/player.ts';
+import * as PlayerDB from '../database/player';
+import { Player } from '../models/player';
 
 interface CreatePlayerPayload {
 	username: string;

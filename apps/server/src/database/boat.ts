@@ -1,9 +1,9 @@
 import { query } from './db';
-import { InvalidQueryPayloadError } from './errors.ts';
+import { InvalidQueryPayloadError } from './errors';
 import { TOTAL_BOATS_COUNT } from 'game-rules';
 import { z } from 'zod';
-import { generateMapperToDomainModel } from './mapper.ts';
-import { Boat } from '../models/boat.ts';
+import { generateMapperToDomainModel } from './mapper';
+import { Boat } from '../models/boat';
 
 interface SaveBoatsPayload {
 	playerId: string;

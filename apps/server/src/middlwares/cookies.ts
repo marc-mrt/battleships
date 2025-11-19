@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { Response } from 'express';
-import { signJwt, verifyJwt } from '../utils/jwt.ts';
-import { config } from '../config.ts';
+import { signJwt, verifyJwt } from '../utils/jwt';
+import { config } from '../config';
 
 const COOKIE_NAME = 'session';
 const MAX_AGE = 24 * 60 * 60 * 1000;

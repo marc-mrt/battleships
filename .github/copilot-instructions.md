@@ -389,7 +389,7 @@ cd apps/server && pnpm build
 
 ### Session Status States
 
-- `waiting_for_friend`: Created, waiting for opponent
+- `waiting_for_opponent`: Created, waiting for opponent
 - `waiting_for_boat_placements`: Both joined, placing boats
 - `in_game`: Active gameplay (server only)
 - `ready_to_play`: Ready to start (client-side representation of in_game)

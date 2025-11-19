@@ -6,10 +6,10 @@ import {
 	isSessionPlaying,
 } from '../models/session';
 import { GameOverState, GameInProgressState, LastShot, NewGameStartedMessage } from 'game-messages';
-import { sendNewGameStartedMessage, sendNextTurnMessage } from '../controllers/websocket.ts';
-import * as BoatService from './boat.ts';
-import * as SessionService from './session.ts';
-import * as ShotService from './shot.ts';
+import { sendNewGameStartedMessage, sendNextTurnMessage } from '../controllers/websocket';
+import * as BoatService from './boat';
+import * as SessionService from './session';
+import * as ShotService from './shot';
 import { Boat } from '../models/boat';
 import { Coordinates } from '../models/coordinates';
 import * as R from 'ramda';
@@ -22,7 +22,7 @@ import {
 	getPlayerShots,
 	getSunkOpponentBoats,
 	validatePlayerTurn,
-} from './game-utils.ts';
+} from './game-utils';
 
 const COIN_FLIP_PROBABILITY = 0.5;
 

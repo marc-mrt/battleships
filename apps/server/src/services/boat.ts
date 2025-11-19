@@ -1,6 +1,6 @@
-import * as BoatDB from '../database/boat.ts';
-import { Boat } from '../models/boat.ts';
-import { Coordinates } from '../models/coordinates.ts';
+import * as BoatDB from '../database/boat';
+import { Boat } from '../models/boat';
+import { Coordinates } from '../models/coordinates';
 
 interface SaveBoatsPayload {
 	playerId: string;

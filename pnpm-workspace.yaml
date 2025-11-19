@@ -5,6 +5,11 @@ packages:
 onlyBuiltDependencies:
   - esbuild
 
+syncInjectedDepsAfterScripts:
+  - build
+
+injectWorkspacePackages: true
+
 catalog:
   '@eslint/js': 9.37.0
   '@types/node': 22.18.8

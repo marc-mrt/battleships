@@ -1,7 +1,7 @@
 import { query } from './db';
 import { z } from 'zod';
 import { generateMapperToDomainModel } from './mapper';
-import { Shot } from '../models/shot.ts';
+import { Shot } from '../models/shot';
 
 interface CreateShotPayload {
 	sessionId: string;

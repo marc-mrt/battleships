@@ -6,9 +6,8 @@
 	"type": "module",
 	"scripts": {
 		"start": "node dist/index.js",
-		"dev": "tsx watch src/index.ts",
-		"build": "pnpm build:clean && pnpm tsc --build && echo '{\"module\": \"commonjs\"}' >> dist/package.json",
-		"build:clean": "rm -rf dist/",
+		"dev": "tsx watch --conditions=development --tsconfig=tsconfig.json src/index.ts",
+		"build": "rm -rf dist && pnpm tsc --build && echo '{\"module\": \"commonjs\"}' >> dist/package.json",
 		"lint": "eslint .",
 		"format": "prettier --write .",
 		"typecheck": "tsc --noEmit"

@@ -10,10 +10,10 @@ import {
 	type NewGameStartedMessage,
 } from 'game-messages';
 import { InternalServerError } from './errors';
-import * as SessionService from '../services/session.ts';
-import * as GameStateManager from '../services/game-state-manager.ts';
-import { parseSessionCookie } from '../middlwares/cookies.ts';
-import { SessionGameOver } from '../models/session.ts';
+import * as SessionService from '../services/session';
+import * as GameStateManager from '../services/game-state-manager';
+import { parseSessionCookie } from '../middlwares/cookies';
+import { SessionGameOver } from '../models/session';
 
 const WEBSOCKET_CLOSE_CODE_POLICY_VIOLATION = 1008;
 

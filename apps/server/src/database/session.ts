@@ -11,8 +11,8 @@ import { query } from './db';
 import { z } from 'zod';
 import { generateMapperToDomainModel } from './mapper';
 import { BoatDatabaseSchema, mapToBoat } from './boat';
-import { mapToShot, ShotDatabaseSchema } from './shot.ts';
-import { RecordNotFoundError, UnexpectedDatabaseError } from './errors.ts';
+import { mapToShot, ShotDatabaseSchema } from './shot';
+import { RecordNotFoundError, UnexpectedDatabaseError } from './errors';
 
 interface CreateSessionPayload {
 	owner: { playerId: string };
