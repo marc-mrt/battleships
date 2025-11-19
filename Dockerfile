@@ -12,7 +12,7 @@ COPY packages/game-rules/package.json packages/game-rules/tsconfig.json packages
 COPY packages/game-rules/src ./packages/game-rules/src
 COPY packages/game-messages/package.json packages/game-messages/tsconfig.json packages/game-messages/tsconfig.build.json ./packages/game-messages/
 COPY packages/game-messages/src ./packages/game-messages/src
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 RUN pnpm run -r build
 RUN pnpm deploy --filter ./apps/server --prod /prod/server
 
