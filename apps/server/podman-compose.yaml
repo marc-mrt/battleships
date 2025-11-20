@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:15
+    image: docker.io/postgres:15
     container_name: battleships-postgres
     environment:
       POSTGRES_DB: battleships
@@ -10,7 +10,7 @@ services:
       - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:Z
     restart: unless-stopped
 
 volumes:

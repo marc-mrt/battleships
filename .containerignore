@@ -21,5 +21,8 @@ coverage
 eslint.config.js
 tsconfig.json
 docker-compose.yaml
+compose.yaml
 Dockerfile
+Containerfile
 .dockerignore
+.containerignore
