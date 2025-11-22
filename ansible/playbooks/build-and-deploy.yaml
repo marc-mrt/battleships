@@ -69,8 +69,8 @@
         name: battleships-server
         tag: latest
         path: '{{ project_root }}'
-        dockerfile: Containerfile
         build:
+          file: Containerfile
           target: server
         state: build
 
