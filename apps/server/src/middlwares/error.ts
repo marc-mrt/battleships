@@ -26,7 +26,7 @@ function handleUnexpectedError(error: unknown, response: Response): void {
 	internalError.respond(response);
 }
 
-export function errorHandler(error: unknown, request: Request, response: Response): void {
+export function errorHandler(error: unknown, _: Request, response: Response): void {
 	if (isDatabaseError(error)) {
 		handleDatabaseError(error, response);
 		return;
