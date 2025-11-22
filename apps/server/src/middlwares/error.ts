@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { DatabaseError } from '../database/errors';
 import { HttpError, InternalServerError } from '../controllers/errors';
 
@@ -19,24 +19,14 @@ function handleHttpError(error: HttpError, response: Response): void {
 	error.respond(response);
 }
 
-function logUnexpectedError(error: unknown): void {
+function handleUnexpectedError(error: unknown, response: Response): void {
 	console.error('Unexpected error:', error);
-}
 
-function handleUnexpectedError(response: Response): void {
 	const internalError = new InternalServerError('Unexpected error');
 	internalError.respond(response);
 }
 
-interface ErrorHandlerPayload {
-	error: unknown;
-	request: Request;
-	response: Response;
-	next: NextFunction;
-}
-
-function handleError(payload: ErrorHandlerPayload): void {
-	const { error, response } = payload;
+export function errorHandler(error: unknown, request: Request, response: Response): void {
 	if (isDatabaseError(error)) {
 		handleDatabaseError(error, response);
 		return;
@@ -47,15 +37,5 @@ function handleError(payload: ErrorHandlerPayload): void {
 		return;
 	}
 
-	logUnexpectedError(error);
-	handleUnexpectedError(response);
-}
-
-export function errorHandler(
-	error: unknown,
-	request: Request,
-	response: Response,
-	next: NextFunction,
-): void {
-	handleError({ error, request, response, next });
+	handleUnexpectedError(error, response);
 }
