@@ -9,6 +9,6 @@ export default defineConfig({
 	sourcemap: true,
 	dts: false,
 	treeshake: true,
-	minify: true,
+	minify: false,
 	noExternal: ['game-messages', 'game-rules'],
 });
