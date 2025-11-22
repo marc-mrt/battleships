@@ -141,21 +141,21 @@
       register: nginx_conf_content
       delegate_to: localhost
 
-    - name: Write nginx.conf with domain substitution
+    - name: Write nginx.conf with app_dir
       ansible.builtin.copy:
-        content: "{{ (nginx_conf_content.content | b64decode) | replace('DOMAIN_PLACEHOLDER', domain) }}"
+        content: "{{ (nginx_conf_content.content | b64decode) | replace('APP_DIR', app_dir) }}"
         dest: '{{ app_dir }}/nginx.conf'
         mode: '0644'
 
     - name: Check if SSL certificates exist
       ansible.builtin.stat:
-        path: /etc/letsencrypt/live/{{ domain }}/fullchain.pem
+        path: /{{ app_dir }}/certs/fullchain.pem
       register: ssl_cert_check
 
     - name: Warn if SSL certificates are missing
       ansible.builtin.debug:
         msg:
-          - '⚠️  WARNING: SSL certificates not found at /etc/letsencrypt/live/{{ domain }}/'
+          - '⚠️  WARNING: SSL certificates not found at /{{ app_dir }}/certs/'
           - 'The application may fail to start. Please ensure certificates are set up.'
           - 'You can use certbot to obtain certificates before deployment.'
       when: not ssl_cert_check.stat.exists
