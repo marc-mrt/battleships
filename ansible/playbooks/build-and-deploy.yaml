@@ -1,0 +1,220 @@
+---
+- name: Build application artifacts locally
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    project_root: '{{ playbook_dir }}/../..'
+    env_file: '{{ project_root }}/.env.production'
+    db_password: '{{ lookup("env", "DB_PASSWORD") }}'
+    jwt_secret: '{{ lookup("env", "JWT_SECRET") }}'
+    domain: '{{ lookup("env", "DOMAIN") }}'
+    allowed_origins: 'https://{{ domain }}'
+    vite_server_base_url: 'https://{{ domain }}/api'
+
+  tasks:
+    - name: Verify required environment variables are set
+      ansible.builtin.fail:
+        msg: 'Required environment variable {{ item }} is not set'
+      when: lookup("env", item) == ""
+      loop:
+        - DB_PASSWORD
+        - JWT_SECRET
+        - DOMAIN
+
+    - name: Create .env.production file
+      ansible.builtin.copy:
+        dest: '{{ env_file }}'
+        mode: '0600'
+        content: |
+          # Database Configuration
+          DB_PASSWORD={{ db_password }}
+
+          # Server Configuration
+          JWT_SECRET={{ jwt_secret }}
+          ALLOWED_ORIGINS={{ allowed_origins }}
+
+          # Client Configuration
+          VITE_SERVER_BASE_URL={{ vite_server_base_url }}
+
+    - name: Display build configuration
+      ansible.builtin.debug:
+        msg:
+          - 'Building with configuration:'
+          - '  VITE_SERVER_BASE_URL: {{ vite_server_base_url }}'
+
+    - name: Install pnpm dependencies
+      ansible.builtin.command:
+        cmd: pnpm install --frozen-lockfile
+        chdir: '{{ project_root }}'
+      changed_when: true
+
+    - name: Build client application
+      ansible.builtin.command:
+        cmd: pnpm run --filter ./apps/client build
+        chdir: '{{ project_root }}'
+      environment:
+        VITE_SERVER_BASE_URL: '{{ vite_server_base_url }}'
+      changed_when: true
+
+    - name: Verify client dist folder exists
+      ansible.builtin.stat:
+        path: '{{ project_root }}/apps/client/dist'
+      register: client_dist
+      failed_when: not client_dist.stat.exists
+
+    - name: Build server container image
+      containers.podman.podman_image:
+        name: battleships-server
+        tag: latest
+        path: '{{ project_root }}'
+        dockerfile: Containerfile
+        build:
+          target: server
+        state: build
+
+    - name: Save server image to tarball
+      ansible.builtin.command:
+        cmd: podman save -o {{ project_root }}/battleships-server.tar battleships-server:latest
+      changed_when: true
+
+    - name: Display build summary
+      ansible.builtin.debug:
+        msg:
+          - '============================================'
+          - 'Build Complete'
+          - '============================================'
+          - 'Client dist: {{ project_root }}/apps/client/dist'
+          - 'Server image: {{ project_root }}/battleships-server.tar'
+          - ''
+          - 'Ready for deployment to VPS'
+
+- name: Deploy application to VPS
+  hosts: server
+  become: false
+  vars:
+    app_dir: '{{ ansible_env.HOME }}/app'
+    local_project_root: '{{ playbook_dir }}/../..'
+    env_file: '{{ local_project_root }}/.env.production'
+    domain: '{{ lookup("env", "DOMAIN") }}'
+
+  tasks:
+    - name: Create application directory
+      ansible.builtin.file:
+        path: '{{ app_dir }}'
+        state: directory
+        mode: '0755'
+
+    - name: Transfer server image tarball to VPS
+      ansible.builtin.copy:
+        src: '{{ local_project_root }}/battleships-server.tar'
+        dest: '{{ app_dir }}/battleships-server.tar'
+        mode: '0644'
+
+    - name: Load server image into podman
+      ansible.builtin.command:
+        cmd: podman load -i {{ app_dir }}/battleships-server.tar
+      changed_when: true
+
+    - name: Remove server image tarball
+      ansible.builtin.file:
+        path: '{{ app_dir }}/battleships-server.tar'
+        state: absent
+
+    - name: Sync client dist folder to VPS
+      ansible.posix.synchronize:
+        src: '{{ local_project_root }}/apps/client/dist/'
+        dest: '{{ app_dir }}/client-assets/'
+        delete: true
+        recursive: true
+
+    - name: Sync podman-compose.yml to VPS
+      ansible.builtin.copy:
+        src: '{{ local_project_root }}/podman-compose.yml'
+        dest: '{{ app_dir }}/podman-compose.yml'
+        mode: '0644'
+
+    - name: Read nginx.conf template
+      ansible.builtin.slurp:
+        src: '{{ local_project_root }}/nginx.conf'
+      register: nginx_conf_content
+      delegate_to: localhost
+
+    - name: Write nginx.conf with domain substitution
+      ansible.builtin.copy:
+        content: "{{ (nginx_conf_content.content | b64decode) | replace('DOMAIN_PLACEHOLDER', domain) }}"
+        dest: '{{ app_dir }}/nginx.conf'
+        mode: '0644'
+
+    - name: Check if SSL certificates exist
+      ansible.builtin.stat:
+        path: /etc/letsencrypt/live/{{ domain }}/fullchain.pem
+      register: ssl_cert_check
+
+    - name: Warn if SSL certificates are missing
+      ansible.builtin.debug:
+        msg:
+          - '⚠️  WARNING: SSL certificates not found at /etc/letsencrypt/live/{{ domain }}/'
+          - 'The application may fail to start. Please ensure certificates are set up.'
+          - 'You can use certbot to obtain certificates before deployment.'
+      when: not ssl_cert_check.stat.exists
+
+    - name: Sync Containerfile to VPS
+      ansible.builtin.copy:
+        src: '{{ local_project_root }}/Containerfile'
+        dest: '{{ app_dir }}/Containerfile'
+        mode: '0644'
+
+    - name: Sync server init.sql to VPS
+      ansible.builtin.copy:
+        src: '{{ local_project_root }}/apps/server/init.sql'
+        dest: '{{ app_dir }}/init.sql'
+        mode: '0644'
+
+    - name: Transfer .env.production to VPS
+      ansible.builtin.copy:
+        src: '{{ env_file }}'
+        dest: '{{ app_dir }}/.env.production'
+        mode: '0600'
+
+    - name: Stop existing containers
+      ansible.builtin.command:
+        cmd: podman-compose --env-file .env.production down
+        chdir: '{{ app_dir }}'
+      register: compose_down
+      failed_when: false
+      changed_when: compose_down.rc == 0
+
+    - name: Start containers with podman-compose
+      ansible.builtin.command:
+        cmd: podman-compose --env-file .env.production up -d
+        chdir: '{{ app_dir }}'
+      changed_when: true
+
+    - name: Wait for services to be healthy
+      ansible.builtin.pause:
+        seconds: 15
+
+    - name: Verify CDN health endpoint
+      ansible.builtin.uri:
+        url: http://localhost/health
+        method: GET
+        status_code: 200
+      register: health_check
+      retries: 5
+      delay: 3
+      until: health_check.status == 200
+      ignore_errors: true
+
+    - name: Display deployment result
+      ansible.builtin.debug:
+        msg:
+          - '============================================'
+          - 'Deployment Complete'
+          - '============================================'
+          - 'Application directory: {{ app_dir }}'
+          - "Health check: {{ 'PASSED' if health_check is succeeded else 'FAILED' }}"
+          - ''
+          - 'View logs: podman-compose logs -f'
+          - 'Application: http://{{ ansible_host }}'

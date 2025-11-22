@@ -142,3 +142,6 @@ vite.config.ts.timestamp-*
 .idea/
 .vscode/
 .zed/
+
+# Build artifacts for deployment
+images/
