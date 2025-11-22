@@ -192,7 +192,7 @@
 
     - name: Verify CDN health endpoint
       ansible.builtin.uri:
-        url: http://localhost/health
+        url: http://localhost:8080/health
         method: GET
         status_code: 200
       register: health_check
