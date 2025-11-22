@@ -14,10 +14,13 @@ function getWebSocketProtocol(): string {
 	return isHttps() ? 'wss' : 'ws';
 }
 
-function convertToWebSocketUrl(httpUrl: string): string {
-	return httpUrl.replace(/^http/, getWebSocketProtocol());
+function getWebSocketUrl(baseURL: string): string {
+	const urlWithoutPath = baseURL.replace(/\/api$/, '');
+	const protocol = getWebSocketProtocol();
+	const wsUrl = urlWithoutPath.replace(/^http/, protocol);
+	return `${wsUrl}/ws`;
 }
 
 export const API_BASE_URL: string = getBaseUrl();
 
-export const WEBSOCKET_BASE_URL: string = convertToWebSocketUrl(API_BASE_URL);
+export const WEBSOCKET_BASE_URL: string = getWebSocketUrl(API_BASE_URL);
