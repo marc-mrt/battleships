@@ -2,20 +2,18 @@
 	"name": "game-messages",
 	"version": "0.0.0",
 	"description": "",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"type": "module",
 	"exports": {
 		".": {
 			"development": "./src/index.ts",
-			"types": "./dist/index.d.ts",
-			"default": "./dist/index.js"
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
 		}
 	},
 	"scripts": {
 		"lint": "eslint .",
 		"format": "prettier --write .",
-		"typecheck": "tsc --noEmit",
-		"build": "pnpm tsc --build tsconfig.build.json --force"
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"zod": "catalog:",
