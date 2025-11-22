@@ -193,16 +193,6 @@
         timeout: 60
         delay: 2
 
-    - name: Verify CDN health endpoint
-      ansible.builtin.uri:
-        url: http://localhost:8080/health
-        method: GET
-        status_code: 200
-      register: health_check
-      retries: 12
-      delay: 5
-      until: health_check.status == 200
-
     - name: Display deployment result
       ansible.builtin.debug:
         msg:
@@ -210,7 +200,6 @@
           - 'Deployment Complete'
           - '============================================'
           - 'Application directory: {{ app_dir }}'
-          - "Health check: {{ 'PASSED' if health_check is succeeded else 'FAILED' }}"
           - ''
           - 'View logs: podman-compose logs -f'
           - 'Application: http://{{ ansible_host }}'

@@ -24,17 +24,13 @@ jobs:
           version: 10
 
       - name: Install Ansible
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ansible
+        run: sudo apt-get install -y ansible
 
       - name: Install Ansible collections
         run: ansible-galaxy collection install -r ansible/requirements.yaml
 
       - name: Install Podman
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y podman
+        run: sudo apt-get install -y podman
 
       - name: Setup SSH key
         run: |
@@ -64,16 +60,7 @@ jobs:
           DOMAIN: ${{ vars.DOMAIN }}
 
       - name: Verify deployment
-        run: |
-          sleep 10
-          curl -f http://${{ secrets.VPS_IP }}/health || exit 1
+        run: curl -f https://${{ vars.DOMAIN }}/health || exit 1
 
       - name: Deployment notification
-        if: always()
-        run: |
-          if [ ${{ job.status }} == 'success' ]; then
-            echo "✅ Deployment successful to ${{ secrets.VPS_IP }}"
-          else
-            echo "❌ Deployment failed"
-            exit 1
-          fi
+        run: echo "✅ Deployment successful to https://${{ vars.DOMAIN }}"
