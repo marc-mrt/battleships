@@ -135,25 +135,6 @@
         dest: '{{ app_dir }}/podman-compose.yml'
         mode: '0644'
 
-    - name: Sync nginx.conf to VPS
-      ansible.builtin.copy:
-        src: '{{ local_project_root }}/nginx.conf'
-        dest: '{{ app_dir }}/nginx.conf'
-        mode: '0644'
-
-    - name: Check if SSL certificates exist
-      ansible.builtin.stat:
-        path: '{{ app_dir }}/certs/fullchain.pem'
-      register: ssl_cert_check
-
-    - name: Warn if SSL certificates are missing
-      ansible.builtin.debug:
-        msg:
-          - '⚠️  WARNING: SSL certificates not found at {{ app_dir }}/certs/'
-          - 'The application may fail to start. Please ensure certificates are set up.'
-          - 'You can use certbot to obtain certificates before deployment.'
-      when: not ssl_cert_check.stat.exists
-
     - name: Sync Containerfile to VPS
       ansible.builtin.copy:
         src: '{{ local_project_root }}/Containerfile'
@@ -186,9 +167,9 @@
         chdir: '{{ app_dir }}'
       changed_when: true
 
-    - name: Wait for CDN port to be listening
+    - name: Wait for backend port to be listening
       ansible.builtin.wait_for:
-        port: 8080
+        port: 3100
         host: localhost
         timeout: 60
         delay: 2
@@ -200,6 +181,12 @@
           - 'Deployment Complete'
           - '============================================'
           - 'Application directory: {{ app_dir }}'
+          - 'Backend: http://localhost:3100'
+          - 'Client assets: {{ app_dir }}/client-assets'
           - ''
-          - 'View logs: podman-compose logs -f'
-          - 'Application: http://{{ ansible_host }}'
+          - 'Configure your nginx reverse proxy to:'
+          - '  - Proxy /api/* to http://localhost:3100/*'
+          - '  - Proxy /ws to http://localhost:3100/ (WebSocket)'
+          - '  - Serve /* from {{ app_dir }}/client-assets'
+          - ''
+          - 'View logs: cd {{ app_dir }} && podman-compose logs -f'
