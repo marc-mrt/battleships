@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { CellState } from '../grid/types';
-	import './grid-styles.css';
 
 	interface AnimationState {
 		type: 'idle' | 'shooting' | 'hit' | 'miss' | 'sunk';
@@ -93,22 +92,16 @@
 <style>
 	.cell {
 		border-radius: 0;
-		transition: all 0.1s;
+		transition: all var(--transition-fast);
 		cursor: pointer;
 		touch-action: manipulation;
-	}
-
-	@media (min-width: 640px) {
-		.cell {
-			min-height: auto;
-		}
 	}
 
 	@media (hover: hover) and (pointer: fine) {
 		.cell:not(:disabled):hover {
 			position: relative;
 			background: var(--color-white);
-			animation: borderGrow 0.2s ease-out forwards;
+			animation: borderGrow var(--transition-normal) ease-out forwards;
 		}
 
 		.cell:not(:disabled):hover::before {
@@ -117,7 +110,7 @@
 			inset: 0;
 			border: 2px solid red;
 			border-radius: 0px;
-			animation: borderGrow 0.2s ease-out forwards;
+			animation: borderGrow var(--transition-normal) ease-out forwards;
 		}
 
 		.cell:not(:disabled):hover::after {
@@ -167,15 +160,6 @@
 
 	.cell:not(:disabled):active {
 		transform: scale(0.95);
-	}
-
-	@keyframes borderGrow {
-		from {
-			border-radius: 0px;
-		}
-		to {
-			border-radius: 24px;
-		}
 	}
 
 	@keyframes crosshairExpand {

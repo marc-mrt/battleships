@@ -241,8 +241,8 @@
 	header {
 		display: flex;
 		justify-content: space-between;
-		margin-bottom: 0.75rem;
-		gap: 0.5rem;
+		margin-bottom: var(--spacing-sm);
+		gap: var(--spacing-xs);
 	}
 
 	header h3 {
@@ -255,17 +255,12 @@
 
 	@media (min-width: 640px) {
 		header {
-			margin-bottom: 0.5rem;
+			margin-bottom: var(--spacing-xs);
 		}
 
 		header h3 {
 			font-size: 1rem;
 		}
-	}
-
-	.player {
-		text-decoration: underline;
-		text-decoration-color: var(--color-text-success);
 	}
 
 	.turn-view {
@@ -278,7 +273,7 @@
 
 	@media (min-width: 640px) {
 		.turn-view {
-			gap: 1rem;
+			gap: var(--spacing-md);
 		}
 	}
 
@@ -286,49 +281,26 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
-		padding: 2rem;
+		padding: var(--spacing-xl);
 		color: var(--color-text-subtle);
-	}
-
-	.status-message {
-		font-size: 1.2rem;
-		font-weight: 600;
-		margin: 0;
-		padding: 0 0.5rem;
-	}
-
-	@media (min-width: 640px) {
-		.status-message {
-			font-size: 1.1rem;
-			font-weight: 500;
-			padding: 0;
-		}
-	}
-
-	.status-message.your-turn {
-		color: var(--color-text-success);
-	}
-
-	.status-message.opponent-turn {
-		color: var(--color-accent);
 	}
 
 	.grid-container {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.75rem;
+		gap: var(--spacing-sm);
 		width: 100%;
 	}
 
 	@media (min-width: 640px) {
 		.grid-container {
-			gap: 0.5rem;
+			gap: var(--spacing-xs);
 		}
 	}
 
 	footer {
-		margin-top: 1rem;
+		margin-top: var(--spacing-md);
 		text-align: center;
 	}
 
@@ -336,13 +308,13 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 2rem;
-		padding: 1.5rem 1rem;
+		gap: var(--spacing-xl);
+		padding: var(--spacing-lg) var(--spacing-md);
 	}
 
 	@media (min-width: 640px) {
 		.game-over {
-			padding: 2rem;
+			padding: var(--spacing-xl);
 		}
 	}
 
@@ -359,15 +331,15 @@
 	}
 
 	.new-game-button {
-		padding: 1rem 1.5rem;
+		padding: var(--spacing-md) var(--spacing-lg);
 		font-size: 1.1rem;
 		font-weight: 600;
 		color: white;
 		background-color: var(--color-accent);
 		border: none;
-		border-radius: 0.5rem;
+		border-radius: var(--border-radius-lg);
 		cursor: pointer;
-		transition: all 0.2s ease;
+		transition: all var(--transition-normal) ease;
 		min-height: 52px;
 		width: 100%;
 		max-width: 300px;
@@ -375,7 +347,7 @@
 
 	@media (min-width: 640px) {
 		.new-game-button {
-			padding: 1rem 2rem;
+			padding: var(--spacing-md) var(--spacing-xl);
 			font-size: 1.2rem;
 			min-height: auto;
 			width: auto;
@@ -398,7 +370,7 @@
 		color: var(--color-text-subtle);
 		margin: 0;
 		text-align: center;
-		padding: 0 1rem;
+		padding: 0 var(--spacing-md);
 	}
 
 	@media (min-width: 640px) {

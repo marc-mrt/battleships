@@ -54,24 +54,3 @@
 {:else}
 	<CreateOrJoinSession sharedSlug={querySharedSlug} />
 {/if}
-
-<style>
-	.loading,
-	.error {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		min-height: 100vh;
-		padding: 2rem;
-	}
-
-	.loading p {
-		color: var(--color-text-subtle);
-		font-size: 1.2rem;
-	}
-
-	.error p {
-		color: var(--color-text-error);
-		font-size: 1.2rem;
-	}
-</style>

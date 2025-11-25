@@ -212,14 +212,14 @@
 	form {
 		max-width: 400px;
 		margin: 0 auto;
-		padding: 1rem;
-		border-radius: 8px;
+		padding: var(--spacing-md);
+		border-radius: var(--border-radius-lg);
 		width: 100%;
 	}
 
 	@media (min-width: 640px) {
 		form {
-			padding: 2rem;
+			padding: var(--spacing-xl);
 		}
 	}
 
@@ -229,7 +229,7 @@
 
 	@media (min-width: 640px) {
 		.form-group {
-			margin-bottom: 1rem;
+			margin-bottom: var(--spacing-md);
 		}
 	}
 
@@ -242,7 +242,7 @@
 
 	@media (min-width: 640px) {
 		label {
-			margin-bottom: 0.5rem;
+			margin-bottom: var(--spacing-xs);
 			font-size: inherit;
 		}
 	}
@@ -259,7 +259,7 @@
 
 	@media (min-width: 640px) {
 		.error {
-			margin: 0.5rem 0 0 0;
+			margin: var(--spacing-xs) 0 0 0;
 			font-size: 0.9rem;
 		}
 	}
@@ -270,37 +270,7 @@
 
 	@media (min-width: 640px) {
 		.error.general {
-			margin-top: 1rem;
+			margin-top: var(--spacing-md);
 		}
-	}
-
-	button.alternative {
-		background: none;
-		border: none;
-		color: var(--color-text-subtle);
-		font-style: italic;
-		transition: all 200ms ease;
-		margin-top: 0.75rem;
-		min-height: 44px;
-		font-size: 0.95rem;
-	}
-
-	@media (min-width: 640px) {
-		button.alternative {
-			margin-top: 0.5rem;
-			min-height: auto;
-			font-size: inherit;
-		}
-	}
-
-	@media (hover: hover) and (pointer: fine) {
-		button.alternative:hover:not(:disabled) {
-			text-decoration: underline;
-		}
-	}
-
-	button.alternative:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
 	}
 </style>

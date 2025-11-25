@@ -210,7 +210,7 @@
 	header {
 		display: flex;
 		justify-content: space-between;
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--spacing-xs);
 	}
 
 	header h3 {
@@ -218,15 +218,10 @@
 		font-size: 1rem;
 	}
 
-	.player {
-		text-decoration: underline;
-		text-decoration-color: var(--color-text-success);
-	}
-
 	.container {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: var(--spacing-md);
 		width: 100%;
 		align-items: center;
 	}
@@ -241,7 +236,7 @@
 	.controls-section {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+		gap: var(--spacing-sm);
 		width: 100%;
 		max-width: 400px;
 	}
@@ -265,11 +260,11 @@
 	.boat-stock {
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		gap: var(--spacing-xs);
 	}
 
 	.boat-stock h5 {
-		margin: 0 0 0.25rem 0;
+		margin: 0 0 var(--spacing-xs) 0;
 		font-size: 0.9rem;
 		font-weight: 600;
 		text-align: center;
@@ -285,26 +280,26 @@
 	.stock-item {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		padding: 0.6rem 0.75rem;
+		gap: var(--spacing-xs);
+		padding: 0.6rem var(--spacing-sm);
 		border: 1px solid var(--color-accent);
-		border-radius: 8px;
+		border-radius: var(--border-radius-lg);
 		background: white;
-		transition: opacity 0.2s;
+		transition: opacity var(--transition-normal);
 	}
 
 	@media (min-width: 640px) {
 		.stock-item {
-			gap: 0.4rem;
-			padding: 0.4rem 0.5rem;
-			border-radius: 4px;
+			gap: var(--spacing-xs);
+			padding: var(--spacing-xs) var(--spacing-xs);
+			border-radius: var(--border-radius-md);
 			min-height: auto;
 		}
 	}
 
 	.stock-item.depleted {
 		opacity: 0.3;
-		border-color: #ccc;
+		border-color: var(--color-border-light);
 	}
 
 	.boat-visual {
@@ -312,7 +307,7 @@
 		gap: 1px;
 		flex: 1;
 		user-select: none;
-		transition: all 0.2s;
+		transition: all var(--transition-normal);
 		touch-action: none;
 	}
 
@@ -322,7 +317,7 @@
 
 	@media (hover: hover) and (pointer: fine) {
 		.boat-visual.draggable:hover {
-			animation: pulse 1s ease-in-out infinite;
+			animation: pulse var(--animation-pulse) ease-in-out infinite;
 		}
 	}
 
@@ -337,7 +332,7 @@
 	.boat-segment {
 		width: 20px;
 		height: 20px;
-		background: var(--color-accent);
+		background: var(--color-boat);
 	}
 
 	@media (min-width: 640px) {
@@ -369,38 +364,16 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.75rem;
-		margin: 0.75rem 0;
+		gap: var(--spacing-sm);
+		margin: var(--spacing-sm) 0;
 	}
 
 	@media (min-width: 640px) {
 		.selected-boat-actions {
-			gap: 0.5rem;
-			margin: 0.5rem 0;
+			gap: var(--spacing-xs);
+			margin: var(--spacing-xs) 0;
 			min-height: 32px;
 		}
-	}
-
-	.action-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0 1.25rem;
-		font-size: 1.1rem;
-	}
-
-	@media (min-width: 640px) {
-		.action-btn {
-			height: 32px;
-			min-height: 32px;
-			padding: 0 1rem;
-			font-size: 1rem;
-		}
-	}
-
-	.action-btn.delete:hover {
-		background: var(--color-text-error);
-		border-color: var(--color-text-error);
 	}
 
 	.status-message {
@@ -409,21 +382,21 @@
 	}
 
 	footer {
-		margin-top: 1rem;
+		margin-top: var(--spacing-md);
 		text-align: center;
 	}
 
 	.ready-button {
-		padding: 0.75rem 1rem;
+		padding: var(--spacing-sm) var(--spacing-md);
 		font-size: 1.05rem;
 		font-weight: 600;
-		transition: all 0.2s;
+		transition: all var(--transition-normal);
 		min-height: 52px;
 	}
 
 	@media (min-width: 640px) {
 		.ready-button {
-			padding: 0.5rem 1rem;
+			padding: var(--spacing-xs) var(--spacing-md);
 			font-size: 1rem;
 		}
 	}
@@ -433,23 +406,13 @@
 		cursor: not-allowed;
 	}
 
-	@keyframes pulse {
-		0%,
-		100% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0.5;
-		}
-	}
-
 	.floating-boat {
 		position: fixed;
 		display: flex;
 		gap: 1px;
 		pointer-events: none;
 		transform: translate(-50%, -50%);
-		z-index: 1000;
+		z-index: var(--z-index-floating);
 		opacity: 0.8;
 		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 	}
@@ -465,7 +428,7 @@
 	.floating-boat-segment {
 		width: 24px;
 		height: 24px;
-		background: var(--color-accent);
+		background: var(--color-boat);
 		border: 1px solid rgba(0, 0, 0, 0.1);
 	}
 

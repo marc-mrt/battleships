@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { CellState } from '../grid/types';
-	import './grid-styles.css';
 
 	interface AnimationState {
 		type: 'idle' | 'shooting' | 'hit' | 'miss' | 'sunk';
@@ -62,6 +61,6 @@
 
 <style>
 	.cell {
-		transition: background 0.1s;
+		transition: background var(--transition-fast);
 	}
 </style>

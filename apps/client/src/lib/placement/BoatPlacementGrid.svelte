@@ -87,46 +87,14 @@
 
 <style>
 	.grid {
-		display: grid;
-		grid-template-columns: repeat(9, 1fr);
-		gap: 2px;
-		background: #ddd;
-		padding: 2px;
-		border-radius: 4px;
-		width: 100%;
-		max-width: 100%;
 		touch-action: none;
 		user-select: none;
 	}
 
-	@media (min-width: 640px) {
-		.grid {
-			max-width: 360px;
-			gap: 1px;
-			padding: 1px;
-			border-radius: 2px;
-		}
-	}
-
 	.cell {
-		aspect-ratio: 1;
-		width: 100%;
-		background: var(--color-white);
-		border: none;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: background 0.1s;
-		padding: 0;
+		transition: background var(--transition-fast);
 		cursor: pointer;
 		touch-action: none;
-		min-height: 32px;
-	}
-
-	@media (min-width: 640px) {
-		.cell {
-			min-height: auto;
-		}
 	}
 
 	.cell.draggable {
@@ -137,14 +105,10 @@
 		cursor: grabbing;
 	}
 
-	.cell.boat {
-		background: var(--color-accent);
-	}
-
 	.cell.selected {
-		animation: pulse 1s ease-in-out infinite;
-		background: var(--color-accent) !important;
-		box-shadow: 0 0 4px var(--color-accent);
+		animation: pulse var(--animation-pulse) ease-in-out infinite;
+		background: var(--color-boat) !important;
+		box-shadow: 0 0 4px var(--color-boat);
 	}
 
 	.cell.preview {
@@ -152,22 +116,12 @@
 	}
 
 	.cell.valid-drop {
-		background: var(--color-accent);
+		background: var(--color-boat);
 		opacity: 0.5;
 	}
 
 	.cell.invalid-drop {
 		background: var(--color-text-error);
 		opacity: 0.7;
-	}
-
-	@keyframes pulse {
-		0%,
-		100% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0.5;
-		}
 	}
 </style>
