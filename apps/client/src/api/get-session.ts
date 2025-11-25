@@ -3,5 +3,6 @@ import type { Session } from '../models/session';
 import { get, type Result } from './http-client';
 
 export function getSession(): Promise<Result<Session | null, string>> {
-	return get<Session | null>(`${API_BASE_URL}/sessions`);
+	const url = new URL('/sessions', API_BASE_URL).toString();
+	return get<Session | null>(url);
 }
