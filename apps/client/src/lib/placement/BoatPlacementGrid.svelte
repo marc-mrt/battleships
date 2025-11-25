@@ -89,14 +89,23 @@
 	.grid {
 		display: grid;
 		grid-template-columns: repeat(9, 1fr);
-		gap: 1px;
+		gap: 2px;
 		background: #ddd;
-		padding: 1px;
-		border-radius: 2px;
+		padding: 2px;
+		border-radius: 4px;
 		width: 100%;
-		max-width: 360px;
+		max-width: 100%;
 		touch-action: none;
 		user-select: none;
+	}
+
+	@media (min-width: 640px) {
+		.grid {
+			max-width: 360px;
+			gap: 1px;
+			padding: 1px;
+			border-radius: 2px;
+		}
 	}
 
 	.cell {
@@ -111,6 +120,13 @@
 		padding: 0;
 		cursor: pointer;
 		touch-action: none;
+		min-height: 32px;
+	}
+
+	@media (min-width: 640px) {
+		.cell {
+			min-height: auto;
+		}
 	}
 
 	.cell.draggable {

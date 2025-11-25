@@ -225,16 +225,32 @@
 
 	.container {
 		display: flex;
+		flex-direction: column;
 		gap: 1rem;
 		width: 100%;
+		align-items: center;
+	}
+
+	@media (min-width: 640px) {
+		.container {
+			flex-direction: row;
+			align-items: flex-start;
+		}
 	}
 
 	.controls-section {
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-		min-width: 140px;
-		max-width: 160px;
+		width: 100%;
+		max-width: 400px;
+	}
+
+	@media (min-width: 640px) {
+		.controls-section {
+			min-width: 140px;
+			max-width: 160px;
+		}
 	}
 
 	.grid-section {
@@ -243,6 +259,7 @@
 		justify-content: center;
 		align-items: center;
 		flex-direction: column;
+		width: 100%;
 	}
 
 	.boat-stock {
@@ -253,19 +270,36 @@
 
 	.boat-stock h5 {
 		margin: 0 0 0.25rem 0;
-		font-size: 0.85rem;
+		font-size: 0.9rem;
 		font-weight: 600;
+		text-align: center;
+	}
+
+	@media (min-width: 640px) {
+		.boat-stock h5 {
+			font-size: 0.85rem;
+			text-align: left;
+		}
 	}
 
 	.stock-item {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
-		padding: 0.4rem 0.5rem;
+		gap: 0.5rem;
+		padding: 0.6rem 0.75rem;
 		border: 1px solid var(--color-accent);
-		border-radius: 4px;
+		border-radius: 8px;
 		background: white;
 		transition: opacity 0.2s;
+	}
+
+	@media (min-width: 640px) {
+		.stock-item {
+			gap: 0.4rem;
+			padding: 0.4rem 0.5rem;
+			border-radius: 4px;
+			min-height: auto;
+		}
 	}
 
 	.stock-item.depleted {
@@ -286,8 +320,10 @@
 		cursor: grab;
 	}
 
-	.boat-visual.draggable:hover {
-		animation: pulse 1s ease-in-out infinite;
+	@media (hover: hover) and (pointer: fine) {
+		.boat-visual.draggable:hover {
+			animation: pulse 1s ease-in-out infinite;
+		}
 	}
 
 	.boat-visual.depleted {
@@ -299,9 +335,16 @@
 	}
 
 	.boat-segment {
-		width: 16px;
-		height: 16px;
+		width: 20px;
+		height: 20px;
 		background: var(--color-accent);
+	}
+
+	@media (min-width: 640px) {
+		.boat-segment {
+			width: 16px;
+			height: 16px;
+		}
 	}
 
 	.stock-info {
@@ -311,27 +354,48 @@
 	}
 
 	.boat-count {
-		font-size: 0.65rem;
+		font-size: 0.75rem;
 		opacity: 0.6;
 		line-height: 1;
+	}
+
+	@media (min-width: 640px) {
+		.boat-count {
+			font-size: 0.65rem;
+		}
 	}
 
 	.selected-boat-actions {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.5rem;
-		margin: 0.5rem 0;
-		min-height: 32px;
+		gap: 0.75rem;
+		margin: 0.75rem 0;
+	}
+
+	@media (min-width: 640px) {
+		.selected-boat-actions {
+			gap: 0.5rem;
+			margin: 0.5rem 0;
+			min-height: 32px;
+		}
 	}
 
 	.action-btn {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		height: 32px;
-		padding: 0 1rem;
-		font-size: 1rem;
+		padding: 0 1.25rem;
+		font-size: 1.1rem;
+	}
+
+	@media (min-width: 640px) {
+		.action-btn {
+			height: 32px;
+			min-height: 32px;
+			padding: 0 1rem;
+			font-size: 1rem;
+		}
 	}
 
 	.action-btn.delete:hover {
@@ -350,10 +414,18 @@
 	}
 
 	.ready-button {
-		padding: 0.5rem 1rem;
-		font-size: 1rem;
+		padding: 0.75rem 1rem;
+		font-size: 1.05rem;
 		font-weight: 600;
 		transition: all 0.2s;
+		min-height: 52px;
+	}
+
+	@media (min-width: 640px) {
+		.ready-button {
+			padding: 0.5rem 1rem;
+			font-size: 1rem;
+		}
 	}
 
 	.ready-button:disabled {
@@ -391,9 +463,16 @@
 	}
 
 	.floating-boat-segment {
-		width: 20px;
-		height: 20px;
+		width: 24px;
+		height: 24px;
 		background: var(--color-accent);
 		border: 1px solid rgba(0, 0, 0, 0.1);
+	}
+
+	@media (min-width: 640px) {
+		.floating-boat-segment {
+			width: 20px;
+			height: 20px;
+		}
 	}
 </style>

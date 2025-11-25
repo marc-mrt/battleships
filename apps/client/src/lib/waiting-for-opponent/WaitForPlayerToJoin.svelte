@@ -63,37 +63,80 @@
 	header {
 		display: flex;
 		justify-content: space-between;
-		margin-bottom: 0.5rem;
+		margin-bottom: 0.75rem;
+		gap: 0.5rem;
+	}
+
+	@media (min-width: 640px) {
+		header {
+			margin-bottom: 0.5rem;
+		}
 	}
 
 	p.subtle {
-		font-size: 0.7em;
+		font-size: 0.85em;
 		color: var(--color-text-subtle);
 		margin: 0;
+		padding: 0 0.5rem;
+	}
+
+	@media (min-width: 640px) {
+		p.subtle {
+			font-size: 0.7em;
+			padding: 0;
+		}
 	}
 
 	footer {
-		margin-top: 0.5rem;
+		margin-top: 1rem;
+	}
+
+	@media (min-width: 640px) {
+		footer {
+			margin-top: 0.5rem;
+		}
 	}
 
 	input[readonly] {
 		background: var(--color-bg, #fff);
 		border: 1px solid #ccc;
-		border-radius: 4px;
-		padding: 0.4em 0.7em;
+		border-radius: 8px;
+		padding: 0.75em 1em;
 		font-size: 1em;
 		outline: none;
 		transition:
 			border-color 0.2s,
 			box-shadow 0.2s;
 		caret-color: transparent;
+		width: 100%;
+		text-align: center;
 	}
 
-	input[readonly]:hover,
+	@media (min-width: 640px) {
+		input[readonly] {
+			border-radius: 4px;
+			padding: 0.4em 0.7em;
+			min-height: auto;
+			text-align: left;
+		}
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		input[readonly]:hover {
+			border-color: #888;
+			box-shadow: 0 0 0 2px #e0e0e0;
+		}
+	}
+
 	input[readonly]:focus {
 		border-color: #888;
 		box-shadow: 0 0 0 2px #e0e0e0;
 		cursor: pointer;
+	}
+
+	input[readonly]:active {
+		border-color: var(--color-accent);
+		box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
 	}
 
 	input.copied {

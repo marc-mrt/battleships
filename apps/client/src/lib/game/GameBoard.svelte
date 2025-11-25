@@ -241,12 +241,26 @@
 	header {
 		display: flex;
 		justify-content: space-between;
-		margin-bottom: 0.5rem;
+		margin-bottom: 0.75rem;
+		gap: 0.5rem;
 	}
 
 	header h3 {
 		margin: 0;
-		font-size: 1rem;
+		font-size: 1.1rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	@media (min-width: 640px) {
+		header {
+			margin-bottom: 0.5rem;
+		}
+
+		header h3 {
+			font-size: 1rem;
+		}
 	}
 
 	.player {
@@ -258,8 +272,14 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 1rem;
+		gap: 1.25rem;
 		width: 100%;
+	}
+
+	@media (min-width: 640px) {
+		.turn-view {
+			gap: 1rem;
+		}
 	}
 
 	.loading {
@@ -271,9 +291,18 @@
 	}
 
 	.status-message {
-		font-size: 1.1rem;
-		font-weight: 500;
+		font-size: 1.2rem;
+		font-weight: 600;
 		margin: 0;
+		padding: 0 0.5rem;
+	}
+
+	@media (min-width: 640px) {
+		.status-message {
+			font-size: 1.1rem;
+			font-weight: 500;
+			padding: 0;
+		}
 	}
 
 	.status-message.your-turn {
@@ -288,8 +317,14 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.75rem;
 		width: 100%;
+	}
+
+	@media (min-width: 640px) {
+		.grid-container {
+			gap: 0.5rem;
+		}
 	}
 
 	footer {
@@ -302,17 +337,30 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 2rem;
-		padding: 2rem;
+		padding: 1.5rem 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.game-over {
+			padding: 2rem;
+		}
 	}
 
 	.game-over h1 {
-		font-size: 2.5rem;
+		font-size: 2.2rem;
 		margin: 0;
+		text-align: center;
+	}
+
+	@media (min-width: 640px) {
+		.game-over h1 {
+			font-size: 2.5rem;
+		}
 	}
 
 	.new-game-button {
-		padding: 1rem 2rem;
-		font-size: 1.2rem;
+		padding: 1rem 1.5rem;
+		font-size: 1.1rem;
 		font-weight: 600;
 		color: white;
 		background-color: var(--color-accent);
@@ -320,11 +368,25 @@
 		border-radius: 0.5rem;
 		cursor: pointer;
 		transition: all 0.2s ease;
+		min-height: 52px;
+		width: 100%;
+		max-width: 300px;
 	}
 
-	.new-game-button:hover {
-		transform: scale(1.05);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+	@media (min-width: 640px) {
+		.new-game-button {
+			padding: 1rem 2rem;
+			font-size: 1.2rem;
+			min-height: auto;
+			width: auto;
+		}
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		.new-game-button:hover {
+			transform: scale(1.05);
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+		}
 	}
 
 	.new-game-button:active {
@@ -332,8 +394,17 @@
 	}
 
 	.waiting-message {
-		font-size: 1.1rem;
+		font-size: 1rem;
 		color: var(--color-text-subtle);
 		margin: 0;
+		text-align: center;
+		padding: 0 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.waiting-message {
+			font-size: 1.1rem;
+			padding: 0;
+		}
 	}
 </style>

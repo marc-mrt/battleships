@@ -95,65 +95,78 @@
 		border-radius: 0;
 		transition: all 0.1s;
 		cursor: pointer;
+		touch-action: manipulation;
 	}
 
-	.cell:not(:disabled):hover {
-		position: relative;
-		background: var(--color-white);
-		animation: borderGrow 0.2s ease-out forwards;
+	@media (min-width: 640px) {
+		.cell {
+			min-height: auto;
+		}
 	}
 
-	.cell:not(:disabled):hover::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		border: 2px solid red;
-		border-radius: 0px;
-		animation: borderGrow 0.2s ease-out forwards;
+	@media (hover: hover) and (pointer: fine) {
+		.cell:not(:disabled):hover {
+			position: relative;
+			background: var(--color-white);
+			animation: borderGrow 0.2s ease-out forwards;
+		}
+
+		.cell:not(:disabled):hover::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border: 2px solid red;
+			border-radius: 0px;
+			animation: borderGrow 0.2s ease-out forwards;
+		}
+
+		.cell:not(:disabled):hover::after {
+			content: '';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 100%;
+			height: 100%;
+			background: linear-gradient(
+					to bottom,
+					red 0%,
+					red 48%,
+					transparent 48%,
+					transparent 52%,
+					red 52%,
+					red 100%
+				),
+				linear-gradient(
+					to right,
+					red 0%,
+					red 48%,
+					transparent 48%,
+					transparent 52%,
+					red 52%,
+					red 100%
+				),
+				red;
+			clip-path: polygon(
+				48% 0,
+				52% 0,
+				52% 48%,
+				100% 48%,
+				100% 52%,
+				52% 52%,
+				52% 100%,
+				48% 100%,
+				48% 52%,
+				0 52%,
+				0 48%,
+				48% 48%
+			);
+			animation: crosshairExpand 0.4s ease-out forwards;
+		}
 	}
 
-	.cell:not(:disabled):hover::after {
-		content: '';
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		width: 100%;
-		height: 100%;
-		background: linear-gradient(
-				to bottom,
-				red 0%,
-				red 48%,
-				transparent 48%,
-				transparent 52%,
-				red 52%,
-				red 100%
-			),
-			linear-gradient(
-				to right,
-				red 0%,
-				red 48%,
-				transparent 48%,
-				transparent 52%,
-				red 52%,
-				red 100%
-			),
-			red;
-		clip-path: polygon(
-			48% 0,
-			52% 0,
-			52% 48%,
-			100% 48%,
-			100% 52%,
-			52% 52%,
-			52% 100%,
-			48% 100%,
-			48% 52%,
-			0 52%,
-			0 48%,
-			48% 48%
-		);
-		animation: crosshairExpand 0.4s ease-out forwards;
+	.cell:not(:disabled):active {
+		transform: scale(0.95);
 	}
 
 	@keyframes borderGrow {

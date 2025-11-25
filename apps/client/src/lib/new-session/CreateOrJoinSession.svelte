@@ -212,18 +212,39 @@
 	form {
 		max-width: 400px;
 		margin: 0 auto;
-		padding: 2rem;
+		padding: 1rem;
 		border-radius: 8px;
+		width: 100%;
+	}
+
+	@media (min-width: 640px) {
+		form {
+			padding: 2rem;
+		}
 	}
 
 	.form-group {
-		margin-bottom: 1rem;
+		margin-bottom: 1.25rem;
+	}
+
+	@media (min-width: 640px) {
+		.form-group {
+			margin-bottom: 1rem;
+		}
 	}
 
 	label {
 		display: block;
-		margin-bottom: 0.5rem;
+		margin-bottom: 0.6rem;
 		font-weight: 500;
+		font-size: 1rem;
+	}
+
+	@media (min-width: 640px) {
+		label {
+			margin-bottom: 0.5rem;
+			font-size: inherit;
+		}
 	}
 
 	button {
@@ -232,12 +253,25 @@
 
 	.error {
 		color: var(--color-text-error);
-		margin: 0.5rem 0 0 0;
-		font-size: 0.9rem;
+		margin: 0.6rem 0 0 0;
+		font-size: 0.95rem;
+	}
+
+	@media (min-width: 640px) {
+		.error {
+			margin: 0.5rem 0 0 0;
+			font-size: 0.9rem;
+		}
 	}
 
 	.error.general {
-		margin-top: 1rem;
+		margin-top: 1.25rem;
+	}
+
+	@media (min-width: 640px) {
+		.error.general {
+			margin-top: 1rem;
+		}
 	}
 
 	button.alternative {
@@ -246,11 +280,23 @@
 		color: var(--color-text-subtle);
 		font-style: italic;
 		transition: all 200ms ease;
-		margin-top: 0.5rem;
+		margin-top: 0.75rem;
+		min-height: 44px;
+		font-size: 0.95rem;
 	}
 
-	button.alternative:hover:not(:disabled) {
-		text-decoration: underline;
+	@media (min-width: 640px) {
+		button.alternative {
+			margin-top: 0.5rem;
+			min-height: auto;
+			font-size: inherit;
+		}
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		button.alternative:hover:not(:disabled) {
+			text-decoration: underline;
+		}
 	}
 
 	button.alternative:disabled {
