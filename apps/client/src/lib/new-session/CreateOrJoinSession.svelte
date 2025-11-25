@@ -8,12 +8,21 @@
 
 	let { sharedSlug = null }: Props = $props();
 
-	function shouldValidateUsername(loading: boolean, username: string): boolean {
-		return !loading && username.length > 0;
+	function shouldValidateUsername(
+		loading: boolean,
+		username: string,
+		hasAttemptedSubmit: boolean,
+	): boolean {
+		return hasAttemptedSubmit && !loading && username.length > 0;
 	}
 
-	function shouldValidateSlug(mode: 'create' | 'join', loading: boolean, slug: string): boolean {
-		return mode === 'join' && !loading && slug.length > 0;
+	function shouldValidateSlug(
+		mode: 'create' | 'join',
+		loading: boolean,
+		slug: string,
+		hasAttemptedSubmit: boolean,
+	): boolean {
+		return mode === 'join' && hasAttemptedSubmit && !loading && slug.length > 0;
 	}
 
 	function getValidationError(isValid: boolean, errorMessage: string | null): string | null {
@@ -50,15 +59,16 @@
 	let slug = $state(sharedSlug ?? '');
 	let loading = $state(false);
 	let error = $state('');
+	let hasAttemptedSubmit = $state(false);
 
 	function validateUsernameField(): string | null {
-		if (!shouldValidateUsername(loading, username)) return null;
+		if (!shouldValidateUsername(loading, username, hasAttemptedSubmit)) return null;
 		const result = validateUsername(username);
 		return getValidationError(result.valid, result.error);
 	}
 
 	function validateSlugField(): string | null {
-		if (!shouldValidateSlug(mode, loading, slug)) return null;
+		if (!shouldValidateSlug(mode, loading, slug, hasAttemptedSubmit)) return null;
 		const result = validateSlug(slug);
 		return getValidationError(result.valid, result.error);
 	}
@@ -80,7 +90,12 @@
 		error = message;
 	}
 
+	function markSubmitAttempted(): void {
+		hasAttemptedSubmit = true;
+	}
+
 	async function handleCreateSession(): Promise<void> {
+		markSubmitAttempted();
 		if (!canSubmit) return;
 
 		startLoading();
@@ -95,6 +110,7 @@
 	}
 
 	async function handleJoinSession(): Promise<void> {
+		markSubmitAttempted();
 		if (!canSubmit || mode !== 'join') return;
 
 		startLoading();
@@ -255,6 +271,7 @@
 		color: var(--color-text-error);
 		margin: 0.6rem 0 0 0;
 		font-size: 0.95rem;
+		min-height: 0;
 	}
 
 	@media (min-width: 640px) {
