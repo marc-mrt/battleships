@@ -3,81 +3,69 @@
 
 	interface Props {
 		cells: CellState[][];
-		onCellClick?: (x: number, y: number) => void;
-		onCellDragStart?: (x: number, y: number) => void;
-		onCellDragEnd?: () => void;
-		onCellDragOver?: (event: DragEvent, x: number, y: number) => void;
+		onCellClick: (x: number, y: number) => void;
+		onCellPointerStart: (x: number, y: number) => void;
+		onCellPointerMove: (x: number, y: number) => void;
 	}
 
-	let { cells, onCellClick, onCellDragStart, onCellDragEnd, onCellDragOver }: Props = $props();
+	let { cells, onCellClick, onCellPointerStart, onCellPointerMove }: Props = $props();
 
-	function hasClickHandler(): boolean {
-		return onCellClick !== undefined;
-	}
-
-	function hasDragStartHandler(): boolean {
-		return onCellDragStart !== undefined;
-	}
-
-	function hasDragOverHandler(): boolean {
-		return onCellDragOver !== undefined;
-	}
+	let gridElement: HTMLDivElement | null = $state(null);
 
 	function isCellBoat(cellState: CellState): boolean {
 		return cellState.boat ?? false;
 	}
 
-	function canDragCell(cellState: CellState): boolean {
-		return isCellBoat(cellState) && hasDragStartHandler();
+	function getCellFromPoint(clientX: number, clientY: number): { x: number; y: number } | null {
+		if (!gridElement) return null;
+
+		const rect = gridElement.getBoundingClientRect();
+		const x = clientX - rect.left;
+		const y = clientY - rect.top;
+
+		if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) {
+			return null;
+		}
+
+		const cellWidth = rect.width / 9;
+		const cellHeight = rect.height / 9;
+
+		const cellX = Math.floor(x / cellWidth);
+		const cellY = Math.floor(y / cellHeight);
+
+		if (cellX < 0 || cellX >= 9 || cellY < 0 || cellY >= 9) {
+			return null;
+		}
+
+		return { x: cellX, y: cellY };
 	}
 
-	function handleCellClick(x: number, y: number) {
-		if (hasClickHandler() && onCellClick) {
-			onCellClick(x, y);
+	function handleGlobalPointerMove(e: PointerEvent): void {
+		const cell = getCellFromPoint(e.clientX, e.clientY);
+		if (cell) {
+			onCellPointerMove(cell.x, cell.y);
 		}
 	}
 
-	function handleDragStart(x: number, y: number, cellState: CellState) {
-		if (canDragCell(cellState) && onCellDragStart) {
-			onCellDragStart(x, y);
-		}
-	}
-
-	function preventDefaultEvent(event: DragEvent) {
-		event.preventDefault();
-	}
-
-	function handleDragOver(event: DragEvent, x: number, y: number) {
-		if (hasDragOverHandler() && onCellDragOver) {
-			preventDefaultEvent(event);
-			onCellDragOver(event, x, y);
-		}
-	}
-
-	function handleDrop(event: DragEvent) {
-		preventDefaultEvent(event);
-	}
-
-	function createDragStartHandler(x: number, y: number, cell: CellState) {
-		return function handleStart() {
-			handleDragStart(x, y, cell);
-		};
-	}
-
-	function createDragOverHandler(x: number, y: number) {
-		return function handleOver(e: DragEvent) {
-			handleDragOver(e, x, y);
+	function createPointerDownHandler(x: number, y: number, cell: CellState) {
+		return function onPointerDown(e: PointerEvent) {
+			if (isCellBoat(cell)) {
+				e.preventDefault();
+				onCellPointerStart(x, y);
+			}
 		};
 	}
 
 	function createClickHandler(x: number, y: number) {
-		return function handleClick() {
-			handleCellClick(x, y);
+		return function onClick() {
+			onCellClick(x, y);
 		};
 	}
 </script>
 
-<div class="grid" role="presentation">
+<svelte:window onpointermove={handleGlobalPointerMove} />
+
+<div class="grid" role="presentation" bind:this={gridElement}>
 	{#each cells as row, y (y)}
 		{#each row as cell, x (`${x}-${y}`)}
 			<div
@@ -87,11 +75,8 @@
 				class:preview={cell.preview}
 				class:valid-drop={cell.validDrop}
 				class:invalid-drop={cell.invalidDrop}
-				draggable={cell.boat}
-				ondragstart={createDragStartHandler(x, y, cell)}
-				ondragend={onCellDragEnd}
-				ondragover={createDragOverHandler(x, y)}
-				ondrop={handleDrop}
+				class:draggable={isCellBoat(cell)}
+				onpointerdown={createPointerDownHandler(x, y, cell)}
 				onclick={createClickHandler(x, y)}
 				onkeydown={undefined}
 				role="presentation"
@@ -110,6 +95,8 @@
 		border-radius: 2px;
 		width: 100%;
 		max-width: 360px;
+		touch-action: none;
+		user-select: none;
 	}
 
 	.cell {
@@ -123,13 +110,14 @@
 		transition: background 0.1s;
 		padding: 0;
 		cursor: pointer;
+		touch-action: none;
 	}
 
-	.cell[draggable='true'] {
+	.cell.draggable {
 		cursor: grab;
 	}
 
-	.cell[draggable='true']:active {
+	.cell.draggable:active {
 		cursor: grabbing;
 	}
 

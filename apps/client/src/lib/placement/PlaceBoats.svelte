@@ -30,25 +30,63 @@
 		isReady = true;
 	}
 
-	function handleDragStartFromStock(length: number): void {
+	let pointerX = $state(0);
+	let pointerY = $state(0);
+	let isDraggingFromStock = $state(false);
+
+	function handlePointerStartFromStock(length: number): void {
+		isDraggingFromStock = true;
 		placement.startDragFromStock(length);
 	}
 
-	function handleDragEnd(): void {
+	function handlePointerEnd(): void {
+		isDraggingFromStock = false;
 		placement.endDrag();
 	}
 
-	function handleCellClick(x: number, y: number): void {
-		placement.selectBoat(x, y);
+	function handleGlobalPointerMove(e: PointerEvent): void {
+		if (!placement.isDragging) return;
+
+		pointerX = e.clientX;
+		pointerY = e.clientY;
+
+		const gridSection = document.querySelector('.grid');
+		if (!gridSection) return;
+
+		const rect = gridSection.getBoundingClientRect();
+		const x = e.clientX - rect.left;
+		const y = e.clientY - rect.top;
+
+		if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) {
+			placement.setHoveredCell(null);
+			return;
+		}
+
+		const cellWidth = rect.width / 9;
+		const cellHeight = rect.height / 9;
+
+		const cellX = Math.floor(x / cellWidth);
+		const cellY = Math.floor(y / cellHeight);
+
+		if (cellX >= 0 && cellX < 9 && cellY >= 0 && cellY < 9) {
+			placement.setHoveredCell({ x: cellX, y: cellY });
+		}
 	}
 
-	function handleCellDragStart(x: number, y: number): void {
+	function handleCellClick(x: number, y: number): void {
+		if (!placement.isDragging) {
+			placement.selectBoat(x, y);
+		}
+	}
+
+	function handleCellPointerStart(x: number, y: number): void {
 		placement.startDragFromCell(x, y);
 	}
 
-	function handleCellDragOver(e: DragEvent, x: number, y: number): void {
-		e.preventDefault();
-		placement.setHoveredCell({ x, y });
+	function handleCellPointerMove(x: number, y: number): void {
+		if (placement.isDragging) {
+			placement.setHoveredCell({ x, y });
+		}
 	}
 
 	function handleRotateSelected(): void {
@@ -59,12 +97,28 @@
 		placement.deleteSelected();
 	}
 
-	function handleStockDragStart(length: number) {
-		return function onDragStart() {
-			handleDragStartFromStock(length);
+	function handleStockPointerDown(length: number) {
+		return function onPointerDown(e: PointerEvent) {
+			e.preventDefault();
+			handlePointerStartFromStock(length);
 		};
 	}
 </script>
+
+<svelte:window onpointermove={handleGlobalPointerMove} onpointerup={handlePointerEnd} />
+
+{#if isDraggingFromStock && placement.draggedBoatLength > 0}
+	<div
+		class="floating-boat"
+		style="left: {pointerX}px; top: {pointerY}px;"
+		class:horizontal={placement.draggedBoatOrientation === 'horizontal'}
+		class:vertical={placement.draggedBoatOrientation === 'vertical'}
+	>
+		{#each R.times(identity, placement.draggedBoatLength) as idx (idx)}
+			<div class="floating-boat-segment"></div>
+		{/each}
+	</div>
+{/if}
 
 <header>
 	<h3 class="player">{player?.username}</h3>
@@ -82,11 +136,11 @@
 						<div class="stock-item" class:depleted={!isAvailable}>
 							<div
 								class="boat-visual"
-								draggable={isAvailable}
-								ondragstart={handleStockDragStart(stock.length)}
-								ondragend={handleDragEnd}
 								class:depleted={!isAvailable}
-								role="presentation"
+								class:draggable={isAvailable}
+								onpointerdown={isAvailable ? handleStockPointerDown(stock.length) : undefined}
+								role="button"
+								tabindex={isAvailable ? 0 : -1}
 							>
 								{#each R.times(identity, stock.length) as idx (idx)}
 									<div class="boat-segment"></div>
@@ -104,9 +158,8 @@
 				<BoatPlacementGrid
 					cells={placement.cells}
 					onCellClick={handleCellClick}
-					onCellDragStart={handleCellDragStart}
-					onCellDragEnd={handleDragEnd}
-					onCellDragOver={handleCellDragOver}
+					onCellPointerStart={handleCellPointerStart}
+					onCellPointerMove={handleCellPointerMove}
 				/>
 
 				<div class="selected-boat-actions">
@@ -224,12 +277,16 @@
 		display: flex;
 		gap: 1px;
 		flex: 1;
-		cursor: grab;
 		user-select: none;
 		transition: all 0.2s;
+		touch-action: none;
 	}
 
-	.boat-visual:not(.depleted):hover {
+	.boat-visual.draggable {
+		cursor: grab;
+	}
+
+	.boat-visual.draggable:hover {
 		animation: pulse 1s ease-in-out infinite;
 	}
 
@@ -237,7 +294,7 @@
 		cursor: not-allowed;
 	}
 
-	.boat-visual:active:not(.depleted) {
+	.boat-visual.draggable:active {
 		cursor: grabbing;
 	}
 
@@ -312,5 +369,31 @@
 		50% {
 			opacity: 0.5;
 		}
+	}
+
+	.floating-boat {
+		position: fixed;
+		display: flex;
+		gap: 1px;
+		pointer-events: none;
+		transform: translate(-50%, -50%);
+		z-index: 1000;
+		opacity: 0.8;
+		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+	}
+
+	.floating-boat.horizontal {
+		flex-direction: row;
+	}
+
+	.floating-boat.vertical {
+		flex-direction: column;
+	}
+
+	.floating-boat-segment {
+		width: 20px;
+		height: 20px;
+		background: var(--color-accent);
+		border: 1px solid rgba(0, 0, 0, 0.1);
 	}
 </style>

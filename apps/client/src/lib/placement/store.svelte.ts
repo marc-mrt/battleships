@@ -38,6 +38,14 @@ export class PlacementStore {
 		return this.dragState.isDragging;
 	}
 
+	get draggedBoatLength(): number {
+		return this.dragState.boatLength ?? 0;
+	}
+
+	get draggedBoatOrientation(): 'horizontal' | 'vertical' {
+		return this.dragState.orientation;
+	}
+
 	get cells() {
 		return renderPlacementCells({
 			state: {
