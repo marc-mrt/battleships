@@ -1,4 +1,4 @@
-import { API_BASE_URL } from './config';
+import { getApiURL } from './config';
 import type { Session } from '../models/session';
 import { post, type Result } from './http-client';
 
@@ -9,6 +9,6 @@ interface CreateSessionRequestPayload {
 export function createSession(
 	payload: CreateSessionRequestPayload,
 ): Promise<Result<Session, string>> {
-	const url = new URL('/sessions', API_BASE_URL).toString();
+	const url = getApiURL('/sessions');
 	return post<Session>({ url, body: payload });
 }

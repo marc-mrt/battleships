@@ -1,4 +1,4 @@
-import { API_BASE_URL } from './config';
+import { getApiURL } from './config';
 import type { Session } from '../models/session';
 import { post, type Result } from './http-client';
 
@@ -8,7 +8,7 @@ interface JoinSessionRequestPayload {
 }
 
 export function joinSession(payload: JoinSessionRequestPayload): Promise<Result<Session, string>> {
-	const url = new URL(`/sessions/${payload.slug}/join`, API_BASE_URL).toString();
+	const url = getApiURL(`/sessions/${payload.slug}/join`);
 	return post<Session>({
 		url,
 		body: { username: payload.username },

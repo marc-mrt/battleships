@@ -1,4 +1,4 @@
-function getApiBaseUrl(): URL {
+function getApiBaseUrlFromEnv(): URL {
 	const urlRaw = import.meta.env.VITE_SERVER_BASE_URL;
 	if (!urlRaw) {
 		throw new Error('VITE_SERVER_BASE_URL is not defined.');
@@ -12,11 +12,23 @@ function getApiBaseUrl(): URL {
 	return url;
 }
 
+function removeSlashes(path: string): string {
+	return path.replace(/\/$/, '').replace(/\/$/, '').replace(/^\//, '');
+}
+
+export function getApiURL(path: string): string {
+	const apiBaseURL = getApiBaseUrlFromEnv();
+	const fullPath = [apiBaseURL.pathname, path].map(removeSlashes).join('/');
+	const url = new URL(fullPath, apiBaseURL);
+	return url.toString();
+}
+
 function getWebSocketProtocol(protocol: string): string {
 	return protocol === 'https:' ? 'wss' : 'ws';
 }
 
-function getWebSocketUrl(apiBaseURL: URL): URL {
+function getWebSocketUrl(): URL {
+	const apiBaseURL = getApiBaseUrlFromEnv();
 	const protocol = getWebSocketProtocol(apiBaseURL.protocol);
 	const host = apiBaseURL.host;
 	const path = 'ws';
@@ -25,6 +37,4 @@ function getWebSocketUrl(apiBaseURL: URL): URL {
 	return url;
 }
 
-export const API_BASE_URL: URL = getApiBaseUrl();
-
-export const WEBSOCKET_BASE_URL: URL = getWebSocketUrl(API_BASE_URL);
+export const WEBSOCKET_BASE_URL: URL = getWebSocketUrl();
