@@ -298,6 +298,8 @@ input:disabled {
 	border-radius: var(--border-radius-md);
 	width: 100%;
 	max-width: 100%;
+	box-sizing: border-box;
+	overflow: hidden;
 }
 
 @media (min-width: 640px) {
