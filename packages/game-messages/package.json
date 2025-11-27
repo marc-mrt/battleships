@@ -16,8 +16,8 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"zod": "catalog:",
-		"game-rules": "workspace:"
+		"game-rules": "workspace:^",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@eslint/js": "catalog:",
