@@ -7,6 +7,8 @@ type AnimationState =
 
 type SoundType = 'shoot' | 'hit' | 'miss' | 'sunk';
 
+const ONE_SECOND_IN_MS = 1000;
+
 const ANIMATION_DELAYS = {
 	shoot: 300,
 	hit: 800,
@@ -125,7 +127,7 @@ class EffectManager {
 
 	private delay(ms: number): Promise<void> {
 		return new Promise((resolve) => {
-			this.timeoutId = setTimeout(resolve, ms);
+			this.timeoutId = setTimeout(resolve, ms + ONE_SECOND_IN_MS);
 		});
 	}
 
