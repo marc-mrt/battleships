@@ -7,6 +7,7 @@
 	import Rotate from '../icons/Rotate.svelte';
 	import { PlacementStore } from './store.svelte';
 	import { TOTAL_BOATS_COUNT } from 'game-rules';
+	import * as GridOps from '../grid/operations';
 
 	function identity<T>(x: T): T {
 		return x;
@@ -74,7 +75,16 @@
 	}
 
 	function handleCellClick(x: number, y: number): void {
-		if (!placement.isDragging) {
+		if (placement.isDragging) return;
+
+		const clickedBoat = placement.boats.find((boat) => {
+			const cells = GridOps.getBoatCells(boat);
+			return cells.some((cell) => cell.x === x && cell.y === y);
+		});
+
+		if (clickedBoat && clickedBoat.id === placement.selectedBoatId) {
+			placement.rotateSelected();
+		} else {
 			placement.selectBoat(x, y);
 		}
 	}
