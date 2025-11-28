@@ -84,12 +84,22 @@ class AppStore {
 		this.state = newState;
 	}
 
-	private handleApiError(error: string): never {
+	private logApiError(operation: string, error: string): void {
+		console.error(`API error during ${operation}:`, error);
+	}
+
+	private logConnectionError(operation: string, error: unknown): void {
+		console.error(`Connection error during ${operation}:`, error);
+	}
+
+	private handleApiError(operation: string, error: string): never {
+		this.logApiError(operation, error);
 		this.state = createUninitializedState();
 		throw new Error(error);
 	}
 
-	private handleConnectionError(error: unknown): never {
+	private handleConnectionError(operation: string, error: unknown): never {
+		this.logConnectionError(operation, error);
 		this.state = createUninitializedState();
 		throw error;
 	}
@@ -100,14 +110,14 @@ class AppStore {
 		const result = await this.api.createSession(payload);
 
 		if (!result.success) {
-			this.handleApiError(result.error);
+			this.handleApiError('createSession', result.error);
 		}
 
 		try {
 			const newState = buildStateFromSession(result.value);
 			await this.connectAndSetState(newState);
 		} catch (error) {
-			this.handleConnectionError(error);
+			this.handleConnectionError('createSession', error);
 		}
 	}
 
@@ -117,7 +127,7 @@ class AppStore {
 		const result = await this.api.joinSession(payload);
 
 		if (!result.success) {
-			this.handleApiError(result.error);
+			this.handleApiError('joinSession', result.error);
 		}
 
 		const newState = buildStateFromSession(result.value);
@@ -129,7 +139,7 @@ class AppStore {
 		try {
 			await this.connectAndSetState(newState);
 		} catch (error) {
-			this.handleConnectionError(error);
+			this.handleConnectionError('joinSession', error);
 		}
 	}
 

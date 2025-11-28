@@ -13,7 +13,7 @@ import { InternalServerError } from './errors';
 import * as SessionService from '../services/session';
 import * as GameStateManager from '../services/game-state-manager';
 import { parseSessionCookie } from '../middlwares/cookies';
-import { SessionGameOver } from '../models/session';
+import { isSessionPlaying, isSessionGameOver } from '../models/session';
 
 const WEBSOCKET_CLOSE_CODE_POLICY_VIOLATION = 1008;
 
@@ -25,7 +25,7 @@ export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
 		const session = parseSessionCookie(request.headers.cookie);
 
 		if (!session) {
-			console.log('WebSocket connection rejected: No session cookie');
+			logConnectionRejection('No session cookie');
 			webSocket.close(WEBSOCKET_CLOSE_CODE_POLICY_VIOLATION, 'No session cookie');
 			return;
 		}
@@ -41,14 +41,14 @@ export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
 				const parsed = ClientMessageSchema.safeParse(json);
 
 				if (!parsed.success) {
-					console.error('Invalid message from client:', parsed.error);
+					logInvalidMessage(parsed.error);
 					return;
 				}
 
 				const message: ClientMessage = parsed.data;
 				await handleIncomingClientMessage(playerId, message);
 			} catch (error) {
-				console.error('Error handling WebSocket message:', error);
+				logMessageHandlingError(error);
 			}
 		});
 
@@ -57,10 +57,30 @@ export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
 		});
 
 		webSocket.on('error', (error) => {
-			console.error(`WebSocket error for player ${playerId}:`, error);
+			logWebSocketError(playerId, error);
 			connections.delete(playerId);
 		});
 	});
+}
+
+function logConnectionRejection(reason: string): void {
+	console.log(`WebSocket connection rejected: ${reason}`);
+}
+
+function logInvalidMessage(error: unknown): void {
+	console.error('Invalid message from client:', error);
+}
+
+function logMessageHandlingError(error: unknown): void {
+	console.error('Error handling WebSocket message:', error);
+}
+
+function logWebSocketError(playerId: string, error: unknown): void {
+	console.error(`WebSocket error for player ${playerId}:`, error);
+}
+
+function logReconnectionError(playerId: string, error: unknown): void {
+	console.error(`Failed to send game state on reconnection for player ${playerId}:`, error);
 }
 
 async function handleIncomingClientMessage(
@@ -133,32 +153,32 @@ async function sendGameStateOnReconnection(playerId: string): Promise<void> {
 	try {
 		const session = await SessionService.getSessionByPlayerId(playerId);
 
-		if (session.status === 'playing') {
-			let gameState: GameState;
-			if ((session as SessionGameOver).winner != null) {
-				const winner = (session as SessionGameOver).winner.id === playerId ? 'player' : 'opponent';
-				gameState = GameStateManager.createGameOverState({
-					winner,
-					session,
-					playerId,
-					lastShot: null,
-				});
-			} else {
-				const isPlayerTurn = session.currentTurn.id === playerId;
-				const turn = isPlayerTurn ? 'player' : 'opponent';
-				gameState = GameStateManager.createInGameState({
-					turn,
-					session,
-					playerId,
-					lastShot: null,
-				});
-			}
-
-			sendNextTurnMessage(playerId, gameState);
-		} else {
+		if (!isSessionPlaying(session)) {
 			return;
 		}
+
+		let gameState: GameState;
+		if (isSessionGameOver(session)) {
+			const winner = session.winner.id === playerId ? 'player' : 'opponent';
+			gameState = GameStateManager.createGameOverState({
+				winner,
+				session,
+				playerId,
+				lastShot: null,
+			});
+		} else {
+			const isPlayerTurn = session.currentTurn.id === playerId;
+			const turn = isPlayerTurn ? 'player' : 'opponent';
+			gameState = GameStateManager.createInGameState({
+				turn,
+				session,
+				playerId,
+				lastShot: null,
+			});
+		}
+
+		sendNextTurnMessage(playerId, gameState);
 	} catch (error) {
-		console.error(`Failed to send game state on reconnection for player ${playerId}:`, error);
+		logReconnectionError(playerId, error);
 	}
 }

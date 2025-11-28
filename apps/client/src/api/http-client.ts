@@ -40,8 +40,12 @@ function createSuccessResult<T>(value: T): Result<T, string> {
 	return { success: true, value };
 }
 
-function buildErrorMessage(response: Response): string {
-	return `Request failed: ${response.statusText} (${response.status})`;
+function buildHttpErrorMessage(response: Response): string {
+	return `HTTP ${response.status} ${response.statusText}`;
+}
+
+function buildNetworkErrorMessage(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -56,13 +60,13 @@ async function executeRequest<T>(url: string, options: RequestInit): Promise<Res
 		const response = await fetch(url, options);
 
 		if (!response.ok) {
-			return createErrorResult(buildErrorMessage(response));
+			return createErrorResult(buildHttpErrorMessage(response));
 		}
 
 		const value = await parseResponse<T>(response);
 		return createSuccessResult(value);
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
+		const message = buildNetworkErrorMessage(error);
 		return createErrorResult(message);
 	}
 }
