@@ -16,7 +16,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"game-rules": "workspace:^",
+		"game-rules": "workspace:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

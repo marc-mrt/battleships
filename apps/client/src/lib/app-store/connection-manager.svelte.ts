@@ -211,21 +211,15 @@ export class ConnectionManager {
 }
 
 function createUnsubscriber<T>(set: SvelteSet<T>, item: T) {
-	return function unsubscribe(): void {
-		set.delete(item);
-	};
+	return (): boolean => set.delete(item);
 }
 
 function callHandler(message: ServerMessage) {
-	return function invoke(handler: MessageHandler): void {
-		handler(message);
-	};
+	return (handler: MessageHandler): void => handler(message);
 }
 
 function callErrorHandler(error: WebSocketError) {
-	return function invoke(handler: ErrorHandler): void {
-		handler(error);
-	};
+	return (handler: ErrorHandler): void => handler(error);
 }
 
 let connectionManagerInstance: ConnectionManager | null = null;

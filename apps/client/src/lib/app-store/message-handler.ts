@@ -42,6 +42,7 @@ function handleNextTurnMessage(state: State, message: NextTurnMessage): State {
 			...state.meta,
 			session: {
 				...state.meta.session,
+				status: message.data.session.status,
 			},
 		},
 		game: message.data,

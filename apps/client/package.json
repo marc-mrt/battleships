@@ -13,8 +13,8 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"game-messages": "workspace:^",
-		"game-rules": "workspace:^",
+		"game-messages": "workspace:",
+		"game-rules": "workspace:",
 		"ramda": "catalog:"
 	},
 	"devDependencies": {

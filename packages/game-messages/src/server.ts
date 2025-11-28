@@ -49,6 +49,9 @@ export const OpponentGameStateSchema = z.object({
 export type OpponentGameState = z.infer<typeof OpponentGameStateSchema>;
 
 const BaseGameStateSchema = z.object({
+	session: z.object({
+		status: z.literal('playing'),
+	}),
 	player: PlayerGameStateSchema,
 	opponent: OpponentGameStateSchema,
 	lastShot: LastShotSchema.nullable(),

@@ -40,6 +40,9 @@ export function createInGameState(payload: CreateInGameStatePayload): GameInProg
 		status: 'in_progress',
 		turn,
 		lastShot,
+		session: {
+			status: payload.session.status,
+		},
 		player: {
 			boats: getPlayerBoats(playerId)(session),
 			shots: getPlayerShots(playerId)(session.shots),
@@ -64,6 +67,9 @@ export function createGameOverState(payload: CreateGameOverStatePayload): GameOv
 		status: 'over',
 		winner,
 		lastShot,
+		session: {
+			status: payload.session.status,
+		},
 		player: {
 			boats: getPlayerBoats(playerId)(session),
 			shots: getPlayerShots(playerId)(session.shots),
