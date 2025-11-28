@@ -96,28 +96,32 @@ interface SetCurrentTurnPayload {
 	playerId: string;
 }
 
+function buildBoatsSubquery(playerIdField: string): string {
+	return `(SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
+																						b.length,
+																						'orientation', b.orientation, 'sunk', b.sunk))
+					FROM boats b
+					WHERE ${playerIdField} = b.player_id)`;
+}
+
+function buildShotsSubquery(sessionIdField: string): string {
+	return `(SELECT json_agg(json_build_object('id', shots.id, 'created_at', shots.created_at, 'shooter_id', shots.shooter_id, 'target_id',
+																						shots.target_id,
+																						'x', shots.x, 'y', shots.y, 'hit', shots.hit))
+					FROM shots
+					WHERE shots.session_id = ${sessionIdField})`;
+}
+
 function buildFullSessionSelectQuery(source: string, whereClause?: string): string {
 	return `
 		SELECT s.*,
 					 owner_player.id                        AS owner_id,
 					 owner_player.username                  AS owner_username,
-					 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
-																							b.length,
-																							'orientation', b.orientation, 'sunk', b.sunk))
-						FROM boats b
-						WHERE owner_player.id = b.player_id)  AS owner_boats,
+					 ${buildBoatsSubquery('owner_player.id')}  AS owner_boats,
 					 friend_player.id                       AS friend_id,
 					 friend_player.username                 AS friend_username,
-					 (SELECT json_agg(json_build_object('id', b.id, 'start_x', b.start_x, 'start_y', b.start_y, 'length',
-																							b.length,
-																							'orientation', b.orientation, 'sunk', b.sunk))
-						FROM boats b
-						WHERE friend_player.id = b.player_id) AS friend_boats,
-					 (SELECT json_agg(json_build_object('id', shots.id, 'created_at', shots.created_at, 'shooter_id', shots.shooter_id, 'target_id',
-																							shots.target_id,
-																							'x', shots.x, 'y', shots.y, 'hit', shots.hit))
-						FROM shots
-						WHERE shots.session_id = s.id)        AS shots
+					 ${buildBoatsSubquery('friend_player.id')} AS friend_boats,
+					 ${buildShotsSubquery('s.id')}        AS shots
 		FROM ${source} s
   		JOIN players owner_player ON s.owner_id = owner_player.id
       LEFT JOIN players friend_player ON s.friend_id = friend_player.id
