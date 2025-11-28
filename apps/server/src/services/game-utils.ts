@@ -34,11 +34,11 @@ export function getPlayerBoats(playerId: string) {
 	};
 }
 
-export function isShooter(playerId: string) {
+function isShooter(playerId: string) {
 	return R.propEq(playerId, 'shooterId');
 }
 
-export function isTarget(playerId: string) {
+function isTarget(playerId: string) {
 	return R.propEq(playerId, 'targetId');
 }
 

@@ -10,12 +10,14 @@ export type Boat = {
 	orientation: Orientation;
 };
 
+export type ModifiableBoat = Omit<Boat, 'id'>;
+
 export type Cell = {
 	occupied: boolean;
 	boatId: string | null;
 };
 
-export type BoatStock = {
+type BoatStock = {
 	length: number;
 	count: number;
 	placed: number;
@@ -45,12 +47,6 @@ export type DragState = {
 	hoveredCell: Position | null;
 	offset: Position;
 	originalBoat: Boat | null;
-};
-
-export type PlacementUIState = {
-	placement: PlacementState;
-	drag: DragState;
-	selectedBoatId: string | null;
 };
 
 export type CellState = {

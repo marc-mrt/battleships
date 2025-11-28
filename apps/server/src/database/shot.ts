@@ -21,17 +21,6 @@ export async function recordShot(payload: CreateShotPayload): Promise<Shot> {
 	return mapToShot(result.rows[0]);
 }
 
-export async function getShotsForSession(sessionId: string): Promise<Shot[]> {
-	const result = await query(
-		`SELECT *
-		 FROM shots
-		 WHERE session_id = $1
-		 ORDER BY created_at ASC`,
-		[sessionId],
-	);
-	return result.rows.map(mapToShot);
-}
-
 export const ShotDatabaseSchema = z.object({
 	id: z.string(),
 	created_at: z.coerce.date(),

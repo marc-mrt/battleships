@@ -6,12 +6,12 @@ import { config } from '../config';
 const COOKIE_NAME = 'session';
 const MAX_AGE = 24 * 60 * 60 * 1000;
 
-export const SessionCookieSchema = z.object({
+const SessionCookieSchema = z.object({
 	sessionId: z.string(),
 	playerId: z.string(),
 });
 
-export type SessionCookie = z.infer<typeof SessionCookieSchema>;
+type SessionCookie = z.infer<typeof SessionCookieSchema>;
 
 interface CookieOptions {
 	httpOnly: boolean;

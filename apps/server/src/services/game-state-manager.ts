@@ -88,7 +88,7 @@ function checkForWinner(session: SessionPlaying, opponentId: string): string | n
 	return null;
 }
 
-export function broadcastNextTurn(
+function broadcastNextTurn(
 	session: SessionPlaying,
 	nextTurnPlayerId: string,
 	lastShot?: LastShot,
@@ -209,7 +209,7 @@ interface StartGamePayload {
 	friendId: string;
 }
 
-export async function startGame(payload: StartGamePayload): Promise<void> {
+async function startGame(payload: StartGamePayload): Promise<void> {
 	const { sessionId, ownerId, friendId } = payload;
 	const firstPlayerId: string = pickRandom([ownerId, friendId]);
 

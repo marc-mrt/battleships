@@ -46,10 +46,6 @@ export interface SessionGameOver extends SessionPlaying {
 	winner: Pick<Player, 'id'>;
 }
 
-export function isSessionGameOver(session: Session): session is SessionGameOver {
-	return session.status === 'playing' && (session as SessionGameOver).winner != null;
-}
-
 export type Session =
 	| SessionCreated
 	| SessionWaitingForBoats

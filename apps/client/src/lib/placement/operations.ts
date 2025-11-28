@@ -292,19 +292,3 @@ function isStockComplete(stockItem: { placed: number; count: number }): boolean 
 export function isPlacementComplete(state: PlacementState): boolean {
 	return state.stock.every(isStockComplete);
 }
-
-interface GetBoatAtPayload {
-	state: PlacementState;
-	x: number;
-	y: number;
-}
-
-export function getBoatAt(payload: GetBoatAtPayload): Boat | null {
-	const { state, x, y } = payload;
-	const position = { x, y };
-	const cell = getCell(state.grid, position);
-	if (!cell?.boatId) {
-		return null;
-	}
-	return findBoat(state, cell.boatId) || null;
-}

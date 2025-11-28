@@ -75,11 +75,7 @@ export class PlacementStore {
 
 	startDragFromCell(cellX: number, cellY: number): void {
 		const position = { x: cellX, y: cellY };
-		const boat = GridOps.getBoatAt({
-			grid: this.placementState.grid,
-			boats: this.placementState.boats,
-			pos: position,
-		});
+		const boat = GridOps.getBoatAt(this.placementState.grid, this.placementState.boats, position);
 		if (!boat) return;
 
 		this.placementState.selectBoatAt(position);

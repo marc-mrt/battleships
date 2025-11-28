@@ -19,7 +19,7 @@ interface CreateReadyStatePayload {
 	opponent: PlayerMetadata | null;
 }
 
-export function createReadyState(payload: CreateReadyStatePayload): State {
+function createReadyState(payload: CreateReadyStatePayload): State {
 	return {
 		status: 'ready',
 		meta: {
@@ -31,7 +31,7 @@ export function createReadyState(payload: CreateReadyStatePayload): State {
 	};
 }
 
-export function extractSessionMetadata(session: Session): SessionMetadata {
+function extractSessionMetadata(session: Session): SessionMetadata {
 	return {
 		slug: session.slug,
 		status: session.status,
@@ -44,7 +44,7 @@ interface PlayerMetadataPayload {
 	isOwner: boolean;
 }
 
-export function extractPlayerMetadata(payload: PlayerMetadataPayload): PlayerMetadata {
+function extractPlayerMetadata(payload: PlayerMetadataPayload): PlayerMetadata {
 	return {
 		id: payload.id,
 		username: payload.username,

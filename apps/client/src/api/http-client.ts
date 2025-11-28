@@ -72,7 +72,7 @@ interface RequestPayload {
 	config: RequestConfig;
 }
 
-export async function request<T>(payload: RequestPayload): Promise<Result<T, string>> {
+function request<T>(payload: RequestPayload): Promise<Result<T, string>> {
 	const { baseUrl, config } = payload;
 	const options = createRequestOptions(config);
 	return executeRequest<T>(baseUrl, options);
