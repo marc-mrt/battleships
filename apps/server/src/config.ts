@@ -32,11 +32,7 @@ function getRequiredEnvVariable(key: string): string {
 }
 
 function parseAllowedOrigins(origins: string): string[] {
-	return origins.split(',').map(trimString);
-}
-
-function trimString(value: string): string {
-	return value.trim();
+	return origins.split(',').map((value) => value.trim());
 }
 
 function parsePort(portString: string): number {
