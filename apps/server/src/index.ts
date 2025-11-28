@@ -9,7 +9,7 @@ import { errorHandler } from './middlwares/error';
 import { setupWebSocketServer } from './controllers/websocket';
 import cookieParser from 'cookie-parser';
 
-function run() {
+function run(): void {
 	try {
 		const app: Application = express();
 
