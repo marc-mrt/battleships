@@ -7,10 +7,23 @@ import * as ShotDB from '../database/shot';
 import { isSessionPlaying, SessionPlaying } from '../models/session';
 import * as SessionService from '../services/session';
 import { getOpponentId, getPlayerBoats } from './game-utils';
+import { InvalidGameStateError, DuplicateShotError } from './errors';
+
+function isCoordinateMatch(coordinates: Coordinates) {
+	return function checkCoordinate(shot: Shot): boolean {
+		return shot.x === coordinates.x && shot.y === coordinates.y;
+	};
+}
+
+function isShooterMatch(playerId: string) {
+	return function checkShooter(shot: Shot): boolean {
+		return shot.shooterId === playerId;
+	};
+}
 
 function isShotAtCoordinates(playerId: string, coordinates: Coordinates) {
 	return function checkShot(shot: Shot): boolean {
-		return shot.x === coordinates.x && shot.y === coordinates.y && shot.shooterId === playerId;
+		return isCoordinateMatch(coordinates)(shot) && isShooterMatch(playerId)(shot);
 	};
 }
 
@@ -71,11 +84,11 @@ export async function registerShot(
 ): Promise<LastShot> {
 	const session = await SessionService.getSessionByPlayerId(playerId);
 	if (!isSessionPlaying(session)) {
-		throw new Error('Game not in progress');
+		throw new InvalidGameStateError();
 	}
 
 	if (hasAlreadyShot(playerId, session.shots, coordinates)) {
-		throw new Error('Cannot shoot twice at the same coordinates');
+		throw new DuplicateShotError();
 	}
 
 	const opponentId = getOpponentId(session, playerId);

@@ -8,8 +8,8 @@ import {
 } from '../models/session';
 import { Player } from '../models/player';
 import { sendOpponentJoinedMessage } from '../controllers/websocket';
-import { BadRequestError, NotFoundError } from '../controllers/errors';
 import * as PlayerService from './player';
+import { SessionNotFoundError, UnauthorizedActionError, GameInProgressError } from './errors';
 
 interface CreateSessionPayload {
 	username: string;
@@ -53,7 +53,7 @@ export async function joinSession(payload: JoinSessionPayload): Promise<SessionW
 export async function getSessionByPlayerId(playerId: string): Promise<Session> {
 	const session: Session | null = await SessionDB.getSessionByPlayerId(playerId);
 	if (!session) {
-		throw new NotFoundError(`Session not found for player with ID: ${playerId}`);
+		throw new SessionNotFoundError(playerId);
 	}
 
 	return session;
@@ -81,11 +81,11 @@ export async function resetSessionForPlayer(playerId: string): Promise<SessionWa
 	const session: Session = await getSessionByPlayerId(playerId);
 
 	if (session.owner.id !== playerId) {
-		throw new BadRequestError('Only the session owner can request a new game');
+		throw new UnauthorizedActionError();
 	}
 
 	if (isSessionPlaying(session)) {
-		throw new BadRequestError('Session is still in progress');
+		throw new GameInProgressError();
 	}
 
 	const updatedSession: SessionWaitingForBoats = await SessionDB.resetSessionToBoatPlacement(

@@ -1,34 +1,47 @@
 import { Request, Response } from 'express';
 import { DatabaseError } from '../database/errors';
+import { DomainServiceError } from '../services/errors';
 import { HttpError, InternalServerError } from '../controllers/errors';
 
 function isDatabaseError(error: unknown): error is DatabaseError {
 	return error instanceof DatabaseError;
 }
 
+function isDomainServiceError(error: unknown): error is DomainServiceError {
+	return error instanceof DomainServiceError;
+}
+
 function isHttpError(error: unknown): error is HttpError {
 	return error instanceof HttpError;
 }
 
-function handleDatabaseError(error: DatabaseError, response: Response): void {
-	const httpError = error.toHttpError();
-	httpError.respond(response);
+function handleHttpError(error: HttpError, response: Response): void {
+	console.error(error);
+	error.respond(response);
 }
 
-function handleHttpError(error: HttpError, response: Response): void {
-	error.respond(response);
+function handleDatabaseError(error: DatabaseError, response: Response): void {
+	handleHttpError(error.toHttpError(), response);
+}
+
+function handleDomainServiceError(error: DomainServiceError, response: Response): void {
+	handleHttpError(error.toHttpError(), response);
 }
 
 function handleUnexpectedError(error: unknown, response: Response): void {
 	console.error('Unexpected error:', error);
-
-	const internalError = new InternalServerError('Unexpected error');
-	internalError.respond(response);
+	const unexpectedInternalError = new InternalServerError('Unexpected error');
+	unexpectedInternalError.respond(response);
 }
 
 export function errorHandler(error: unknown, _: Request, response: Response): void {
 	if (isDatabaseError(error)) {
 		handleDatabaseError(error, response);
+		return;
+	}
+
+	if (isDomainServiceError(error)) {
+		handleDomainServiceError(error, response);
 		return;
 	}
 

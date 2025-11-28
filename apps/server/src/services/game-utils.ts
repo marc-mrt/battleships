@@ -3,10 +3,11 @@ import { SessionGameOver, SessionPlaying } from '../models/session';
 import { LastShot } from 'game-messages';
 import { Shot } from '../models/shot';
 import { Boat } from '../models/boat';
+import { InvalidTurnError } from './errors';
 
 export function validatePlayerTurn(session: SessionPlaying, playerId: string): void {
 	if (session.currentTurn.id !== playerId) {
-		throw new Error('Cannot shoot at this time');
+		throw new InvalidTurnError();
 	}
 }
 

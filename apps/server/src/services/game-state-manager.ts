@@ -23,6 +23,7 @@ import {
 	getSunkOpponentBoats,
 	validatePlayerTurn,
 } from './game-utils';
+import { InvalidGameStateError } from './errors';
 
 const COIN_FLIP_PROBABILITY = 0.5;
 
@@ -168,7 +169,7 @@ export async function handleShotFired(playerId: string, x: number, y: number): P
 
 	const session = await SessionService.getSessionByPlayerId(playerId);
 	if (!isSessionPlaying(session)) {
-		throw new Error('Game not in progress');
+		throw new InvalidGameStateError();
 	}
 
 	validatePlayerTurn(session, playerId);
@@ -181,7 +182,7 @@ export async function handleShotFired(playerId: string, x: number, y: number): P
 async function processAfterShotEffects(playerId: string, shot: LastShot): Promise<void> {
 	const session = await SessionService.getSessionByPlayerId(playerId);
 	if (!isSessionPlaying(session)) {
-		throw new Error('Game not in progress');
+		throw new InvalidGameStateError();
 	}
 
 	const opponentId = getOpponentId(session, playerId);
