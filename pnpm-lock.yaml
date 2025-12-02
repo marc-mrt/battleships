@@ -64,10 +64,10 @@ importers:
   apps/client:
     dependencies:
       game-messages:
-        specifier: workspace:^
-        version: file:packages/game-messages
+        specifier: 'workspace:'
+        version: link:../../packages/game-messages
       game-rules:
-        specifier: workspace:^
+        specifier: 'workspace:'
         version: link:../../packages/game-rules
       ramda:
         specifier: 'catalog:'
@@ -137,10 +137,10 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0
       game-messages:
-        specifier: workspace:^
-        version: file:packages/game-messages
+        specifier: 'workspace:'
+        version: link:../../packages/game-messages
       game-rules:
-        specifier: workspace:^
+        specifier: 'workspace:'
         version: link:../../packages/game-rules
       pg:
         specifier: ^8.16.3
@@ -204,7 +204,7 @@ importers:
   packages/game-messages:
     dependencies:
       game-rules:
-        specifier: workspace:^
+        specifier: 'workspace:'
         version: link:../game-rules
       zod:
         specifier: 'catalog:'
@@ -1295,12 +1295,6 @@ packages:
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
 
-  game-messages@file:packages/game-messages:
-    resolution: {directory: packages/game-messages, type: directory}
-
-  game-rules@file:packages/game-rules:
-    resolution: {directory: packages/game-rules, type: directory}
-
   get-intrinsic@1.3.0:
     resolution: {integrity: sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==}
     engines: {node: '>= 0.4'}
@@ -2001,9 +1995,6 @@ packages:
 
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
-
-  zod@4.1.11:
-    resolution: {integrity: sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg==}
 
   zod@4.1.13:
     resolution: {integrity: sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig==}
@@ -2951,13 +2942,6 @@ snapshots:
 
   function-bind@1.1.2: {}
 
-  game-messages@file:packages/game-messages:
-    dependencies:
-      game-rules: file:packages/game-rules
-      zod: 4.1.11
-
-  game-rules@file:packages/game-rules: {}
-
   get-intrinsic@1.3.0:
     dependencies:
       call-bind-apply-helpers: 1.0.2
@@ -3622,7 +3606,5 @@ snapshots:
   yocto-queue@0.1.0: {}
 
   zimmerframe@1.1.4: {}
-
-  zod@4.1.11: {}
 
   zod@4.1.13: {}
