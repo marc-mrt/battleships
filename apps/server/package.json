@@ -1,44 +1,41 @@
 {
-	"name": "backend",
-	"private": true,
-	"version": "0.0.0",
-	"type": "module",
-	"main": "dist/index.mjs",
-	"scripts": {
-		"start": "node dist/index.mjs",
-		"dev": "tsx watch --conditions=development --tsconfig=tsconfig.json src/index.ts",
-		"build": "tsdown",
-		"lint": "eslint .",
-		"format": "prettier --write .",
-		"typecheck": "tsc --noEmit"
-	},
-	"dependencies": {
-		"cookie-parser": "^1.4.7",
-		"cors": "^2.8.5",
-		"dotenv": "^17.2.3",
-		"express": "^5.2.0",
-		"game-messages": "workspace:",
-		"game-rules": "workspace:",
-		"pg": "^8.16.3",
-		"ramda": "catalog:",
-		"ws": "^8.18.3",
-		"zod": "catalog:"
-	},
-	"devDependencies": {
-		"@eslint/js": "catalog:",
-		"@types/cookie-parser": "^1.4.10",
-		"@types/cors": "^2.8.19",
-		"@types/express": "^5.0.5",
-		"@types/node": "catalog:",
-		"@types/pg": "^8.15.6",
-		"@types/ramda": "catalog:",
-		"@types/ws": "^8.18.1",
-		"eslint": "catalog:",
-		"globals": "catalog:",
-		"prettier": "catalog:",
-		"tsdown": "^0.16.7",
-		"tsx": "^4.20.6",
-		"typescript": "catalog:",
-		"typescript-eslint": "catalog:"
-	}
+  "name": "backend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/index.mjs",
+  "scripts": {
+    "start": "node dist/index.mjs",
+    "dev": "tsx watch --conditions=development --tsconfig=tsconfig.json src/index.ts",
+    "build": "tsdown",
+    "lint": "biome lint",
+    "format": "biome format --write",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.0",
+    "game-messages": "workspace:",
+    "game-rules": "workspace:",
+    "pg": "^8.16.3",
+    "ramda": "catalog:",
+    "ws": "^8.18.3",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/node": "catalog:",
+    "@types/pg": "^8.15.6",
+    "@types/ramda": "catalog:",
+    "@types/ws": "^8.18.1",
+    "globals": "catalog:",
+    "tsdown": "^0.16.7",
+    "tsx": "^4.20.6",
+    "typescript": "catalog:"
+  }
 }

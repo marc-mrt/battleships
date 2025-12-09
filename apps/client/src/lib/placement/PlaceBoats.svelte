@@ -1,118 +1,118 @@
 <script lang="ts">
-	import * as R from 'ramda';
-	import { appStore } from '../app-store/store.svelte';
-	import BoatPlacementGrid from './BoatPlacementGrid.svelte';
-	import type { PlaceBoatsMessage } from 'game-messages';
-	import Trash from '../icons/Trash.svelte';
-	import Rotate from '../icons/Rotate.svelte';
-	import { PlacementStore } from './store.svelte';
-	import { TOTAL_BOATS_COUNT } from 'game-rules';
-	import * as GridOps from '../grid/operations';
+import type { PlaceBoatsMessage } from "game-messages";
+import { TOTAL_BOATS_COUNT } from "game-rules";
+import * as R from "ramda";
+import { appStore } from "../app-store/store.svelte";
+import * as GridOps from "../grid/operations";
+import Rotate from "../icons/Rotate.svelte";
+import Trash from "../icons/Trash.svelte";
+import BoatPlacementGrid from "./BoatPlacementGrid.svelte";
+import { PlacementStore } from "./store.svelte";
 
-	function identity<T>(x: T): T {
-		return x;
-	}
+function identity<T>(x: T): T {
+  return x;
+}
 
-	const player = $derived(appStore.player);
-	const opponent = $derived(appStore.opponent);
+const player = $derived(appStore.player);
+const opponent = $derived(appStore.opponent);
 
-	const placement = new PlacementStore();
+const placement = new PlacementStore();
 
-	let isReady = $state(false);
+let isReady = $state(false);
 
-	function sendBoatPlacements(): void {
-		if (placement.boats.length === 0) return;
+function sendBoatPlacements(): void {
+  if (placement.boats.length === 0) return;
 
-		const message: PlaceBoatsMessage = {
-			type: 'place_boats',
-			data: { boats: placement.boats },
-		};
-		appStore.sendAction(message);
-		isReady = true;
-	}
+  const message: PlaceBoatsMessage = {
+    type: "place_boats",
+    data: { boats: placement.boats },
+  };
+  appStore.sendAction(message);
+  isReady = true;
+}
 
-	let pointerX = $state(0);
-	let pointerY = $state(0);
-	let isDraggingFromStock = $state(false);
+let pointerX = $state(0);
+let pointerY = $state(0);
+let isDraggingFromStock = $state(false);
 
-	function handlePointerStartFromStock(length: number): void {
-		isDraggingFromStock = true;
-		placement.startDragFromStock(length);
-	}
+function handlePointerStartFromStock(length: number): void {
+  isDraggingFromStock = true;
+  placement.startDragFromStock(length);
+}
 
-	function handlePointerEnd(): void {
-		isDraggingFromStock = false;
-		placement.endDrag();
-	}
+function handlePointerEnd(): void {
+  isDraggingFromStock = false;
+  placement.endDrag();
+}
 
-	function handleGlobalPointerMove(e: PointerEvent): void {
-		if (!placement.isDragging) return;
+function handleGlobalPointerMove(e: PointerEvent): void {
+  if (!placement.isDragging) return;
 
-		pointerX = e.clientX;
-		pointerY = e.clientY;
+  pointerX = e.clientX;
+  pointerY = e.clientY;
 
-		const gridSection = document.querySelector('.grid');
-		if (!gridSection) return;
+  const gridSection = document.querySelector(".grid");
+  if (!gridSection) return;
 
-		const rect = gridSection.getBoundingClientRect();
-		const x = e.clientX - rect.left;
-		const y = e.clientY - rect.top;
+  const rect = gridSection.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
 
-		if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) {
-			placement.setHoveredCell(null);
-			return;
-		}
+  if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) {
+    placement.setHoveredCell(null);
+    return;
+  }
 
-		const cellWidth = rect.width / 9;
-		const cellHeight = rect.height / 9;
+  const cellWidth = rect.width / 9;
+  const cellHeight = rect.height / 9;
 
-		const cellX = Math.floor(x / cellWidth);
-		const cellY = Math.floor(y / cellHeight);
+  const cellX = Math.floor(x / cellWidth);
+  const cellY = Math.floor(y / cellHeight);
 
-		if (cellX >= 0 && cellX < 9 && cellY >= 0 && cellY < 9) {
-			placement.setHoveredCell({ x: cellX, y: cellY });
-		}
-	}
+  if (cellX >= 0 && cellX < 9 && cellY >= 0 && cellY < 9) {
+    placement.setHoveredCell({ x: cellX, y: cellY });
+  }
+}
 
-	function handleCellClick(x: number, y: number): void {
-		if (placement.isDragging) return;
+function handleCellClick(x: number, y: number): void {
+  if (placement.isDragging) return;
 
-		const clickedBoat = placement.boats.find((boat) => {
-			const cells = GridOps.getBoatCells(boat);
-			return cells.some((cell) => cell.x === x && cell.y === y);
-		});
+  const clickedBoat = placement.boats.find((boat) => {
+    const cells = GridOps.getBoatCells(boat);
+    return cells.some((cell) => cell.x === x && cell.y === y);
+  });
 
-		if (clickedBoat && clickedBoat.id === placement.selectedBoatId) {
-			placement.rotateSelected();
-		} else {
-			placement.selectBoat(x, y);
-		}
-	}
+  if (clickedBoat && clickedBoat.id === placement.selectedBoatId) {
+    placement.rotateSelected();
+  } else {
+    placement.selectBoat(x, y);
+  }
+}
 
-	function handleCellPointerStart(x: number, y: number): void {
-		placement.startDragFromCell(x, y);
-	}
+function handleCellPointerStart(x: number, y: number): void {
+  placement.startDragFromCell(x, y);
+}
 
-	function handleCellPointerMove(x: number, y: number): void {
-		if (placement.isDragging) {
-			placement.setHoveredCell({ x, y });
-		}
-	}
+function handleCellPointerMove(x: number, y: number): void {
+  if (placement.isDragging) {
+    placement.setHoveredCell({ x, y });
+  }
+}
 
-	function handleRotateSelected(): void {
-		placement.rotateSelected();
-	}
+function handleRotateSelected(): void {
+  placement.rotateSelected();
+}
 
-	function handleDeleteSelected(): void {
-		placement.deleteSelected();
-	}
+function handleDeleteSelected(): void {
+  placement.deleteSelected();
+}
 
-	function handleStockPointerDown(length: number) {
-		return function onPointerDown(e: PointerEvent) {
-			e.preventDefault();
-			handlePointerStartFromStock(length);
-		};
-	}
+function handleStockPointerDown(length: number) {
+  return function onPointerDown(e: PointerEvent) {
+    e.preventDefault();
+    handlePointerStartFromStock(length);
+  };
+}
 </script>
 
 <svelte:window onpointermove={handleGlobalPointerMove} onpointerup={handlePointerEnd} />

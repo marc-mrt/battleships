@@ -1,10 +1,13 @@
-import type { Player } from './player';
+import type { Player } from "./player";
 
-export type SessionStatus = 'waiting_for_opponent' | 'waiting_for_boat_placements' | 'playing';
+export type SessionStatus =
+  | "waiting_for_opponent"
+  | "waiting_for_boat_placements"
+  | "playing";
 
 export interface Session {
-	slug: string;
-	status: SessionStatus;
-	player: Player;
-	opponent: Player | null;
+  slug: string;
+  status: SessionStatus;
+  player: Player;
+  opponent: Player | null;
 }

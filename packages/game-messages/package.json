@@ -1,30 +1,27 @@
 {
-	"name": "game-messages",
-	"version": "0.0.0",
-	"description": "",
-	"type": "module",
-	"exports": {
-		".": {
-			"development": "./src/index.ts",
-			"types": "./src/index.ts",
-			"default": "./src/index.ts"
-		}
-	},
-	"scripts": {
-		"lint": "eslint .",
-		"format": "prettier --write .",
-		"typecheck": "tsc --noEmit"
-	},
-	"dependencies": {
-		"game-rules": "workspace:",
-		"zod": "catalog:"
-	},
-	"devDependencies": {
-		"@eslint/js": "catalog:",
-		"eslint": "catalog:",
-		"globals": "catalog:",
-		"prettier": "catalog:",
-		"typescript": "catalog:",
-		"typescript-eslint": "catalog:"
-	}
+  "name": "game-messages",
+  "version": "0.0.0",
+  "description": "",
+  "type": "module",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "lint": "biome lint",
+    "format": "biome format --write",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "game-rules": "workspace:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "globals": "catalog:",
+    "typescript": "catalog:"
+  }
 }

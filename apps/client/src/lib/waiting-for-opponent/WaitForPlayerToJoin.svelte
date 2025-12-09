@@ -1,37 +1,37 @@
 <script lang="ts">
-	import { appStore } from '../app-store/store.svelte';
-	import { ClipboardManager } from './clipboard.svelte';
+import { appStore } from "../app-store/store.svelte";
+import { ClipboardManager } from "./clipboard.svelte";
 
-	function buildShareableUrl(slug: string | undefined): string {
-		return `${window.location.origin}?s=${slug}`;
-	}
+function buildShareableUrl(slug: string | undefined): string {
+  return `${window.location.origin}?s=${slug}`;
+}
 
-	function getDisplayValue(isCopied: boolean, url: string): string {
-		return isCopied ? 'Copied!' : url;
-	}
+function getDisplayValue(isCopied: boolean, url: string): string {
+  return isCopied ? "Copied!" : url;
+}
 
-	function isActivationKey(key: string): boolean {
-		return key === 'Enter' || key === ' ';
-	}
+function isActivationKey(key: string): boolean {
+  return key === "Enter" || key === " ";
+}
 
-	const player = $derived(appStore.player);
-	const slug = $derived(appStore.session?.slug);
+const player = $derived(appStore.player);
+const slug = $derived(appStore.session?.slug);
 
-	const urlToShare = $derived(buildShareableUrl(slug));
-	const clipboard = new ClipboardManager();
+const urlToShare = $derived(buildShareableUrl(slug));
+const clipboard = new ClipboardManager();
 
-	function copyToClipboard() {
-		if (slug) {
-			clipboard.copy(urlToShare);
-		}
-	}
+function copyToClipboard() {
+  if (slug) {
+    clipboard.copy(urlToShare);
+  }
+}
 
-	function handleKeyPress(event: KeyboardEvent) {
-		if (isActivationKey(event.key)) {
-			event.preventDefault();
-			copyToClipboard();
-		}
-	}
+function handleKeyPress(event: KeyboardEvent) {
+  if (isActivationKey(event.key)) {
+    event.preventDefault();
+    copyToClipboard();
+  }
+}
 </script>
 
 <header>

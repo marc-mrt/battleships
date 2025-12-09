@@ -1,36 +1,36 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import CreateOrJoinSession from './lib/new-session/CreateOrJoinSession.svelte';
-	import WaitForPlayerToJoin from './lib/waiting-for-opponent/WaitForPlayerToJoin.svelte';
-	import { appStore } from './lib/app-store/store.svelte';
-	import PlaceBoats from './lib/placement/PlaceBoats.svelte';
-	import GameBoard from './lib/game/GameBoard.svelte';
-	import type { SessionStatus } from './models/session';
+import { onMount } from "svelte";
+import { appStore } from "./lib/app-store/store.svelte";
+import GameBoard from "./lib/game/GameBoard.svelte";
+import CreateOrJoinSession from "./lib/new-session/CreateOrJoinSession.svelte";
+import PlaceBoats from "./lib/placement/PlaceBoats.svelte";
+import WaitForPlayerToJoin from "./lib/waiting-for-opponent/WaitForPlayerToJoin.svelte";
+import type { SessionStatus } from "./models/session";
 
-	function getSharedSlugFromUrl(): string | null {
-		const urlParams = new URLSearchParams(window.location.search);
-		return urlParams.has('s') ? urlParams.get('s') : null;
-	}
+function getSharedSlugFromUrl(): string | null {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.has("s") ? urlParams.get("s") : null;
+}
 
-	const querySharedSlug = getSharedSlugFromUrl();
+const querySharedSlug = getSharedSlugFromUrl();
 
-	let initializing = $state(true);
+let initializing = $state(true);
 
-	const status: SessionStatus | null = $derived(appStore.session?.status ?? null);
+const status: SessionStatus | null = $derived(appStore.session?.status ?? null);
 
-	function finishInitializing(): void {
-		initializing = false;
-	}
+function finishInitializing(): void {
+  initializing = false;
+}
 
-	async function initialize(): Promise<void> {
-		try {
-			await appStore.attemptReconnect();
-		} finally {
-			finishInitializing();
-		}
-	}
+async function initialize(): Promise<void> {
+  try {
+    await appStore.attemptReconnect();
+  } finally {
+    finishInitializing();
+  }
+}
 
-	onMount(initialize);
+onMount(initialize);
 </script>
 
 {#if initializing}

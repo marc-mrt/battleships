@@ -1,43 +1,51 @@
 <script lang="ts">
-	import type { CellState } from '../grid/types';
+import type { CellState } from "../grid/types";
 
-	interface AnimationState {
-		type: 'idle' | 'shooting' | 'hit' | 'miss' | 'sunk';
-		x?: number;
-		y?: number;
-	}
+interface AnimationState {
+  type: "idle" | "shooting" | "hit" | "miss" | "sunk";
+  x?: number;
+  y?: number;
+}
 
-	interface Props {
-		cells: CellState[][];
-		animationState: AnimationState;
-	}
+interface Props {
+  cells: CellState[][];
+  animationState: AnimationState;
+}
 
-	let { cells, animationState }: Props = $props();
+const { cells, animationState }: Props = $props();
 
-	function isIdle(animationState: AnimationState): boolean {
-		return animationState.type === 'idle';
-	}
+function isIdle(animationState: AnimationState): boolean {
+  return animationState.type === "idle";
+}
 
-	function matchesPosition(animationState: AnimationState, x: number, y: number): boolean {
-		return animationState.x === x && animationState.y === y;
-	}
+function matchesPosition(
+  animationState: AnimationState,
+  x: number,
+  y: number,
+): boolean {
+  return animationState.x === x && animationState.y === y;
+}
 
-	function isAnimatingCell(x: number, y: number): boolean {
-		return !isIdle(animationState) && matchesPosition(animationState, x, y);
-	}
+function isAnimatingCell(x: number, y: number): boolean {
+  return !isIdle(animationState) && matchesPosition(animationState, x, y);
+}
 
-	function buildAnimationClass(type: string): string {
-		return `animating-${type}`;
-	}
+function buildAnimationClass(type: string): string {
+  return `animating-${type}`;
+}
 
-	function getAnimationClass(x: number, y: number): string {
-		if (!isAnimatingCell(x, y)) return '';
-		return buildAnimationClass(animationState.type);
-	}
+function getAnimationClass(x: number, y: number): string {
+  if (!isAnimatingCell(x, y)) return "";
+  return buildAnimationClass(animationState.type);
+}
 
-	function shouldAnimateWithClass(x: number, y: number, className: string): boolean {
-		return getAnimationClass(x, y) === className;
-	}
+function shouldAnimateWithClass(
+  x: number,
+  y: number,
+  className: string,
+): boolean {
+  return getAnimationClass(x, y) === className;
+}
 </script>
 
 <div class="grid" role="presentation">

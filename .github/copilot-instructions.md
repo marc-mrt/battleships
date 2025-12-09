@@ -250,29 +250,6 @@ if (!result.success) {
 }
 ```
 
-### Prettier Configuration
-
-Both apps use the same Prettier config:
-
-```json
-{
-  "useTabs": true,
-  "singleQuote": true,
-  "trailingComma": "all",
-  "printWidth": 100
-}
-```
-
-Client also uses `prettier-plugin-svelte`.
-
-### ESLint
-
-**Flat Config Format** (eslint.config.js)
-
-- Client: Includes Svelte plugin and TypeScript ESLint
-- Server: Standard TypeScript ESLint
-- Both disable `no-undef` (TypeScript handles this)
-
 ---
 
 ## Database Schema
@@ -359,8 +336,8 @@ cd apps/server && pnpm build
 
 - `dev`: Development server with hot reload
 - `build`: Production build
-- `lint`: ESLint check
-- `format`: Prettier format
+- `lint`: Biome lint
+- `format`: Biome format
 - `check`: Type check (Svelte-specific)
 
 ### Environment Variables
@@ -437,8 +414,7 @@ cd apps/server && pnpm build
 ## Testing & Quality
 
 - TypeScript strict mode enabled
-- ESLint for code quality
-- Prettier for consistent formatting
+- Biome for linting and formatting
 - Type checking via `tsc` and `svelte-check`
 - No unused locals/parameters (enforced by tsconfig)
 

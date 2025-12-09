@@ -1,195 +1,205 @@
-import * as API from '../../api';
-import type { ClientMessage, ServerMessage, GameState } from 'game-messages';
-import type { State, Metadata, PlayerMetadata, SessionMetadata } from './state-types';
-import { getConnectionManager, type ConnectionManager } from './connection-manager.svelte';
-import { handleMessage } from './message-handler';
+import type { ClientMessage, GameState, ServerMessage } from "game-messages";
+import * as API from "../../api";
 import {
-	createUninitializedState,
-	createLoadingState,
-	buildStateFromSession,
-} from './state-builder';
+  type ConnectionManager,
+  getConnectionManager,
+} from "./connection-manager.svelte";
+import { handleMessage } from "./message-handler";
+import {
+  buildStateFromSession,
+  createLoadingState,
+  createUninitializedState,
+} from "./state-builder";
+import type {
+  Metadata,
+  PlayerMetadata,
+  SessionMetadata,
+  State,
+} from "./state-types";
 
 function isStateReady(
-	state: State,
-): state is { status: 'ready'; meta: Metadata; game: GameState | null } {
-	return state.status === 'ready';
+  state: State,
+): state is { status: "ready"; meta: Metadata; game: GameState | null } {
+  return state.status === "ready";
 }
 
 function getPlayerFromState(state: State): PlayerMetadata | null {
-	if (!isStateReady(state)) {
-		return null;
-	}
-	return state.meta.player;
+  if (!isStateReady(state)) {
+    return null;
+  }
+  return state.meta.player;
 }
 
 function getOpponentFromState(state: State): PlayerMetadata | null {
-	if (!isStateReady(state)) {
-		return null;
-	}
-	return state.meta.opponent;
+  if (!isStateReady(state)) {
+    return null;
+  }
+  return state.meta.opponent;
 }
 
 function getSessionFromState(state: State): SessionMetadata | null {
-	if (!isStateReady(state)) {
-		return null;
-	}
-	return state.meta.session;
+  if (!isStateReady(state)) {
+    return null;
+  }
+  return state.meta.session;
 }
 
 function getGameFromState(state: State): GameState | null {
-	if (!isStateReady(state)) {
-		return null;
-	}
-	return state.game;
+  if (!isStateReady(state)) {
+    return null;
+  }
+  return state.game;
 }
 
 class AppStore {
-	private unsubscribe: (() => void) | null = null;
-	private state = $state<State>({ status: 'uninitialized' });
+  private unsubscribe: (() => void) | null = null;
+  private state = $state<State>({ status: "uninitialized" });
 
-	get player() {
-		return getPlayerFromState(this.state);
-	}
+  get player() {
+    return getPlayerFromState(this.state);
+  }
 
-	get opponent() {
-		return getOpponentFromState(this.state);
-	}
+  get opponent() {
+    return getOpponentFromState(this.state);
+  }
 
-	get session() {
-		return getSessionFromState(this.state);
-	}
+  get session() {
+    return getSessionFromState(this.state);
+  }
 
-	get game() {
-		return getGameFromState(this.state);
-	}
+  get game() {
+    return getGameFromState(this.state);
+  }
 
-	get isOwner(): boolean {
-		const player = this.player;
-		if (!player) {
-			return false;
-		}
+  get isOwner(): boolean {
+    const player = this.player;
+    if (!player) {
+      return false;
+    }
 
-		return player.isOwner;
-	}
+    return player.isOwner;
+  }
 
-	constructor(
-		private connectionManager: ConnectionManager = getConnectionManager(),
-		private api: typeof API = API,
-	) {
-		this.unsubscribe = this.connectionManager.onMessage(this.handleIncomingMessage.bind(this));
-	}
+  constructor(
+    private connectionManager: ConnectionManager = getConnectionManager(),
+    private api: typeof API = API,
+  ) {
+    this.unsubscribe = this.connectionManager.onMessage(
+      this.handleIncomingMessage.bind(this),
+    );
+  }
 
-	private async connectAndSetState(newState: State): Promise<void> {
-		await this.connectionManager.connect();
-		this.state = newState;
-	}
+  private async connectAndSetState(newState: State): Promise<void> {
+    await this.connectionManager.connect();
+    this.state = newState;
+  }
 
-	private logApiError(operation: string, error: string): void {
-		console.error(`API error during ${operation}:`, error);
-	}
+  private logApiError(operation: string, error: string): void {
+    console.error(`API error during ${operation}:`, error);
+  }
 
-	private logConnectionError(operation: string, error: unknown): void {
-		console.error(`Connection error during ${operation}:`, error);
-	}
+  private logConnectionError(operation: string, error: unknown): void {
+    console.error(`Connection error during ${operation}:`, error);
+  }
 
-	private handleApiError(operation: string, error: string): never {
-		this.logApiError(operation, error);
-		this.state = createUninitializedState();
-		throw new Error(error);
-	}
+  private handleApiError(operation: string, error: string): never {
+    this.logApiError(operation, error);
+    this.state = createUninitializedState();
+    throw new Error(error);
+  }
 
-	private handleConnectionError(operation: string, error: unknown): never {
-		this.logConnectionError(operation, error);
-		this.state = createUninitializedState();
-		throw error;
-	}
+  private handleConnectionError(operation: string, error: unknown): never {
+    this.logConnectionError(operation, error);
+    this.state = createUninitializedState();
+    throw error;
+  }
 
-	public async createSession(payload: { username: string }) {
-		this.state = createLoadingState();
+  public async createSession(payload: { username: string }) {
+    this.state = createLoadingState();
 
-		const result = await this.api.createSession(payload);
+    const result = await this.api.createSession(payload);
 
-		if (!result.success) {
-			this.handleApiError('createSession', result.error);
-		}
+    if (!result.success) {
+      this.handleApiError("createSession", result.error);
+    }
 
-		try {
-			const newState = buildStateFromSession(result.value);
-			await this.connectAndSetState(newState);
-		} catch (error) {
-			this.handleConnectionError('createSession', error);
-		}
-	}
+    try {
+      const newState = buildStateFromSession(result.value);
+      await this.connectAndSetState(newState);
+    } catch (error) {
+      this.handleConnectionError("createSession", error);
+    }
+  }
 
-	public async joinSession(payload: { username: string; slug: string }) {
-		this.state = createLoadingState();
+  public async joinSession(payload: { username: string; slug: string }) {
+    this.state = createLoadingState();
 
-		const result = await this.api.joinSession(payload);
+    const result = await this.api.joinSession(payload);
 
-		if (!result.success) {
-			this.handleApiError('joinSession', result.error);
-		}
+    if (!result.success) {
+      this.handleApiError("joinSession", result.error);
+    }
 
-		const newState = buildStateFromSession(result.value);
-		if (newState.status === 'uninitialized') {
-			this.state = newState;
-			throw new Error('Failed to find player in session');
-		}
+    const newState = buildStateFromSession(result.value);
+    if (newState.status === "uninitialized") {
+      this.state = newState;
+      throw new Error("Failed to find player in session");
+    }
 
-		try {
-			await this.connectAndSetState(newState);
-		} catch (error) {
-			this.handleConnectionError('joinSession', error);
-		}
-	}
+    try {
+      await this.connectAndSetState(newState);
+    } catch (error) {
+      this.handleConnectionError("joinSession", error);
+    }
+  }
 
-	private logReconnectionError(error: unknown): void {
-		console.error('Reconnection failed:', error);
-	}
+  private logReconnectionError(error: unknown): void {
+    console.error("Reconnection failed:", error);
+  }
 
-	public async attemptReconnect() {
-		try {
-			const result = await this.api.getSession();
+  public async attemptReconnect() {
+    try {
+      const result = await this.api.getSession();
 
-			if (!result.success) {
-				this.logReconnectionError(result.error);
-				return;
-			}
+      if (!result.success) {
+        this.logReconnectionError(result.error);
+        return;
+      }
 
-			const session = result.value;
-			if (session == null) {
-				return;
-			}
+      const session = result.value;
+      if (session == null) {
+        return;
+      }
 
-			const newState = buildStateFromSession(session);
-			await this.connectAndSetState(newState);
-		} catch (error) {
-			this.logReconnectionError(error);
-		}
-	}
+      const newState = buildStateFromSession(session);
+      await this.connectAndSetState(newState);
+    } catch (error) {
+      this.logReconnectionError(error);
+    }
+  }
 
-	private handleIncomingMessage(message: ServerMessage): void {
-		const newState = handleMessage(this.state, message);
-		this.state = newState;
-	}
+  private handleIncomingMessage(message: ServerMessage): void {
+    const newState = handleMessage(this.state, message);
+    this.state = newState;
+  }
 
-	sendAction(action: ClientMessage): void {
-		this.connectionManager.send(action);
-	}
+  sendAction(action: ClientMessage): void {
+    this.connectionManager.send(action);
+  }
 
-	requestNewGame(): void {
-		this.sendAction({
-			type: 'request_new_game',
-		});
-	}
+  requestNewGame(): void {
+    this.sendAction({
+      type: "request_new_game",
+    });
+  }
 
-	destroy(): void {
-		if (this.unsubscribe) {
-			this.unsubscribe();
-			this.unsubscribe = null;
-		}
-		this.connectionManager.disconnect();
-	}
+  destroy(): void {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+    this.connectionManager.disconnect();
+  }
 }
 
 export const appStore: AppStore = new AppStore();

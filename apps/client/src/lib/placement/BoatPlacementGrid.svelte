@@ -1,66 +1,70 @@
 <script lang="ts">
-	import type { CellState } from '../grid/types';
+import type { CellState } from "../grid/types";
 
-	interface Props {
-		cells: CellState[][];
-		onCellClick: (x: number, y: number) => void;
-		onCellPointerStart: (x: number, y: number) => void;
-		onCellPointerMove: (x: number, y: number) => void;
-	}
+interface Props {
+  cells: CellState[][];
+  onCellClick: (x: number, y: number) => void;
+  onCellPointerStart: (x: number, y: number) => void;
+  onCellPointerMove: (x: number, y: number) => void;
+}
 
-	let { cells, onCellClick, onCellPointerStart, onCellPointerMove }: Props = $props();
+const { cells, onCellClick, onCellPointerStart, onCellPointerMove }: Props =
+  $props();
 
-	let gridElement: HTMLDivElement | null = $state(null);
+let gridElement: HTMLDivElement | null = $state(null);
 
-	function isCellBoat(cellState: CellState): boolean {
-		return cellState.boat ?? false;
-	}
+function isCellBoat(cellState: CellState): boolean {
+  return cellState.boat ?? false;
+}
 
-	function getCellFromPoint(clientX: number, clientY: number): { x: number; y: number } | null {
-		if (!gridElement) return null;
+function getCellFromPoint(
+  clientX: number,
+  clientY: number,
+): { x: number; y: number } | null {
+  if (!gridElement) return null;
 
-		const rect = gridElement.getBoundingClientRect();
-		const x = clientX - rect.left;
-		const y = clientY - rect.top;
+  const rect = gridElement.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
 
-		if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) {
-			return null;
-		}
+  if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) {
+    return null;
+  }
 
-		const cellWidth = rect.width / 9;
-		const cellHeight = rect.height / 9;
+  const cellWidth = rect.width / 9;
+  const cellHeight = rect.height / 9;
 
-		const cellX = Math.floor(x / cellWidth);
-		const cellY = Math.floor(y / cellHeight);
+  const cellX = Math.floor(x / cellWidth);
+  const cellY = Math.floor(y / cellHeight);
 
-		if (cellX < 0 || cellX >= 9 || cellY < 0 || cellY >= 9) {
-			return null;
-		}
+  if (cellX < 0 || cellX >= 9 || cellY < 0 || cellY >= 9) {
+    return null;
+  }
 
-		return { x: cellX, y: cellY };
-	}
+  return { x: cellX, y: cellY };
+}
 
-	function handleGlobalPointerMove(e: PointerEvent): void {
-		const cell = getCellFromPoint(e.clientX, e.clientY);
-		if (cell) {
-			onCellPointerMove(cell.x, cell.y);
-		}
-	}
+function handleGlobalPointerMove(e: PointerEvent): void {
+  const cell = getCellFromPoint(e.clientX, e.clientY);
+  if (cell) {
+    onCellPointerMove(cell.x, cell.y);
+  }
+}
 
-	function createPointerDownHandler(x: number, y: number, cell: CellState) {
-		return function onPointerDown(e: PointerEvent) {
-			if (isCellBoat(cell)) {
-				e.preventDefault();
-				onCellPointerStart(x, y);
-			}
-		};
-	}
+function createPointerDownHandler(x: number, y: number, cell: CellState) {
+  return function onPointerDown(e: PointerEvent) {
+    if (isCellBoat(cell)) {
+      e.preventDefault();
+      onCellPointerStart(x, y);
+    }
+  };
+}
 
-	function createClickHandler(x: number, y: number) {
-		return function onClick() {
-			onCellClick(x, y);
-		};
-	}
+function createClickHandler(x: number, y: number) {
+  return function onClick() {
+    onCellClick(x, y);
+  };
+}
 </script>
 
 <svelte:window onpointermove={handleGlobalPointerMove} />

@@ -1,31 +1,36 @@
-import { Player } from '../models/player';
-import { query } from './db';
-import { z } from 'zod';
-import { generateMapperToDomainModel } from './mapper';
+import { z } from "zod";
+import type { Player } from "../models/player";
+import { query } from "./db";
+import { generateMapperToDomainModel } from "./mapper";
 
 interface CreatePlayerPayload {
-	username: string;
+  username: string;
 }
-export async function createPlayer(payload: CreatePlayerPayload): Promise<Player> {
-	const { username } = payload;
-	const result = await query('INSERT INTO players (username) VALUES ($1) RETURNING *', [username]);
+export async function createPlayer(
+  payload: CreatePlayerPayload,
+): Promise<Player> {
+  const { username } = payload;
+  const result = await query(
+    "INSERT INTO players (username) VALUES ($1) RETURNING *",
+    [username],
+  );
 
-	return mapToPlayer(result.rows[0]);
+  return mapToPlayer(result.rows[0]);
 }
 
 const PlayerDatabaseSchema = z.object({
-	id: z.string(),
-	username: z.string(),
+  id: z.string(),
+  username: z.string(),
 });
 
 function mapper(parsed: z.infer<typeof PlayerDatabaseSchema>): Player {
-	return {
-		id: parsed.id,
-		username: parsed.username,
-	};
+  return {
+    id: parsed.id,
+    username: parsed.username,
+  };
 }
 
 const mapToPlayer = generateMapperToDomainModel({
-	schema: PlayerDatabaseSchema,
-	mapper,
+  schema: PlayerDatabaseSchema,
+  mapper,
 });

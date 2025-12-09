@@ -1,69 +1,78 @@
 <script lang="ts">
-	import type { CellState } from '../grid/types';
+import type { CellState } from "../grid/types";
 
-	interface AnimationState {
-		type: 'idle' | 'shooting' | 'hit' | 'miss' | 'sunk';
-		x?: number;
-		y?: number;
-	}
+interface AnimationState {
+  type: "idle" | "shooting" | "hit" | "miss" | "sunk";
+  x?: number;
+  y?: number;
+}
 
-	interface Props {
-		cells: CellState[][];
-		onCellClick: (x: number, y: number) => void;
-		getCellAriaLabel?: (x: number, y: number) => string;
-		animationState: AnimationState;
-	}
+interface Props {
+  cells: CellState[][];
+  onCellClick: (x: number, y: number) => void;
+  getCellAriaLabel?: (x: number, y: number) => string;
+  animationState: AnimationState;
+}
 
-	let { cells, onCellClick, getCellAriaLabel, animationState }: Props = $props();
+const { cells, onCellClick, getCellAriaLabel, animationState }: Props =
+  $props();
 
-	function isCellShot(cellState: CellState): boolean {
-		return cellState.shot ?? false;
-	}
+function isCellShot(cellState: CellState): boolean {
+  return cellState.shot ?? false;
+}
 
-	function handleCellClick(x: number, y: number, cellState: CellState) {
-		if (!isCellShot(cellState)) {
-			onCellClick(x, y);
-		}
-	}
+function handleCellClick(x: number, y: number, cellState: CellState) {
+  if (!isCellShot(cellState)) {
+    onCellClick(x, y);
+  }
+}
 
-	function isIdle(animationState: AnimationState): boolean {
-		return animationState.type === 'idle';
-	}
+function isIdle(animationState: AnimationState): boolean {
+  return animationState.type === "idle";
+}
 
-	function matchesPosition(animationState: AnimationState, x: number, y: number): boolean {
-		return animationState.x === x && animationState.y === y;
-	}
+function matchesPosition(
+  animationState: AnimationState,
+  x: number,
+  y: number,
+): boolean {
+  return animationState.x === x && animationState.y === y;
+}
 
-	function isAnimatingCell(x: number, y: number): boolean {
-		return !isIdle(animationState) && matchesPosition(animationState, x, y);
-	}
+function isAnimatingCell(x: number, y: number): boolean {
+  return !isIdle(animationState) && matchesPosition(animationState, x, y);
+}
 
-	function buildAnimationClass(type: string): string {
-		return `animating-${type}`;
-	}
+function buildAnimationClass(type: string): string {
+  return `animating-${type}`;
+}
 
-	function getAnimationClass(x: number, y: number): string {
-		if (!isAnimatingCell(x, y)) return '';
-		return buildAnimationClass(animationState.type);
-	}
+function getAnimationClass(x: number, y: number): string {
+  if (!isAnimatingCell(x, y)) return "";
+  return buildAnimationClass(animationState.type);
+}
 
-	function shouldAnimateWithClass(x: number, y: number, className: string): boolean {
-		return getAnimationClass(x, y) === className;
-	}
+function shouldAnimateWithClass(
+  x: number,
+  y: number,
+  className: string,
+): boolean {
+  return getAnimationClass(x, y) === className;
+}
 
-	function getDefaultAriaLabel(x: number, y: number): string {
-		return `Cell ${x}, ${y}`;
-	}
+function getDefaultAriaLabel(x: number, y: number): string {
+  return `Cell ${x}, ${y}`;
+}
 
-	function getCellLabel(x: number, y: number): string {
-		return getCellAriaLabel ? getCellAriaLabel(x, y) : getDefaultAriaLabel(x, y);
-	}
+function getCellLabel(x: number, y: number): string {
+  return getCellAriaLabel ? getCellAriaLabel(x, y) : getDefaultAriaLabel(x, y);
+}
 
-	function createClickHandler(x: number, y: number, cell: CellState) {
-		return function handleClick() {
-			handleCellClick(x, y, cell);
-		};
-	}
+function createClickHandler(x: number, y: number, cell: CellState) {
+  return function handleClick() {
+    handleCellClick(x, y, cell);
+  };
+}
 </script>
 
 <div class="grid" role="presentation">

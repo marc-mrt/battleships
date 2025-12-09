@@ -1,97 +1,106 @@
-import { z } from 'zod';
-import { Response } from 'express';
-import { signJwt, verifyJwt } from '../utils/jwt';
-import { config } from '../config';
+import type { Response } from "express";
+import { z } from "zod";
+import { config } from "../config";
+import { signJwt, verifyJwt } from "../utils/jwt";
 
-const COOKIE_NAME = 'session';
+const COOKIE_NAME = "session";
 const MAX_AGE = 24 * 60 * 60 * 1000;
 
 const SessionCookieSchema = z.object({
-	sessionId: z.string(),
-	playerId: z.string(),
+  sessionId: z.string(),
+  playerId: z.string(),
 });
 
 type SessionCookie = z.infer<typeof SessionCookieSchema>;
 
 interface CookieOptions {
-	httpOnly: boolean;
-	secure: boolean;
-	sameSite: 'strict' | 'lax' | 'none';
-	maxAge: number;
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: "strict" | "lax" | "none";
+  maxAge: number;
 }
 
 function getCookieOptions(): CookieOptions {
-	return {
-		httpOnly: true,
-		secure: process.env.NODE_ENV === 'production',
-		sameSite: 'strict',
-		maxAge: MAX_AGE,
-	};
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: MAX_AGE,
+  };
 }
 
-function parseCookieString(acc: Record<string, string>, cookie: string): Record<string, string> {
-	const [key, value] = cookie.trim().split('=');
-	if (key && value) {
-		acc[key] = decodeURIComponent(value);
-	}
-	return acc;
+function parseCookieString(
+  acc: Record<string, string>,
+  cookie: string,
+): Record<string, string> {
+  const [key, value] = cookie.trim().split("=");
+  if (key && value) {
+    acc[key] = decodeURIComponent(value);
+  }
+  return acc;
 }
 
 function parseCookieHeader(cookieHeader: string): Record<string, string> {
-	return cookieHeader.split(';').reduce(parseCookieString, {} as Record<string, string>);
+  return cookieHeader
+    .split(";")
+    .reduce(parseCookieString, {} as Record<string, string>);
 }
 
-function extractSessionCookie(cookies: Record<string, string>): string | undefined {
-	return cookies[COOKIE_NAME];
+function extractSessionCookie(
+  cookies: Record<string, string>,
+): string | undefined {
+  return cookies[COOKIE_NAME];
 }
 
 function validateSessionCookie(payload: unknown): SessionCookie {
-	return SessionCookieSchema.parse(payload);
+  return SessionCookieSchema.parse(payload);
 }
 
 function logParseError(error: unknown): void {
-	console.error('Failed to parse session cookie:', error);
+  console.error("Failed to parse session cookie:", error);
 }
 
-export function parseSessionCookie(cookieHeader: string | undefined): SessionCookie | null {
-	if (!cookieHeader) {
-		return null;
-	}
+export function parseSessionCookie(
+  cookieHeader: string | undefined,
+): SessionCookie | null {
+  if (!cookieHeader) {
+    return null;
+  }
 
-	const cookies = parseCookieHeader(cookieHeader);
-	const token = extractSessionCookie(cookies);
+  const cookies = parseCookieHeader(cookieHeader);
+  const token = extractSessionCookie(cookies);
 
-	if (!token) {
-		return null;
-	}
+  if (!token) {
+    return null;
+  }
 
-	try {
-		const result = verifyJwt({ token, secret: config.jwtSecret });
+  try {
+    const result = verifyJwt({ token, secret: config.jwtSecret });
 
-		if (!result.valid || !result.payload) {
-			return null;
-		}
+    if (!result.valid || !result.payload) {
+      return null;
+    }
 
-		return validateSessionCookie(result.payload);
-	} catch (error) {
-		logParseError(error);
-		return null;
-	}
+    return validateSessionCookie(result.payload);
+  } catch (error) {
+    logParseError(error);
+    return null;
+  }
 }
 
 interface SetSessionCookiePayload {
-	response: Response;
-	payload: SessionCookie;
+  response: Response;
+  payload: SessionCookie;
 }
 
 export function setSessionCookie(payload: SetSessionCookiePayload): void {
-	const { response, payload: cookiePayload } = payload;
-	const options = getCookieOptions();
+  const { response, payload: cookiePayload } = payload;
+  const options = getCookieOptions();
 
-	const token = signJwt({
-		payload: cookiePayload,
-		secret: config.jwtSecret,
-	});
+  const token = signJwt({
+    payload: cookiePayload,
+    secret: config.jwtSecret,
+  });
 
-	response.cookie(COOKIE_NAME, token, options);
+  response.cookie(COOKIE_NAME, token, options);
 }

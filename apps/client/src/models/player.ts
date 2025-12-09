@@ -1,5 +1,5 @@
 export interface Player {
-	id: string;
-	username: string;
-	isOwner: boolean;
+  id: string;
+  username: string;
+  isOwner: boolean;
 }

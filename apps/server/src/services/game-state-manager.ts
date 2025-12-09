@@ -1,267 +1,306 @@
+import type {
+  GameInProgressState,
+  GameOverState,
+  LastShot,
+  NewGameStartedMessage,
+} from "game-messages";
+import { TOTAL_BOATS_COUNT } from "game-rules";
+import * as R from "ramda";
 import {
-	SessionPlaying,
-	SessionGameOver,
-	SessionWaitingForBoats,
-	Session,
-	isSessionPlaying,
-} from '../models/session';
-import { GameOverState, GameInProgressState, LastShot, NewGameStartedMessage } from 'game-messages';
-import { sendNewGameStartedMessage, sendNextTurnMessage } from '../controllers/websocket';
-import * as BoatService from './boat';
-import * as SessionService from './session';
-import * as ShotService from './shot';
-import { Boat } from '../models/boat';
-import { Coordinates } from '../models/coordinates';
-import * as R from 'ramda';
-import { TOTAL_BOATS_COUNT } from 'game-rules';
+  sendNewGameStartedMessage,
+  sendNextTurnMessage,
+} from "../controllers/websocket";
+import type { Boat } from "../models/boat";
+import type { Coordinates } from "../models/coordinates";
 import {
-	determineNextTurnPlayer,
-	getOpponentId,
-	getOpponentShotsAgainstPlayer,
-	getPlayerBoats,
-	getPlayerShots,
-	getSunkOpponentBoats,
-	validatePlayerTurn,
-} from './game-utils';
-import { InvalidGameStateError } from './errors';
+  isSessionPlaying,
+  type Session,
+  type SessionGameOver,
+  type SessionPlaying,
+  type SessionWaitingForBoats,
+} from "../models/session";
+import * as BoatService from "./boat";
+import { InvalidGameStateError } from "./errors";
+import {
+  determineNextTurnPlayer,
+  getOpponentId,
+  getOpponentShotsAgainstPlayer,
+  getPlayerBoats,
+  getPlayerShots,
+  getSunkOpponentBoats,
+  validatePlayerTurn,
+} from "./game-utils";
+import * as SessionService from "./session";
+import * as ShotService from "./shot";
 
 const COIN_FLIP_PROBABILITY = 0.5;
 
 interface CreateInGameStatePayload {
-	turn: 'player' | 'opponent';
-	session: SessionPlaying;
-	playerId: string;
-	lastShot: LastShot | null;
+  turn: "player" | "opponent";
+  session: SessionPlaying;
+  playerId: string;
+  lastShot: LastShot | null;
 }
 
-export function createInGameState(payload: CreateInGameStatePayload): GameInProgressState {
-	const { turn, session, playerId, lastShot } = payload;
-	return {
-		status: 'in_progress',
-		turn,
-		lastShot,
-		session: {
-			status: payload.session.status,
-		},
-		player: {
-			boats: getPlayerBoats(playerId)(session),
-			shots: getPlayerShots(playerId)(session.shots),
-		},
-		opponent: {
-			sunkBoats: getSunkOpponentBoats(playerId)(session),
-			shotsAgainstPlayer: getOpponentShotsAgainstPlayer(playerId)(session.shots),
-		},
-	};
+export function createInGameState(
+  payload: CreateInGameStatePayload,
+): GameInProgressState {
+  const { turn, session, playerId, lastShot } = payload;
+  return {
+    status: "in_progress",
+    turn,
+    lastShot,
+    session: {
+      status: payload.session.status,
+    },
+    player: {
+      boats: getPlayerBoats(playerId)(session),
+      shots: getPlayerShots(playerId)(session.shots),
+    },
+    opponent: {
+      sunkBoats: getSunkOpponentBoats(playerId)(session),
+      shotsAgainstPlayer: getOpponentShotsAgainstPlayer(playerId)(
+        session.shots,
+      ),
+    },
+  };
 }
 
 interface CreateGameOverStatePayload {
-	winner: 'player' | 'opponent';
-	session: SessionPlaying | SessionGameOver;
-	playerId: string;
-	lastShot: LastShot | null;
+  winner: "player" | "opponent";
+  session: SessionPlaying | SessionGameOver;
+  playerId: string;
+  lastShot: LastShot | null;
 }
 
-export function createGameOverState(payload: CreateGameOverStatePayload): GameOverState {
-	const { winner, session, playerId, lastShot } = payload;
-	return {
-		status: 'over',
-		winner,
-		lastShot,
-		session: {
-			status: payload.session.status,
-		},
-		player: {
-			boats: getPlayerBoats(playerId)(session),
-			shots: getPlayerShots(playerId)(session.shots),
-		},
-		opponent: {
-			sunkBoats: getSunkOpponentBoats(playerId)(session),
-			shotsAgainstPlayer: getOpponentShotsAgainstPlayer(playerId)(session.shots),
-		},
-	};
+export function createGameOverState(
+  payload: CreateGameOverStatePayload,
+): GameOverState {
+  const { winner, session, playerId, lastShot } = payload;
+  return {
+    status: "over",
+    winner,
+    lastShot,
+    session: {
+      status: payload.session.status,
+    },
+    player: {
+      boats: getPlayerBoats(playerId)(session),
+      shots: getPlayerShots(playerId)(session.shots),
+    },
+    opponent: {
+      sunkBoats: getSunkOpponentBoats(playerId)(session),
+      shotsAgainstPlayer: getOpponentShotsAgainstPlayer(playerId)(
+        session.shots,
+      ),
+    },
+  };
 }
 
 function areAllBoatsSunk(boats: Boat[]): boolean {
-	return boats.length === TOTAL_BOATS_COUNT && boats.every(R.prop('sunk'));
+  return boats.length === TOTAL_BOATS_COUNT && boats.every(R.prop("sunk"));
 }
 
-function checkForWinner(session: SessionPlaying, opponentId: string): string | null {
-	const opponentBoats = getPlayerBoats(opponentId)(session);
+function checkForWinner(
+  session: SessionPlaying,
+  opponentId: string,
+): string | null {
+  const opponentBoats = getPlayerBoats(opponentId)(session);
 
-	if (areAllBoatsSunk(opponentBoats)) {
-		return getOpponentId(session, opponentId);
-	}
+  if (areAllBoatsSunk(opponentBoats)) {
+    return getOpponentId(session, opponentId);
+  }
 
-	return null;
+  return null;
 }
 
 function broadcastNextTurn(
-	session: SessionPlaying,
-	nextTurnPlayerId: string,
-	lastShot?: LastShot,
+  session: SessionPlaying,
+  nextTurnPlayerId: string,
+  lastShot?: LastShot,
 ): void {
-	const opponentId = getOpponentId(session, nextTurnPlayerId);
+  const opponentId = getOpponentId(session, nextTurnPlayerId);
 
-	const nextTurnState = createInGameState({
-		turn: 'player',
-		session,
-		playerId: nextTurnPlayerId,
-		lastShot: lastShot ?? null,
-	});
+  const nextTurnState = createInGameState({
+    turn: "player",
+    session,
+    playerId: nextTurnPlayerId,
+    lastShot: lastShot ?? null,
+  });
 
-	const opponentState = createInGameState({
-		turn: 'opponent',
-		session,
-		playerId: opponentId,
-		lastShot: lastShot ?? null,
-	});
+  const opponentState = createInGameState({
+    turn: "opponent",
+    session,
+    playerId: opponentId,
+    lastShot: lastShot ?? null,
+  });
 
-	sendNextTurnMessage(nextTurnPlayerId, nextTurnState);
-	sendNextTurnMessage(opponentId, opponentState);
+  sendNextTurnMessage(nextTurnPlayerId, nextTurnState);
+  sendNextTurnMessage(opponentId, opponentState);
 }
 
-function broadcastGameOver(session: SessionGameOver, winnerId: string, lastShot: LastShot): void {
-	const loserId = getOpponentId(session, winnerId);
+function broadcastGameOver(
+  session: SessionGameOver,
+  winnerId: string,
+  lastShot: LastShot,
+): void {
+  const loserId = getOpponentId(session, winnerId);
 
-	const winnerState = createGameOverState({
-		winner: 'player',
-		session,
-		playerId: winnerId,
-		lastShot,
-	});
+  const winnerState = createGameOverState({
+    winner: "player",
+    session,
+    playerId: winnerId,
+    lastShot,
+  });
 
-	const loserState = createGameOverState({
-		winner: 'opponent',
-		session,
-		playerId: loserId,
-		lastShot,
-	});
+  const loserState = createGameOverState({
+    winner: "opponent",
+    session,
+    playerId: loserId,
+    lastShot,
+  });
 
-	sendNextTurnMessage(winnerId, winnerState);
-	sendNextTurnMessage(loserId, loserState);
+  sendNextTurnMessage(winnerId, winnerState);
+  sendNextTurnMessage(loserId, loserState);
 }
 
 interface HandleNextTurnPayload {
-	sessionId: string;
-	playerId: string;
-	opponentId: string;
-	lastShot: LastShot;
+  sessionId: string;
+  playerId: string;
+  opponentId: string;
+  lastShot: LastShot;
 }
 
 async function handleNextTurn(payload: HandleNextTurnPayload): Promise<void> {
-	const { sessionId, playerId, opponentId, lastShot } = payload;
+  const { sessionId, playerId, opponentId, lastShot } = payload;
 
-	const nextTurnPlayerId = determineNextTurnPlayer(playerId, opponentId, lastShot);
+  const nextTurnPlayerId = determineNextTurnPlayer(
+    playerId,
+    opponentId,
+    lastShot,
+  );
 
-	const updatedSession: SessionPlaying = await SessionService.setCurrentTurn(
-		sessionId,
-		nextTurnPlayerId,
-	);
+  const updatedSession: SessionPlaying = await SessionService.setCurrentTurn(
+    sessionId,
+    nextTurnPlayerId,
+  );
 
-	broadcastNextTurn(updatedSession, nextTurnPlayerId, lastShot);
+  broadcastNextTurn(updatedSession, nextTurnPlayerId, lastShot);
 }
 
 async function handleGameOver(
-	sessionId: string,
-	winnerId: string,
-	lastShot: LastShot,
+  sessionId: string,
+  winnerId: string,
+  lastShot: LastShot,
 ): Promise<void> {
-	const gameOverSession = await SessionService.setWinner(sessionId, winnerId);
-	broadcastGameOver(gameOverSession, winnerId, lastShot);
+  const gameOverSession = await SessionService.setWinner(sessionId, winnerId);
+  broadcastGameOver(gameOverSession, winnerId, lastShot);
 }
 
-export async function handleShotFired(playerId: string, x: number, y: number): Promise<void> {
-	const coordinates: Coordinates = { x, y };
+export async function handleShotFired(
+  playerId: string,
+  x: number,
+  y: number,
+): Promise<void> {
+  const coordinates: Coordinates = { x, y };
 
-	const session = await SessionService.getSessionByPlayerId(playerId);
-	if (!isSessionPlaying(session)) {
-		throw new InvalidGameStateError();
-	}
+  const session = await SessionService.getSessionByPlayerId(playerId);
+  if (!isSessionPlaying(session)) {
+    throw new InvalidGameStateError();
+  }
 
-	validatePlayerTurn(session, playerId);
+  validatePlayerTurn(session, playerId);
 
-	const shot: LastShot = await ShotService.registerShot(session.id, playerId, coordinates);
+  const shot: LastShot = await ShotService.registerShot(
+    session.id,
+    playerId,
+    coordinates,
+  );
 
-	await processAfterShotEffects(playerId, shot);
+  await processAfterShotEffects(playerId, shot);
 }
 
-async function processAfterShotEffects(playerId: string, shot: LastShot): Promise<void> {
-	const session = await SessionService.getSessionByPlayerId(playerId);
-	if (!isSessionPlaying(session)) {
-		throw new InvalidGameStateError();
-	}
+async function processAfterShotEffects(
+  playerId: string,
+  shot: LastShot,
+): Promise<void> {
+  const session = await SessionService.getSessionByPlayerId(playerId);
+  if (!isSessionPlaying(session)) {
+    throw new InvalidGameStateError();
+  }
 
-	const opponentId = getOpponentId(session, playerId);
-	const winnerId = checkForWinner(session, opponentId);
+  const opponentId = getOpponentId(session, playerId);
+  const winnerId = checkForWinner(session, opponentId);
 
-	if (winnerId) {
-		await handleGameOver(session.id, winnerId, shot);
-	} else {
-		await handleNextTurn({
-			sessionId: session.id,
-			playerId,
-			opponentId,
-			lastShot: shot,
-		});
-	}
+  if (winnerId) {
+    await handleGameOver(session.id, winnerId, shot);
+  } else {
+    await handleNextTurn({
+      sessionId: session.id,
+      playerId,
+      opponentId,
+      lastShot: shot,
+    });
+  }
 }
 
 function pickRandom([a, b]: [string, string]): string {
-	return Math.random() < COIN_FLIP_PROBABILITY ? a : b;
+  return Math.random() < COIN_FLIP_PROBABILITY ? a : b;
 }
 
 interface StartGamePayload {
-	sessionId: string;
-	ownerId: string;
-	friendId: string;
+  sessionId: string;
+  ownerId: string;
+  friendId: string;
 }
 
 async function startGame(payload: StartGamePayload): Promise<void> {
-	const { sessionId, ownerId, friendId } = payload;
-	const firstPlayerId: string = pickRandom([ownerId, friendId]);
+  const { sessionId, ownerId, friendId } = payload;
+  const firstPlayerId: string = pickRandom([ownerId, friendId]);
 
-	const updatedSession: SessionPlaying = await SessionService.setCurrentTurn(
-		sessionId,
-		firstPlayerId,
-	);
+  const updatedSession: SessionPlaying = await SessionService.setCurrentTurn(
+    sessionId,
+    firstPlayerId,
+  );
 
-	broadcastNextTurn(updatedSession, firstPlayerId);
+  broadcastNextTurn(updatedSession, firstPlayerId);
 }
 
 export async function handlePlaceBoats(
-	playerId: string,
-	boats: Array<{
-		id: string;
-		startX: number;
-		startY: number;
-		length: number;
-		orientation: 'horizontal' | 'vertical';
-	}>,
+  playerId: string,
+  boats: Array<{
+    id: string;
+    startX: number;
+    startY: number;
+    length: number;
+    orientation: "horizontal" | "vertical";
+  }>,
 ): Promise<void> {
-	await BoatService.saveBoats({
-		playerId,
-		boats,
-	});
+  await BoatService.saveBoats({
+    playerId,
+    boats,
+  });
 
-	const session: Session = await SessionService.getSessionByPlayerId(playerId);
-	if (session.status === 'ready_to_start') {
-		await startGame({
-			sessionId: session.id,
-			ownerId: session.owner.id,
-			friendId: session.friend!.id,
-		});
-	}
+  const session: Session = await SessionService.getSessionByPlayerId(playerId);
+  if (session.status === "ready_to_start") {
+    await startGame({
+      sessionId: session.id,
+      ownerId: session.owner.id,
+      friendId: session.friend.id,
+    });
+  }
 }
 
 export async function handleRequestNewGame(playerId: string): Promise<void> {
-	const resetSession: SessionWaitingForBoats = await SessionService.resetSessionForPlayer(playerId);
+  const resetSession: SessionWaitingForBoats =
+    await SessionService.resetSessionForPlayer(playerId);
 
-	const messageData: NewGameStartedMessage['data'] = {
-		session: {
-			status: resetSession.status,
-		},
-	};
+  const messageData: NewGameStartedMessage["data"] = {
+    session: {
+      status: resetSession.status,
+    },
+  };
 
-	sendNewGameStartedMessage(resetSession.owner.id, messageData);
-	sendNewGameStartedMessage(resetSession.friend.id, messageData);
+  sendNewGameStartedMessage(resetSession.owner.id, messageData);
+  sendNewGameStartedMessage(resetSession.friend.id, messageData);
 }

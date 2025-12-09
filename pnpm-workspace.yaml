@@ -3,15 +3,12 @@ packages:
   - packages/*
 
 catalog:
-  '@eslint/js': 9.39.1
-  '@types/node': 24.10.1
-  '@types/ramda': 0.31.1
-  eslint: 9.39.1
+  "@biomejs/biome": 2.3.8
+  "@types/node": 24.10.1
+  "@types/ramda": 0.31.1
   globals: 16.5.0
-  prettier: 3.6.2
   ramda: 0.32.0
   typescript: 5.9.3
-  typescript-eslint: 8.48.0
   zod: 4.1.13
 
 injectWorkspacePackages: true

@@ -17,8 +17,7 @@ README.md
 .DS_Store
 coverage
 .nyc_output
-.prettierrc*
-eslint.config.js
+biome.json
 tsconfig.json
 docker-compose.yaml
 compose.yaml

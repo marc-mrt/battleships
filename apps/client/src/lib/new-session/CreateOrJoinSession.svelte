@@ -1,152 +1,158 @@
 <script lang="ts">
-	import { appStore } from '../app-store/store.svelte';
-	import { validateUsername, validateSlug } from './session-validators';
+import { appStore } from "../app-store/store.svelte";
+import { validateSlug, validateUsername } from "./session-validators";
 
-	interface Props {
-		sharedSlug?: string | null;
-	}
+interface Props {
+  sharedSlug?: string | null;
+}
 
-	let { sharedSlug = null }: Props = $props();
+const { sharedSlug = null }: Props = $props();
 
-	function shouldValidateUsername(
-		loading: boolean,
-		username: string,
-		hasAttemptedSubmit: boolean,
-	): boolean {
-		return hasAttemptedSubmit && !loading && username.length > 0;
-	}
+function shouldValidateUsername(
+  loading: boolean,
+  username: string,
+  hasAttemptedSubmit: boolean,
+): boolean {
+  return hasAttemptedSubmit && !loading && username.length > 0;
+}
 
-	function shouldValidateSlug(
-		mode: 'create' | 'join',
-		loading: boolean,
-		slug: string,
-		hasAttemptedSubmit: boolean,
-	): boolean {
-		return mode === 'join' && hasAttemptedSubmit && !loading && slug.length > 0;
-	}
+function shouldValidateSlug(
+  mode: "create" | "join",
+  loading: boolean,
+  slug: string,
+  hasAttemptedSubmit: boolean,
+): boolean {
+  return mode === "join" && hasAttemptedSubmit && !loading && slug.length > 0;
+}
 
-	function getValidationError(isValid: boolean, errorMessage: string | null): string | null {
-		return isValid ? null : errorMessage;
-	}
+function getValidationError(
+  isValid: boolean,
+  errorMessage: string | null,
+): string | null {
+  return isValid ? null : errorMessage;
+}
 
-	function extractErrorMessage(e: unknown, fallback: string): string {
-		return e instanceof Error ? e.message : fallback;
-	}
+function extractErrorMessage(e: unknown, fallback: string): string {
+  return e instanceof Error ? e.message : fallback;
+}
 
-	function trimmedUsername(username: string): string {
-		return username.trim();
-	}
+function trimmedUsername(username: string): string {
+  return username.trim();
+}
 
-	function trimmedSlug(slug: string): string {
-		return slug.trim();
-	}
+function trimmedSlug(slug: string): string {
+  return slug.trim();
+}
 
-	function hasValidUsername(username: string): boolean {
-		return trimmedUsername(username).length > 0;
-	}
+function hasValidUsername(username: string): boolean {
+  return trimmedUsername(username).length > 0;
+}
 
-	function canSubmitForm(
-		usernameError: string | null,
-		slugError: string | null,
-		loading: boolean,
-		username: string,
-	): boolean {
-		return !usernameError && !slugError && !loading && hasValidUsername(username);
-	}
+function canSubmitForm(
+  usernameError: string | null,
+  slugError: string | null,
+  loading: boolean,
+  username: string,
+): boolean {
+  return !usernameError && !slugError && !loading && hasValidUsername(username);
+}
 
-	let mode = $state<'create' | 'join'>(sharedSlug ? 'join' : 'create');
-	let username = $state('');
-	let slug = $state(sharedSlug ?? '');
-	let loading = $state(false);
-	let error = $state('');
-	let hasAttemptedSubmit = $state(false);
+let mode = $state<"create" | "join">(sharedSlug ? "join" : "create");
+const username = $state("");
+const slug = $state(sharedSlug ?? "");
+let loading = $state(false);
+let error = $state("");
+let hasAttemptedSubmit = $state(false);
 
-	function validateUsernameField(): string | null {
-		if (!shouldValidateUsername(loading, username, hasAttemptedSubmit)) return null;
-		const result = validateUsername(username);
-		return getValidationError(result.valid, result.error);
-	}
+function validateUsernameField(): string | null {
+  if (!shouldValidateUsername(loading, username, hasAttemptedSubmit))
+    return null;
+  const result = validateUsername(username);
+  return getValidationError(result.valid, result.error);
+}
 
-	function validateSlugField(): string | null {
-		if (!shouldValidateSlug(mode, loading, slug, hasAttemptedSubmit)) return null;
-		const result = validateSlug(slug);
-		return getValidationError(result.valid, result.error);
-	}
+function validateSlugField(): string | null {
+  if (!shouldValidateSlug(mode, loading, slug, hasAttemptedSubmit)) return null;
+  const result = validateSlug(slug);
+  return getValidationError(result.valid, result.error);
+}
 
-	const usernameError = $derived(validateUsernameField());
-	const slugError = $derived(validateSlugField());
-	const canSubmit = $derived(canSubmitForm(usernameError, slugError, loading, username));
+const usernameError = $derived(validateUsernameField());
+const slugError = $derived(validateSlugField());
+const canSubmit = $derived(
+  canSubmitForm(usernameError, slugError, loading, username),
+);
 
-	function startLoading(): void {
-		loading = true;
-		error = '';
-	}
+function startLoading(): void {
+  loading = true;
+  error = "";
+}
 
-	function finishLoading(): void {
-		loading = false;
-	}
+function finishLoading(): void {
+  loading = false;
+}
 
-	function setError(message: string): void {
-		error = message;
-	}
+function setError(message: string): void {
+  error = message;
+}
 
-	function markSubmitAttempted(): void {
-		hasAttemptedSubmit = true;
-	}
+function markSubmitAttempted(): void {
+  hasAttemptedSubmit = true;
+}
 
-	async function handleCreateSession(): Promise<void> {
-		markSubmitAttempted();
-		if (!canSubmit) return;
+async function handleCreateSession(): Promise<void> {
+  markSubmitAttempted();
+  if (!canSubmit) return;
 
-		startLoading();
+  startLoading();
 
-		try {
-			await appStore.createSession({ username: trimmedUsername(username) });
-		} catch (e) {
-			setError(extractErrorMessage(e, 'Failed to create session'));
-		} finally {
-			finishLoading();
-		}
-	}
+  try {
+    await appStore.createSession({ username: trimmedUsername(username) });
+  } catch (e) {
+    setError(extractErrorMessage(e, "Failed to create session"));
+  } finally {
+    finishLoading();
+  }
+}
 
-	async function handleJoinSession(): Promise<void> {
-		markSubmitAttempted();
-		if (!canSubmit || mode !== 'join') return;
+async function handleJoinSession(): Promise<void> {
+  markSubmitAttempted();
+  if (!canSubmit || mode !== "join") return;
 
-		startLoading();
+  startLoading();
 
-		try {
-			await appStore.joinSession({
-				username: trimmedUsername(username),
-				slug: trimmedSlug(slug),
-			});
-		} catch (e) {
-			setError(extractErrorMessage(e, 'Failed to join session'));
-		} finally {
-			finishLoading();
-		}
-	}
+  try {
+    await appStore.joinSession({
+      username: trimmedUsername(username),
+      slug: trimmedSlug(slug),
+    });
+  } catch (e) {
+    setError(extractErrorMessage(e, "Failed to join session"));
+  } finally {
+    finishLoading();
+  }
+}
 
-	function isCreateMode(): boolean {
-		return mode === 'create';
-	}
+function isCreateMode(): boolean {
+  return mode === "create";
+}
 
-	function handleSubmit(): void {
-		if (isCreateMode()) {
-			handleCreateSession();
-		} else {
-			handleJoinSession();
-		}
-	}
+function handleSubmit(): void {
+  if (isCreateMode()) {
+    handleCreateSession();
+  } else {
+    handleJoinSession();
+  }
+}
 
-	function switchToJoinMode(): void {
-		mode = 'join';
-	}
+function switchToJoinMode(): void {
+  mode = "join";
+}
 
-	function preventDefaultAndSubmit(e: Event): void {
-		e.preventDefault();
-		handleSubmit();
-	}
+function preventDefaultAndSubmit(e: Event): void {
+  e.preventDefault();
+  handleSubmit();
+}
 </script>
 
 <header>

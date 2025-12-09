@@ -1,193 +1,193 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
-	import type { GameState } from 'game-messages';
-	import type { CellState } from '../grid/types';
-	import { appStore } from '../app-store/store.svelte';
-	import ShootingGrid from './ShootingGrid.svelte';
-	import WaitingGrid from './WaitingGrid.svelte';
-	import { renderPlayerGrid, renderOpponentGrid } from './presenter';
-	import { createEmptyCellGrid } from '../grid/render-utils';
-	import { GRID_SIZE } from 'game-rules';
-	import { createEffectManager } from './effect-manager.svelte';
+import type { GameState } from "game-messages";
+import { GRID_SIZE } from "game-rules";
+import { onDestroy } from "svelte";
+import { appStore } from "../app-store/store.svelte";
+import { createEmptyCellGrid } from "../grid/render-utils";
+import type { CellState } from "../grid/types";
+import { createEffectManager } from "./effect-manager.svelte";
+import { renderOpponentGrid, renderPlayerGrid } from "./presenter";
+import ShootingGrid from "./ShootingGrid.svelte";
+import WaitingGrid from "./WaitingGrid.svelte";
 
-	const isOwner = $derived(appStore.isOwner);
+const isOwner = $derived(appStore.isOwner);
 
-	function shouldResetGame(rawGame: GameState | null): boolean {
-		return !rawGame;
-	}
+function shouldResetGame(rawGame: GameState | null): boolean {
+  return !rawGame;
+}
 
-	function shouldInitializeGame(displayedGame: GameState | null): boolean {
-		return !displayedGame;
-	}
+function shouldInitializeGame(displayedGame: GameState | null): boolean {
+  return !displayedGame;
+}
 
-	function hasGameChanged(rawGame: GameState, displayedGame: GameState): boolean {
-		return rawGame !== displayedGame;
-	}
+function hasGameChanged(rawGame: GameState, displayedGame: GameState): boolean {
+  return rawGame !== displayedGame;
+}
 
-	function getHitResult(hit: boolean): 'hit' | 'miss' {
-		return hit ? 'hit' : 'miss';
-	}
+function getHitResult(hit: boolean): "hit" | "miss" {
+  return hit ? "hit" : "miss";
+}
 
-	function isPlayerTurn(turn: string): boolean {
-		return turn === 'player';
-	}
+function isPlayerTurn(turn: string): boolean {
+  return turn === "player";
+}
 
-	function isOpponentTurn(turn: string): boolean {
-		return turn === 'opponent';
-	}
+function isOpponentTurn(turn: string): boolean {
+  return turn === "opponent";
+}
 
-	function canFireShot(
-		effectManager: ReturnType<typeof createEffectManager>,
-		pendingGame: GameState | null,
-	): boolean {
-		return !effectManager.isAnimating() && !pendingGame;
-	}
+function canFireShot(
+  effectManager: ReturnType<typeof createEffectManager>,
+  pendingGame: GameState | null,
+): boolean {
+  return !effectManager.isAnimating() && !pendingGame;
+}
 
-	function buildCellAriaLabel(x: number, y: number): string {
-		return `Fire at position ${x}, ${y}`;
-	}
+function buildCellAriaLabel(x: number, y: number): string {
+  return `Fire at position ${x}, ${y}`;
+}
 
-	const player = $derived(appStore.player);
-	const opponent = $derived(appStore.opponent);
-	const rawGame = $derived(appStore.game);
+const player = $derived(appStore.player);
+const opponent = $derived(appStore.opponent);
+const rawGame = $derived(appStore.game);
 
-	const effectManager = createEffectManager();
-	let displayedGame = $state<GameState | null>(null);
-	let pendingGame = $state<GameState | null>(null);
+const effectManager = createEffectManager();
+let displayedGame = $state<GameState | null>(null);
+let pendingGame = $state<GameState | null>(null);
 
-	const game = $derived(displayedGame);
+const game = $derived(displayedGame);
 
-	function computeOpponentTurnCells(): CellState[][] {
-		if (!game) return createEmptyCellGrid(GRID_SIZE);
-		return renderPlayerGrid(game);
-	}
+function computeOpponentTurnCells(): CellState[][] {
+  if (!game) return createEmptyCellGrid(GRID_SIZE);
+  return renderPlayerGrid(game);
+}
 
-	function computeYourTurnCells(): CellState[][] {
-		if (!game) return createEmptyCellGrid(GRID_SIZE);
-		return renderOpponentGrid(game);
-	}
+function computeYourTurnCells(): CellState[][] {
+  if (!game) return createEmptyCellGrid(GRID_SIZE);
+  return renderOpponentGrid(game);
+}
 
-	const opponentTurnCells = $derived.by(computeOpponentTurnCells);
+const opponentTurnCells = $derived.by(computeOpponentTurnCells);
 
-	const yourTurnCells = $derived.by(computeYourTurnCells);
+const yourTurnCells = $derived.by(computeYourTurnCells);
 
-	function resetGameState() {
-		displayedGame = null;
-		pendingGame = null;
-	}
+function resetGameState() {
+  displayedGame = null;
+  pendingGame = null;
+}
 
-	function initializeGame(rawGame: GameState) {
-		displayedGame = rawGame;
-	}
+function initializeGame(rawGame: GameState) {
+  displayedGame = rawGame;
+}
 
-	function updatePendingGame(rawGame: GameState) {
-		pendingGame = rawGame;
-	}
+function updatePendingGame(rawGame: GameState) {
+  pendingGame = rawGame;
+}
 
-	function syncGameState(): void {
-		if (shouldResetGame(rawGame)) {
-			resetGameState();
-			return;
-		}
+function syncGameState(): void {
+  if (shouldResetGame(rawGame)) {
+    resetGameState();
+    return;
+  }
 
-		if (!rawGame) {
-			return;
-		}
+  if (!rawGame) {
+    return;
+  }
 
-		if (shouldInitializeGame(displayedGame)) {
-			initializeGame(rawGame);
-			return;
-		}
+  if (shouldInitializeGame(displayedGame)) {
+    initializeGame(rawGame);
+    return;
+  }
 
-		if (!displayedGame) {
-			return;
-		}
+  if (!displayedGame) {
+    return;
+  }
 
-		if (!hasGameChanged(rawGame, displayedGame)) {
-			return;
-		}
+  if (!hasGameChanged(rawGame, displayedGame)) {
+    return;
+  }
 
-		updatePendingGame(rawGame);
-		handleGameStateChange(displayedGame, rawGame);
-	}
+  updatePendingGame(rawGame);
+  handleGameStateChange(displayedGame, rawGame);
+}
 
-	$effect(syncGameState);
+$effect(syncGameState);
 
-	function updateDisplayedGame(newGame: GameState) {
-		displayedGame = newGame;
-		pendingGame = null;
-	}
+function updateDisplayedGame(newGame: GameState) {
+  displayedGame = newGame;
+  pendingGame = null;
+}
 
-	async function playShootingAnimation(lastShot: {
-		x: number;
-		y: number;
-		hit: boolean;
-		sunkBoat: boolean;
-	}) {
-		await effectManager.playShootingSequence(
-			lastShot.x,
-			lastShot.y,
-			getHitResult(lastShot.hit),
-			lastShot.sunkBoat,
-		);
-	}
+async function playShootingAnimation(lastShot: {
+  x: number;
+  y: number;
+  hit: boolean;
+  sunkBoat: boolean;
+}) {
+  await effectManager.playShootingSequence(
+    lastShot.x,
+    lastShot.y,
+    getHitResult(lastShot.hit),
+    lastShot.sunkBoat,
+  );
+}
 
-	async function playReceivingAnimation(lastShot: {
-		x: number;
-		y: number;
-		hit: boolean;
-		sunkBoat: boolean;
-	}) {
-		await effectManager.playReceivingSequence(
-			lastShot.x,
-			lastShot.y,
-			getHitResult(lastShot.hit),
-			lastShot.sunkBoat,
-		);
-	}
+async function playReceivingAnimation(lastShot: {
+  x: number;
+  y: number;
+  hit: boolean;
+  sunkBoat: boolean;
+}) {
+  await effectManager.playReceivingSequence(
+    lastShot.x,
+    lastShot.y,
+    getHitResult(lastShot.hit),
+    lastShot.sunkBoat,
+  );
+}
 
-	async function handleGameStateChange(oldGame: GameState, newGame: GameState) {
-		if (oldGame.status !== 'in_progress') return;
+async function handleGameStateChange(oldGame: GameState, newGame: GameState) {
+  if (oldGame.status !== "in_progress") return;
 
-		const previousTurn = oldGame.turn;
-		const lastShot = newGame.lastShot;
-		if (!lastShot) {
-			return;
-		}
+  const previousTurn = oldGame.turn;
+  const lastShot = newGame.lastShot;
+  if (!lastShot) {
+    return;
+  }
 
-		if (isPlayerTurn(previousTurn)) {
-			await playShootingAnimation(lastShot);
-		} else {
-			await playReceivingAnimation(lastShot);
-		}
+  if (isPlayerTurn(previousTurn)) {
+    await playShootingAnimation(lastShot);
+  } else {
+    await playReceivingAnimation(lastShot);
+  }
 
-		updateDisplayedGame(newGame);
-	}
+  updateDisplayedGame(newGame);
+}
 
-	function sendFireShotAction(x: number, y: number) {
-		appStore.sendAction({
-			type: 'fire_shot',
-			data: { x, y },
-		});
-	}
+function sendFireShotAction(x: number, y: number) {
+  appStore.sendAction({
+    type: "fire_shot",
+    data: { x, y },
+  });
+}
 
-	function handleCellClick(x: number, y: number) {
-		if (!canFireShot(effectManager, pendingGame)) {
-			return;
-		}
+function handleCellClick(x: number, y: number) {
+  if (!canFireShot(effectManager, pendingGame)) {
+    return;
+  }
 
-		sendFireShotAction(x, y);
-	}
+  sendFireShotAction(x, y);
+}
 
-	function handleNewGameClick(): void {
-		appStore.requestNewGame();
-	}
+function handleNewGameClick(): void {
+  appStore.requestNewGame();
+}
 
-	function cleanup(): void {
-		effectManager.reset();
-	}
+function cleanup(): void {
+  effectManager.reset();
+}
 
-	onDestroy(cleanup);
+onDestroy(cleanup);
 </script>
 
 <header>
