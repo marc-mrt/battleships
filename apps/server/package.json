@@ -8,8 +8,7 @@
     "start": "node dist/index.mjs",
     "dev": "tsx watch --conditions=development --tsconfig=tsconfig.json src/index.ts",
     "build": "tsdown",
-    "lint": "biome lint",
-    "format": "biome format --write",
+    "check": "biome check --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
