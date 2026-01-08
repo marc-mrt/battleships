@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 const ALGORITHM = "HS256";
 const JWT_TYPE = "JWT";

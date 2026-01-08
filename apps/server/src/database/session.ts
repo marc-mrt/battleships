@@ -1,12 +1,13 @@
 import * as crypto from "node:crypto";
 import { z } from "zod";
-import type {
-  Session,
-  SessionCreated,
-  SessionGameOver,
-  SessionPlaying,
-  SessionReadyToStart,
-  SessionWaitingForBoats,
+import {
+  isSessionPlaying,
+  type Session,
+  type SessionCreated,
+  type SessionGameOver,
+  type SessionPlaying,
+  type SessionReadyToStart,
+  type SessionWaitingForBoats,
 } from "../models/session";
 import { BoatDatabaseSchema, mapToBoat } from "./boat";
 import { query } from "./db";
@@ -156,7 +157,7 @@ export async function setCurrentTurn(
   }
 
   const session: Session = mapToSession(result.rows[0]);
-  if (session.status !== "playing") {
+  if (!isSessionPlaying(session)) {
     throw new UnexpectedDatabaseError(
       `Session is in unexpected '${session.status}' status: ${sessionId}`,
     );
@@ -298,9 +299,13 @@ function createBaseSession(parsed: z.infer<typeof SessionDatabaseSchema>) {
 }
 
 function createFriendData(parsed: z.infer<typeof SessionDatabaseSchema>) {
+  if (!parsed.friend_id || !parsed.friend_username) {
+    throw new Error("Friend data is incomplete");
+  }
+
   return {
-    id: parsed.friend_id!,
-    username: parsed.friend_username!,
+    id: parsed.friend_id,
+    username: parsed.friend_username,
   };
 }
 
@@ -336,13 +341,17 @@ function mapToReadyToStart(
 function mapToPlaying(
   parsed: z.infer<typeof SessionDatabaseSchema>,
 ): SessionPlaying {
+  if (!parsed.current_turn_id) {
+    throw new Error("Current turn ID is missing");
+  }
+
   return {
     ...createBaseSession(parsed),
     status: "playing",
     ownerBoats: parsed.owner_boats?.map(mapToBoat) ?? [],
     friend: createFriendData(parsed),
     friendBoats: parsed.friend_boats?.map(mapToBoat) ?? [],
-    currentTurn: { id: parsed.current_turn_id! },
+    currentTurn: { id: parsed.current_turn_id },
     shots: parsed.shots?.map(mapToShot) ?? [],
   };
 }
@@ -350,9 +359,18 @@ function mapToPlaying(
 function mapToGameOver(
   parsed: z.infer<typeof SessionDatabaseSchema>,
 ): SessionGameOver {
+  if (!parsed.winner_id) {
+    throw new Error("Winner ID is missing");
+  }
+
   return {
-    ...mapToPlaying(parsed),
-    winner: { id: parsed.winner_id! },
+    ...createBaseSession(parsed),
+    status: "playing",
+    ownerBoats: parsed.owner_boats?.map(mapToBoat) ?? [],
+    friend: createFriendData(parsed),
+    friendBoats: parsed.friend_boats?.map(mapToBoat) ?? [],
+    shots: parsed.shots?.map(mapToShot) ?? [],
+    winner: { id: parsed.winner_id },
   };
 }
 

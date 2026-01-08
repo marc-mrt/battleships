@@ -17,7 +17,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
-    "globals": "catalog:",
     "typescript": "catalog:"
   }
 }

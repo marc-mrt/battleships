@@ -6,7 +6,7 @@ A real-time 2-player battleships game for the web using WebSockets for game stat
 
 **Author**: Marc Morant
 **License**: MIT
-**Tech Stack**: TypeScript, Svelte 5, Express, PostgreSQL, WebSockets
+**Tech Stack**: TypeScript, React, Express, PostgreSQL, WebSockets
 
 ---
 
@@ -17,7 +17,7 @@ This is a **pnpm monorepo** with workspace support:
 ```
 battleships/
 ├── apps/
-│   ├── client/          # Svelte 5 frontend application
+│   ├── client/          # React frontend application
 │   └── server/          # Express backend with WebSocket support
 └── packages/
     ├── game-messages/   # Shared WebSocket message schemas (Zod)
@@ -95,39 +95,18 @@ server/src/
 - Helper functions: `parseSessionCookie()`, `setSessionCookie()`
 - JWT utilities: `signJwt()`, `verifyJwt()` in `utils/jwt.ts`
 
-### Frontend (Svelte 5)
+### Frontend
 
 #### Key Patterns
 
-**1. Svelte 5 Runes**
-
-- Use `$state` for reactive state
-- Use `$derived` for computed values
-- Use `$props()` for component props with TypeScript
-- Services use `.svelte.ts` extension for reactive modules
-
-**2. State Management**
-
-- `game-store.svelte.ts`: Central game state using Svelte stores
-- `websocket-manager.svelte.ts`: WebSocket connection management
-- Store pattern: `writable<Store | null>(null)` for nullable state
-- Uses Svelte's `writable` from `svelte/store`
-
-**3. WebSocket Client**
-
-- Auto-reconnect with exponential backoff (max 5 attempts)
-- Message handler registry using `SvelteSet`
-- Connection status tracking with `$state`
-- Type-safe message sending/receiving
-
-**4. API Client**
+**1. API Client**
 
 - Separate files per endpoint in `lib/api/`
 - Always use `credentials: 'include'` for cookies
 - Config-based URLs from `VITE_SERVER_BASE_URL` env var
 - WebSocket URL auto-detection (ws/wss based on protocol)
 
-**5. Component Organization**
+**2. Component Organization**
 
 - Feature-based folders (e.g., `GameSession/`)
 - Subcomponents in `components/` subfolder
@@ -143,8 +122,7 @@ server/src/
 **File Extensions**
 
 - `.ts` - Standard TypeScript
-- `.svelte.ts` - Svelte 5 reactive modules with runes
-- `.svelte` - Svelte components
+- `.tsx` - TypeScript React components
 
 **Type Definitions**
 
@@ -188,9 +166,9 @@ server/src/
 
 **Naming Conventions**
 
-- **Files**: kebab-case (e.g., `game-store.svelte.ts`, `create-session.ts`)
-- **Components**: PascalCase (e.g., `PlaceBoats.svelte`, `BoatGrid.svelte`)
-- **Classes**: PascalCase (e.g., `GridManager`, `WebsocketManagerSvelte`)
+- **Files**: kebab-case (e.g., `create-session.ts`)
+- **Components**: PascalCase (e.g., `PlaceBoats.tsx`, `BoatGrid.tsx`)
+- **Classes**: PascalCase (e.g., `GridManager`, `WebsocketManager`)
 - **Interfaces**: PascalCase (e.g., `Session`, `Player`, `Boat`)
 - **Functions**: camelCase (e.g., `createSession`, `handleShotFired`)
 - **Constants**: SCREAMING_SNAKE_CASE (e.g., `GRID_SIZE`, `BOAT_TYPES`)
@@ -338,7 +316,7 @@ cd apps/server && pnpm build
 - `build`: Production build
 - `lint`: Biome lint
 - `format`: Biome format
-- `check`: Type check (Svelte-specific)
+- `typecheck`: Type check
 
 ### Environment Variables
 
@@ -384,8 +362,6 @@ cd apps/server && pnpm build
 - Use catalog for shared dependencies: `"ramda": "catalog:"`
 - Validate all external input with Zod
 - Use discriminated unions for message types
-- Clean up subscriptions in `onDestroy`
-- Use `$derived` for computed Svelte state
 - Handle WebSocket reconnection gracefully
 - Use TypeScript strict mode
 - Export types alongside implementations
@@ -402,8 +378,6 @@ cd apps/server && pnpm build
 - Don't commit sensitive data (use .gitignore)
 - Don't use direct SQL string concatenation (use parameterized queries)
 - Don't forget error handling in async functions
-- Don't mutate props in Svelte components
-- Don't use `onMount` for subscription setup if `$effect` is more appropriate
 - Don't use arrow functions for main logic (use named functions)
 - Don't pass >2 individual parameters (use payload objects)
 - Don't mix side effects with pure logic
@@ -415,7 +389,7 @@ cd apps/server && pnpm build
 
 - TypeScript strict mode enabled
 - Biome for linting and formatting
-- Type checking via `tsc` and `svelte-check`
+- Type checking via `tsc`
 - No unused locals/parameters (enforced by tsconfig)
 
 ---

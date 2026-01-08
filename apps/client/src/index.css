@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gradient-scanline: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(74, 123, 167, 0.03) 2px,
+    rgba(74, 123, 167, 0.03) 4px
+  );
+}
+
+:root {
+  font-family: "Courier New", "Consolas", monospace, system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  text-align: center;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}

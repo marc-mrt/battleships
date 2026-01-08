@@ -13,7 +13,7 @@ function getApiBaseUrlFromEnv(): URL {
 }
 
 function removeSlashes(path: string): string {
-  return path.replace(/\/$/, "").replace(/\/$/, "").replace(/^\//, "");
+  return path.replace(/^\/+|\/+$/g, "");
 }
 
 export function getApiURL(path: string): string {
@@ -23,13 +23,9 @@ export function getApiURL(path: string): string {
   return url.toString();
 }
 
-function getWebSocketProtocol(protocol: string): string {
-  return protocol === "https:" ? "wss" : "ws";
-}
-
 function getWebSocketUrl(): URL {
   const apiBaseURL = getApiBaseUrlFromEnv();
-  const protocol = getWebSocketProtocol(apiBaseURL.protocol);
+  const protocol = apiBaseURL.protocol === "https:" ? "wss" : "ws";
   const host = apiBaseURL.host;
   const path = "ws";
 

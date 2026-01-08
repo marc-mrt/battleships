@@ -37,7 +37,7 @@ function parseAllowedOrigins(origins: string): string[] {
 
 function parsePort(portString: string): number {
   const port = parseInt(portString, 10);
-  if (isNaN(port)) {
+  if (Number.isNaN(port)) {
     throw new Error(`Invalid PORT value: ${portString}.`);
   }
   return port;

@@ -1,7 +1,7 @@
+import { createServer } from "node:http";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Application } from "express";
-import { createServer } from "http";
 import { WebSocketServer } from "ws";
 import { config } from "./config";
 import * as HealthcheckController from "./controllers/healthcheck";

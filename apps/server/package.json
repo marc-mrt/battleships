@@ -33,7 +33,6 @@
     "@types/pg": "^8.15.6",
     "@types/ramda": "catalog:",
     "@types/ws": "^8.18.1",
-    "globals": "catalog:",
     "tsdown": "^0.16.7",
     "tsx": "^4.20.6",
     "typescript": "catalog:"

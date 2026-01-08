@@ -15,7 +15,7 @@ export function validatePlayerTurn(
 }
 
 export function getOpponentId(
-  session: SessionPlaying,
+  session: SessionPlaying | SessionGameOver,
   playerId: string,
 ): string {
   return playerId === session.owner.id ? session.friend.id : session.owner.id;

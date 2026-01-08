@@ -169,10 +169,6 @@ async function sendGameStateOnReconnection(playerId: string): Promise<void> {
   try {
     const session = await SessionService.getSessionByPlayerId(playerId);
 
-    if (!isSessionPlaying(session)) {
-      return;
-    }
-
     let gameState: GameState;
     if (isSessionGameOver(session)) {
       const winner = session.winner.id === playerId ? "player" : "opponent";
@@ -182,7 +178,7 @@ async function sendGameStateOnReconnection(playerId: string): Promise<void> {
         playerId,
         lastShot: null,
       });
-    } else {
+    } else if (isSessionPlaying(session)) {
       const isPlayerTurn = session.currentTurn.id === playerId;
       const turn = isPlayerTurn ? "player" : "opponent";
       gameState = GameStateManager.createInGameState({
@@ -191,6 +187,8 @@ async function sendGameStateOnReconnection(playerId: string): Promise<void> {
         playerId,
         lastShot: null,
       });
+    } else {
+      return;
     }
 
     sendNextTurnMessage(playerId, gameState);

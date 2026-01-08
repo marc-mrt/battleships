@@ -6,10 +6,12 @@
     "lib": ["ES2023"],
     "types": ["node"],
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
-    "erasableSyntaxOnly": true
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["vite.config.ts"]
 }

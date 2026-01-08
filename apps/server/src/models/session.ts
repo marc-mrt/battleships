@@ -44,12 +44,12 @@ export function isSessionPlaying(session: Session): session is SessionPlaying {
   );
 }
 
-export interface SessionGameOver extends SessionPlaying {
+export interface SessionGameOver extends Omit<SessionPlaying, "currentTurn"> {
   winner: Pick<Player, "id">;
 }
 
 export function isSessionGameOver(
-  session: SessionPlaying,
+  session: Session,
 ): session is SessionGameOver {
   return "winner" in session && session.winner != null;
 }

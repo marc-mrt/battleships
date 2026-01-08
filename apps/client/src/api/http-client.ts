@@ -17,39 +17,13 @@ const defaultHeaders: Record<string, string> = {
   "Content-Type": "application/json",
 };
 
-function mergeHeaders(
-  customHeaders?: Record<string, string>,
-): Record<string, string> {
-  return R.mergeRight(defaultHeaders, customHeaders ?? {});
-}
-
-function serializeBody(body?: unknown): string | undefined {
-  return body ? JSON.stringify(body) : undefined;
-}
-
 function createRequestOptions(config: RequestConfig): RequestInit {
   return {
     method: config.method,
     credentials: config.credentials ?? "include",
-    headers: mergeHeaders(config.headers),
-    body: serializeBody(config.body),
+    headers: R.mergeRight(defaultHeaders, config.headers ?? {}),
+    body: config.body ? JSON.stringify(config.body) : undefined,
   };
-}
-
-function createErrorResult<T>(message: string): Result<T, string> {
-  return { success: false, error: message };
-}
-
-function createSuccessResult<T>(value: T): Result<T, string> {
-  return { success: true, value };
-}
-
-function buildHttpErrorMessage(response: Response): string {
-  return `HTTP ${response.status} ${response.statusText}`;
-}
-
-function buildNetworkErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -67,14 +41,15 @@ async function executeRequest<T>(
     const response = await fetch(url, options);
 
     if (!response.ok) {
-      return createErrorResult(buildHttpErrorMessage(response));
+      const message = `HTTP ${response.status} ${response.statusText}`;
+      return { success: false, error: message };
     }
 
     const value = await parseResponse<T>(response);
-    return createSuccessResult(value);
+    return { success: true, value };
   } catch (error) {
-    const message = buildNetworkErrorMessage(error);
-    return createErrorResult(message);
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
   }
 }
 
