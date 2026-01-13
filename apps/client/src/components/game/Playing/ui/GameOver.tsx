@@ -9,39 +9,62 @@ import {
   getPlayerCellState,
   positionKey,
 } from "../operations";
+import { ScoreFooter } from "./ScoreFooter";
 
 interface GameOverProps {
   game: GameOverState;
+  playerName: string;
+  opponentName: string;
+  canPlayAgain: boolean;
 }
 
-export function GameOver({ game }: GameOverProps): JSX.Element {
+export function GameOver({
+  game,
+  playerName,
+  opponentName,
+  canPlayAgain,
+}: GameOverProps): JSX.Element {
   const playerData = buildPlayerGridData(game);
 
   function handleNewGame(): void {
     requestNewGame();
   }
 
+  const isVictory = game.winner === "player";
+
   return (
     <PageLayout
-      header={<GameOverHeader isVictory={game.winner === "player"} />}
+      header={<GameOverHeader isVictory={isVictory} />}
       footer={
-        <Button ariaLabel="Request new game" onClick={handleNewGame}>
-          Play Again
-        </Button>
+        <div className="flex flex-col gap-4">
+          {canPlayAgain && (
+            <Button ariaLabel="Request new game" onClick={handleNewGame}>
+              Play Again
+            </Button>
+          )}
+          <ScoreFooter
+            playerName={playerName}
+            playerWins={game.player.wins}
+            opponentName={opponentName}
+            opponentWins={game.opponent.wins}
+          />
+        </div>
       }
     >
-      <GameGrid>
-        {R.times(
-          (y) =>
-            R.times((x) => {
-              const key = positionKey(x, y);
-              const cellState = getPlayerCellState(playerData, x, y);
+      <div className="flex flex-col items-center">
+        <GameGrid>
+          {R.times(
+            (y) =>
+              R.times((x) => {
+                const key = positionKey(x, y);
+                const cellState = getPlayerCellState(playerData, x, y);
 
-              return <GameCell key={key} variant={cellState} />;
-            }, GRID_SIZE),
-          GRID_SIZE,
-        )}
-      </GameGrid>
+                return <GameCell key={key} variant={cellState} />;
+              }, GRID_SIZE),
+            GRID_SIZE,
+          )}
+        </GameGrid>
+      </div>
     </PageLayout>
   );
 }

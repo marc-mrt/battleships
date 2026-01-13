@@ -9,12 +9,19 @@ import {
   getOpponentCellState,
   positionKey,
 } from "../operations";
+import { ScoreFooter } from "./ScoreFooter";
 
 interface PlayerTurnProps {
   game: GameInProgressState;
+  playerName: string;
+  opponentName: string;
 }
 
-export function PlayerTurn({ game }: PlayerTurnProps): JSX.Element {
+export function PlayerTurn({
+  game,
+  playerName,
+  opponentName,
+}: PlayerTurnProps): JSX.Element {
   const opponentData = buildOpponentGridData(game);
 
   function handleCellClick(x: number, y: number): void {
@@ -33,6 +40,15 @@ export function PlayerTurn({ game }: PlayerTurnProps): JSX.Element {
           <Title>Your Turn</Title>
           <Subtitle>Tap a cell to fire</Subtitle>
         </div>
+      }
+      footer={
+        <ScoreFooter
+          playerName={playerName}
+          playerWins={game.player.wins}
+          opponentName={opponentName}
+          opponentWins={game.opponent.wins}
+          turn="player"
+        />
       }
     >
       <div className="flex flex-col items-center">

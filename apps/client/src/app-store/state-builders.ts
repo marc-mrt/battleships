@@ -12,6 +12,7 @@ export function buildPlayerState(player: Player): PlayerState {
     id: player.id,
     username: player.username,
     isOwner: player.isOwner,
+    wins: player.wins,
   };
 }
 

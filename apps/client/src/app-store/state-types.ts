@@ -5,6 +5,7 @@ export interface PlayerState {
   id: string;
   username: string;
   isOwner: boolean;
+  wins: number;
 }
 
 export interface SessionState {

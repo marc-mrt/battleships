@@ -6,6 +6,7 @@ import { generateMapperToDomainModel } from "./mapper";
 interface CreatePlayerPayload {
   username: string;
 }
+
 export async function createPlayer(
   payload: CreatePlayerPayload,
 ): Promise<Player> {
@@ -18,15 +19,21 @@ export async function createPlayer(
   return mapToPlayer(result.rows[0]);
 }
 
+export async function incrementWins(playerId: string): Promise<void> {
+  await query("UPDATE players SET wins = wins + 1 WHERE id = $1", [playerId]);
+}
+
 const PlayerDatabaseSchema = z.object({
   id: z.string(),
   username: z.string(),
+  wins: z.number().int().default(0),
 });
 
 function mapper(parsed: z.infer<typeof PlayerDatabaseSchema>): Player {
   return {
     id: parsed.id,
     username: parsed.username,
+    wins: parsed.wins,
   };
 }
 

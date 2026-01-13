@@ -85,6 +85,7 @@ interface PlayerResponse {
   id: string;
   username: string;
   isOwner: boolean;
+  wins: number;
 }
 
 interface SessionResponse {
@@ -110,22 +111,30 @@ function getOpponent(
   const player = playerIsOwner ? session.friend : session.owner;
   const opponentIsOwner = !playerIsOwner;
 
-  return { id: player.id, username: player.username, isOwner: opponentIsOwner };
+  return {
+    id: player.id,
+    username: player.username,
+    isOwner: opponentIsOwner,
+    wins: player.wins,
+  };
 }
 
 function getPlayer(session: Session, playerId: string): PlayerResponse {
   const playerIsOwner = isPlayerOwner(session, playerId);
   let username: string;
+  let wins: number;
   if (playerIsOwner) {
     username = session.owner.username;
+    wins = session.owner.wins;
   } else {
     if (session.status === "waiting_for_opponent") {
       throw new Error("Invalid session state for player mapping");
     }
     username = session.friend.username;
+    wins = session.friend.wins;
   }
 
-  return { id: playerId, username, isOwner: playerIsOwner };
+  return { id: playerId, username, isOwner: playerIsOwner, wins };
 }
 
 function mapToSessionResponse(

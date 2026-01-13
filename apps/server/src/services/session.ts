@@ -1,4 +1,5 @@
 import { sendOpponentJoinedMessage } from "../controllers/websocket";
+import * as PlayerDB from "../database/player";
 import * as SessionDB from "../database/session";
 import type { Player } from "../models/player";
 import {
@@ -56,6 +57,7 @@ export async function joinSession(
       id: player.id,
       username: player.username,
       isOwner: false,
+      wins: player.wins,
     },
   });
 
@@ -88,6 +90,8 @@ export async function setWinner(
   sessionId: string,
   winnerId: string,
 ): Promise<SessionGameOver> {
+  await PlayerDB.incrementWins(winnerId);
+
   const session: SessionGameOver = await SessionDB.setWinner({
     sessionId,
     winnerId,

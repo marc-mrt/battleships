@@ -43,7 +43,8 @@ export async function createSession(
 				)
 			SELECT s.*,
 						 o.id       AS owner_id,
-						 o.username AS owner_username
+						 o.username AS owner_username,
+						 o.wins     AS owner_wins
 			FROM new_session s
 						 JOIN players o ON s.owner_id = o.id
 		`,
@@ -76,8 +77,10 @@ export async function assignFriendToSession(
 			SELECT s.*,
 						 o.id       AS owner_id,
 						 o.username AS owner_username,
+						 o.wins     AS owner_wins,
 						 f.id       AS friend_id,
-						 f.username AS friend_username
+						 f.username AS friend_username,
+						 f.wins     AS friend_wins
 			FROM updated_session s
 						 JOIN players o ON s.owner_id = o.id
 						 JOIN players f ON s.friend_id = f.id
@@ -123,9 +126,11 @@ function buildFullSessionSelectQuery(
 		SELECT s.*,
 					 owner_player.id                        AS owner_id,
 					 owner_player.username                  AS owner_username,
+					 owner_player.wins                      AS owner_wins,
 					 ${buildBoatsSubquery("owner_player.id")}  AS owner_boats,
 					 friend_player.id                       AS friend_id,
 					 friend_player.username                 AS friend_username,
+					 friend_player.wins                     AS friend_wins,
 					 ${buildBoatsSubquery("friend_player.id")} AS friend_boats,
 					 ${buildShotsSubquery("s.id")}        AS shots
 		FROM ${source} s
@@ -216,8 +221,10 @@ export async function resetSessionToBoatPlacement(
 			SELECT s.*,
 						 o.id       AS owner_id,
 						 o.username AS owner_username,
+						 o.wins     AS owner_wins,
 						 f.id       AS friend_id,
-						 f.username AS friend_username
+						 f.username AS friend_username,
+						 f.wins     AS friend_wins
 			FROM updated_session s
 						 JOIN players o ON s.owner_id = o.id
 						 JOIN players f ON s.friend_id = f.id
@@ -262,9 +269,11 @@ const SessionDatabaseSchema = z.object({
   slug: z.string(),
   owner_id: z.string(),
   owner_username: z.string(),
+  owner_wins: z.number().int().default(0),
   owner_boats: z.array(BoatDatabaseSchema).optional().nullable(),
   friend_id: z.string().optional().nullable(),
   friend_username: z.string().optional().nullable(),
+  friend_wins: z.number().int().optional().nullable(),
   friend_boats: z.array(BoatDatabaseSchema).optional().nullable(),
   current_turn_id: z.string().optional().nullable(),
   winner_id: z.string().optional().nullable(),
@@ -294,6 +303,7 @@ function createBaseSession(parsed: z.infer<typeof SessionDatabaseSchema>) {
     owner: {
       id: parsed.owner_id,
       username: parsed.owner_username,
+      wins: parsed.owner_wins,
     },
   };
 }
@@ -306,6 +316,7 @@ function createFriendData(parsed: z.infer<typeof SessionDatabaseSchema>) {
   return {
     id: parsed.friend_id,
     username: parsed.friend_username,
+    wins: parsed.friend_wins ?? 0,
   };
 }
 

@@ -35,6 +35,23 @@ import * as ShotService from "./shot";
 
 const COIN_FLIP_PROBABILITY = 0.5;
 
+type SessionWithPlayers = SessionPlaying | SessionGameOver;
+
+function getPlayerWins(session: SessionWithPlayers, playerId: string): number {
+  if (session.owner.id === playerId) {
+    return session.owner.wins;
+  }
+  return session.friend.wins;
+}
+
+function getOpponentWins(
+  session: SessionWithPlayers,
+  playerId: string,
+): number {
+  const opponentId = getOpponentId(session, playerId);
+  return getPlayerWins(session, opponentId);
+}
+
 interface CreateInGameStatePayload {
   turn: "player" | "opponent";
   session: SessionPlaying;
@@ -51,24 +68,26 @@ export function createInGameState(
     turn,
     lastShot,
     session: {
-      status: payload.session.status,
+      status: session.status,
     },
     player: {
       boats: getPlayerBoats(playerId)(session),
       shots: getPlayerShots(playerId)(session.shots),
+      wins: getPlayerWins(session, playerId),
     },
     opponent: {
       sunkBoats: getSunkOpponentBoats(playerId)(session),
       shotsAgainstPlayer: getOpponentShotsAgainstPlayer(playerId)(
         session.shots,
       ),
+      wins: getOpponentWins(session, playerId),
     },
   };
 }
 
 interface CreateGameOverStatePayload {
   winner: "player" | "opponent";
-  session: SessionPlaying | SessionGameOver;
+  session: SessionWithPlayers;
   playerId: string;
   lastShot: LastShot | null;
 }
@@ -82,17 +101,19 @@ export function createGameOverState(
     winner,
     lastShot,
     session: {
-      status: payload.session.status,
+      status: session.status,
     },
     player: {
       boats: getPlayerBoats(playerId)(session),
       shots: getPlayerShots(playerId)(session.shots),
+      wins: getPlayerWins(session, playerId),
     },
     opponent: {
       sunkBoats: getSunkOpponentBoats(playerId)(session),
       shotsAgainstPlayer: getOpponentShotsAgainstPlayer(playerId)(
         session.shots,
       ),
+      wins: getOpponentWins(session, playerId),
     },
   };
 }

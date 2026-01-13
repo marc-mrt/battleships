@@ -8,6 +8,7 @@ import {
   getPlayerCellState,
   positionKey,
 } from "../operations";
+import { ScoreFooter } from "./ScoreFooter";
 
 function LastShotFeedback({ lastShot }: { lastShot: LastShot }): JSX.Element {
   const message = lastShot.hit
@@ -23,9 +24,15 @@ function LastShotFeedback({ lastShot }: { lastShot: LastShot }): JSX.Element {
 
 interface OpponentTurnProps {
   game: GameInProgressState;
+  playerName: string;
+  opponentName: string;
 }
 
-export function OpponentTurn({ game }: OpponentTurnProps): JSX.Element {
+export function OpponentTurn({
+  game,
+  playerName,
+  opponentName,
+}: OpponentTurnProps): JSX.Element {
   const playerData = buildPlayerGridData(game);
 
   return (
@@ -36,7 +43,18 @@ export function OpponentTurn({ game }: OpponentTurnProps): JSX.Element {
           <Subtitle>Waiting for opponent to fire...</Subtitle>
         </div>
       }
-      footer={game.lastShot && <LastShotFeedback lastShot={game.lastShot} />}
+      footer={
+        <div className="flex flex-col gap-4">
+          {game.lastShot && <LastShotFeedback lastShot={game.lastShot} />}
+          <ScoreFooter
+            playerName={playerName}
+            playerWins={game.player.wins}
+            opponentName={opponentName}
+            opponentWins={game.opponent.wins}
+            turn="opponent"
+          />
+        </div>
+      }
     >
       <div className="flex flex-col items-center">
         <GameGrid>

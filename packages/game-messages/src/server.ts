@@ -11,6 +11,7 @@ export const OpponentJoinedMessageSchema = z.object({
       id: z.string(),
       username: z.string(),
       isOwner: z.boolean(),
+      wins: z.number().int(),
     }),
   }),
 });
@@ -39,12 +40,14 @@ export type LastShot = z.infer<typeof LastShotSchema>;
 export const PlayerGameStateSchema = z.object({
   boats: z.array(BoatSchema),
   shots: z.array(ShotSchema),
+  wins: z.number().int(),
 });
 export type PlayerGameState = z.infer<typeof PlayerGameStateSchema>;
 
 export const OpponentGameStateSchema = z.object({
   sunkBoats: z.array(BoatSchema),
   shotsAgainstPlayer: z.array(ShotSchema),
+  wins: z.number().int(),
 });
 export type OpponentGameState = z.infer<typeof OpponentGameStateSchema>;
 
