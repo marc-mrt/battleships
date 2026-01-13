@@ -1,6 +1,6 @@
 import { GRID_SIZE } from "game-rules";
 import * as R from "ramda";
-import { GameGrid } from "@/components/game/shared/grid";
+import { GameGrid } from "@/components/game/shared";
 import { getBoatCells } from "../operations";
 import type { Boat, Position } from "../types";
 import { GridCell } from "./GridCell";
