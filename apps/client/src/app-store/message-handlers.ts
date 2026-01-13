@@ -9,6 +9,17 @@ import * as R from "ramda";
 import { buildPlayerState } from "./state-builders";
 import { isOnline, type OnlineState, type State } from "./state-types";
 
+type DeepPartial<T> = T extends object
+  ? { [P in keyof T]?: DeepPartial<T[P]> }
+  : T;
+
+function mergeState(
+  state: OnlineState,
+  partial: DeepPartial<OnlineState>,
+): OnlineState {
+  return R.mergeDeepRight(state, partial) as OnlineState;
+}
+
 type MessageHandler<T extends ServerMessage> = (
   state: OnlineState,
   message: T,
@@ -25,8 +36,8 @@ function updateWithOpponentJoined(
   message: OpponentJoinedMessage,
 ): OnlineState {
   const opponent = buildPlayerState(message.data.opponent);
-  return R.mergeDeepRight(state, {
-    meta: { session: { status: message.data.session.status }, opponent },
+  return mergeState(state, {
+    session: { status: message.data.session.status, opponent },
   });
 }
 
@@ -34,8 +45,8 @@ function updateWithNextTurn(
   state: OnlineState,
   message: NextTurnMessage,
 ): OnlineState {
-  return R.mergeDeepRight(state, {
-    meta: { session: { status: message.data.session.status } },
+  return mergeState(state, {
+    session: { status: message.data.session.status },
     game: message.data,
   });
 }
@@ -44,8 +55,8 @@ function updateWithNewGameStarted(
   state: OnlineState,
   message: NewGameStartedMessage,
 ): OnlineState {
-  return R.mergeDeepRight(state, {
-    meta: { session: { status: message.data.session.status } },
+  return mergeState(state, {
+    session: { status: message.data.session.status },
     game: null,
   });
 }
