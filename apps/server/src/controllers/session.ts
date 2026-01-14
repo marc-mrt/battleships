@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { getSessionByPlayerId } from "../database/session";
-import { parseSessionCookie, setSessionCookie } from "../middlwares/cookies";
+import { parseSessionCookie, setSessionCookie } from "../middlewares/cookies";
 import type {
   Session,
   SessionStatus,

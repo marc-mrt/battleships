@@ -5,7 +5,7 @@ import {
   type GameState,
 } from "game-messages";
 import type { WebSocket, WebSocketServer } from "ws";
-import { parseSessionCookie } from "../middlwares/cookies";
+import { parseSessionCookie } from "../middlewares/cookies";
 import { isSessionGameOver, isSessionPlaying } from "../models/session";
 import * as GameStateManager from "../services/game-state-manager";
 import * as SessionService from "../services/session";

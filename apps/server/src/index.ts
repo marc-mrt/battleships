@@ -7,7 +7,7 @@ import { config } from "./config";
 import * as HealthcheckController from "./controllers/healthcheck";
 import * as SessionController from "./controllers/session";
 import { setupWebSocketServer } from "./controllers/websocket";
-import { errorHandler } from "./middlwares/error";
+import { errorHandler } from "./middlewares/error";
 
 function run(): void {
   try {

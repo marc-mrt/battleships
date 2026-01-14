@@ -45,7 +45,7 @@ server/src/
 ├── index.ts               # Application entry point
 ├── controllers/           # Request handlers and WebSocket logic
 ├── database/              # Database queries and mappers
-├── middlwares/            # Express middleware (note: typo in folder name)
+├── middlewares/           # Express middleware
 ├── models/                # TypeScript domain models
 └── services/              # Business logic layer
 ```
@@ -64,7 +64,7 @@ server/src/
 - Custom error hierarchy: `HttpError` → `BadRequestError`, `NotFoundError`, `InternalServerError`
 - Database errors: `DatabaseError` → `UnexpectedDatabaseError`, `InvalidQueryPayloadError`
 - Database errors convert to HTTP errors via `toHttpError()` method
-- Centralized error handler middleware in `middlwares/error.ts`
+- Centralized error handler middleware in `middlewares/error.ts`
 
 **3. Database Access**
 
@@ -478,8 +478,7 @@ const mapToPlayer = generateMapperToDomainModel({
 
 ## Special Notes
 
-1. **Typo Alert**: The folder is named `middlwares` (not `middlewares`)
-2. **Build Process**: Server build adds package.json with commonjs type to dist/
+1. **Build Process**: Server build adds package.json with commonjs type to dist/
 3. **Boat IDs**: Generated client-side using `crypto.getRandomValues()`
 4. **Session Slugs**: Generated server-side with format `s_{random_hex}`
 5. **Grid Indexing**: 0-based (0-8), not 1-based

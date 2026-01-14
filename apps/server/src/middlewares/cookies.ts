@@ -29,21 +29,18 @@ function getCookieOptions(): CookieOptions {
   };
 }
 
-function parseCookieString(
-  acc: Record<string, string>,
-  cookie: string,
-): Record<string, string> {
-  const [key, value] = cookie.trim().split("=");
-  if (key && value) {
-    acc[key] = decodeURIComponent(value);
-  }
-  return acc;
+function isValidCookiePair(parts: string[]): parts is [string, string] {
+  return parts.length === 2 && parts[0] !== "";
 }
 
 function parseCookieHeader(cookieHeader: string): Record<string, string> {
-  return cookieHeader
-    .split(";")
-    .reduce(parseCookieString, {} as Record<string, string>);
+  return Object.fromEntries(
+    cookieHeader
+      .split(";")
+      .map((cookie) => cookie.trim().split("="))
+      .filter(isValidCookiePair)
+      .map(([key, value]) => [key, decodeURIComponent(value)]),
+  );
 }
 
 function extractSessionCookie(

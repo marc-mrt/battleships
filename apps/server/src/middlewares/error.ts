@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { HttpError, InternalServerError } from "../controllers/errors";
 import { DatabaseError } from "../database/errors";
 import { DomainServiceError } from "../services/errors";
@@ -39,8 +39,9 @@ function handleUnexpectedError(error: unknown, response: Response): void {
 
 export function errorHandler(
   error: unknown,
-  _: Request,
+  _request: Request,
   response: Response,
+  _next: NextFunction,
 ): void {
   if (isDatabaseError(error)) {
     handleDatabaseError(error, response);
