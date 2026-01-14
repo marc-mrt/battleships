@@ -10,6 +10,7 @@ export class WebSocketManager {
 
   private reconnectAttempts = 0;
   private reconnectTimeoutId: number | null = null;
+  private isConnecting = false;
 
   constructor(
     private onMessage: (data: string) => void,
@@ -21,10 +22,17 @@ export class WebSocketManager {
       return;
     }
 
+    if (this.isConnecting) {
+      return;
+    }
+
+    this.isConnecting = true;
+
     try {
       this.ws = new WebSocket(WEBSOCKET_BASE_URL.toString());
 
       this.ws.onopen = () => {
+        this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.clearReconnectTimeout();
       };
@@ -34,6 +42,7 @@ export class WebSocketManager {
       };
 
       this.ws.onerror = () => {
+        this.isConnecting = false;
         this.onError("WebSocket connection error");
       };
 
@@ -41,6 +50,7 @@ export class WebSocketManager {
         this.onMessage(event.data);
       };
     } catch (error) {
+      this.isConnecting = false;
       this.onError(error instanceof Error ? error.message : "Unknown error");
     }
   }
@@ -48,6 +58,7 @@ export class WebSocketManager {
   disconnect(): void {
     this.clearReconnectTimeout();
     this.reconnectAttempts = 0;
+    this.isConnecting = false;
 
     if (this.ws) {
       this.ws.close();
