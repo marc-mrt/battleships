@@ -94,9 +94,22 @@ export const NewGameStartedMessageSchema = z.object({
 });
 export type NewGameStartedMessage = z.infer<typeof NewGameStartedMessageSchema>;
 
+export const OpponentDisconnectedMessageSchema = z.object({
+  type: z.literal("opponent_disconnected"),
+  data: z.object({
+    session: z.object({
+      status: z.literal("waiting_for_opponent"),
+    }),
+  }),
+});
+export type OpponentDisconnectedMessage = z.infer<
+  typeof OpponentDisconnectedMessageSchema
+>;
+
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   OpponentJoinedMessageSchema,
   GameUpdateMessageSchema,
   NewGameStartedMessageSchema,
+  OpponentDisconnectedMessageSchema,
 ]);
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;

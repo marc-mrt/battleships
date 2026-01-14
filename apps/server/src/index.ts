@@ -25,6 +25,7 @@ function run(): void {
     app.get("/healthcheck", HealthcheckController.healthcheck);
     app.get("/sessions", SessionController.getCurrentSession);
     app.post("/sessions", SessionController.createSession);
+    app.post("/sessions/disconnect", SessionController.disconnectFromSession);
     app.post("/sessions/:slug/join", SessionController.joinSession);
 
     app.use(errorHandler);

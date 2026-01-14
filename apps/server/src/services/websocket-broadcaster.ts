@@ -1,6 +1,7 @@
 import type {
   GameUpdateMessage,
   NewGameStartedMessage,
+  OpponentDisconnectedMessage,
   OpponentJoinedMessage,
   ServerMessage,
 } from "game-messages";
@@ -60,6 +61,17 @@ export function sendNewGameStartedMessage(
 ): void {
   const message: NewGameStartedMessage = {
     type: "new_game_started",
+    data,
+  };
+  sendMessageToPlayer(playerId, message);
+}
+
+export function sendOpponentDisconnectedMessage(
+  playerId: string,
+  data: OpponentDisconnectedMessage["data"],
+): void {
+  const message: OpponentDisconnectedMessage = {
+    type: "opponent_disconnected",
     data,
   };
   sendMessageToPlayer(playerId, message);

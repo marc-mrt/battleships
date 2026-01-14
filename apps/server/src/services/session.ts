@@ -117,3 +117,20 @@ export async function resetSessionForPlayer(
     await SessionDB.resetSessionToBoatPlacement(session.id);
   return updatedSession;
 }
+
+export async function disconnectFromSession(playerId: string): Promise<void> {
+  const session: Session = await getSessionByPlayerId(playerId);
+  const isOwner = session.owner.id === playerId;
+
+  const { remainingPlayer } = await SessionDB.disconnectPlayerFromSession({
+    sessionId: session.id,
+    leavingPlayerId: playerId,
+    isOwner,
+  });
+
+  if (remainingPlayer != null) {
+    WebSocketBroadcaster.sendOpponentDisconnectedMessage(remainingPlayer.id, {
+      session: { status: "waiting_for_opponent" },
+    });
+  }
+}

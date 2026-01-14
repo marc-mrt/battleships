@@ -1,6 +1,7 @@
 import type { BoatPlacement, ClientMessage } from "game-messages";
 import { useSyncExternalStore } from "react";
 import * as API from "../api";
+import type { Result } from "../api/http-client";
 import { buildStateFromRawMessage } from "./message-handlers";
 import { buildOnlineStateFromSession } from "./state-builders";
 import {
@@ -121,6 +122,16 @@ class GameStore {
     });
   }
 
+  async disconnectFromSession(): Promise<Result<null, string>> {
+    const result = await API.disconnectSession();
+
+    if (result.success) {
+      this.disconnect();
+    }
+
+    return result;
+  }
+
   disconnect(): void {
     this.wsManager.disconnect();
     this.setState(createDisconnectedState());
@@ -169,6 +180,10 @@ export function fireShot(x: number, y: number): void {
 
 export function requestNewGame(): void {
   gameStore.requestNewGame();
+}
+
+export async function disconnectFromSession(): Promise<Result<null, string>> {
+  return gameStore.disconnectFromSession();
 }
 
 export function disconnect(): void {

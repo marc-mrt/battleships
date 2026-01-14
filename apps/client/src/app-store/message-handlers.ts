@@ -1,6 +1,7 @@
 import {
   type GameUpdateMessage,
   type NewGameStartedMessage,
+  type OpponentDisconnectedMessage,
   type OpponentJoinedMessage,
   type ServerMessage,
   ServerMessageSchema,
@@ -61,10 +62,26 @@ function updateWithNewGameStarted(
   });
 }
 
+function updateWithOpponentDisconnected(
+  state: OnlineState,
+  message: OpponentDisconnectedMessage,
+): OnlineState {
+  return {
+    ...state,
+    session: {
+      ...state.session,
+      status: message.data.session.status,
+      opponent: null,
+    },
+    game: null,
+  };
+}
+
 const MESSAGE_HANDLERS: MessageHandlers = {
   opponent_joined: updateWithOpponentJoined,
   game_update: updateWithGameUpdate,
   new_game_started: updateWithNewGameStarted,
+  opponent_disconnected: updateWithOpponentDisconnected,
 };
 
 function parseMessage(rawMessage: string): ServerMessage | Error {

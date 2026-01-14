@@ -101,3 +101,11 @@ export function setSessionCookie(payload: SetSessionCookiePayload): void {
 
   response.cookie(COOKIE_NAME, token, options);
 }
+
+export function clearSessionCookie(response: Response): void {
+  response.clearCookie(COOKIE_NAME, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+}

@@ -1,7 +1,11 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { getSessionByPlayerId } from "../database/session";
-import { parseSessionCookie, setSessionCookie } from "../middlewares/cookies";
+import {
+  clearSessionCookie,
+  parseSessionCookie,
+  setSessionCookie,
+} from "../middlewares/cookies";
 import type {
   Session,
   SessionStatus,
@@ -88,6 +92,23 @@ export async function getCurrentSession(
   }
   const mapped = mapToSessionResponse(session, sessionCookie.playerId);
   return response.status(200).send(mapped);
+}
+
+export async function disconnectFromSession(
+  request: Request,
+  response: Response,
+): Promise<Response> {
+  const cookieHeader = request.headers.cookie;
+  const sessionCookie = parseSessionCookie(cookieHeader);
+
+  if (!sessionCookie) {
+    throw new BadRequestError("No active session");
+  }
+
+  await SessionService.disconnectFromSession(sessionCookie.playerId);
+  clearSessionCookie(response);
+
+  return response.status(204).send();
 }
 
 interface PlayerResponse {

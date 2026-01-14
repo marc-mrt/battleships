@@ -1,5 +1,6 @@
 import * as crypto from "node:crypto";
 import { z } from "zod";
+import type { Player } from "../models/player";
 import {
   isSessionPlaying,
   type Session,
@@ -267,6 +268,110 @@ export async function getSessionByPlayerId(
   }
 
   return mapToSession(result.rows[0]);
+}
+
+interface DisconnectPlayerResult {
+  remainingPlayer: Player | null;
+}
+
+interface DisconnectPlayerPayload {
+  sessionId: string;
+  leavingPlayerId: string;
+  isOwner: boolean;
+}
+
+const RemainingPlayerDatabaseSchema = z.object({
+  remaining_id: z.string(),
+  remaining_username: z.string(),
+  remaining_wins: z.number().int(),
+});
+
+const mapToRemainingPlayer = generateMapperToDomainModel({
+  schema: RemainingPlayerDatabaseSchema,
+  mapper: (parsed) => ({
+    id: parsed.remaining_id,
+    username: parsed.remaining_username,
+    wins: parsed.remaining_wins,
+  }),
+});
+
+async function deleteBoatsForPlayer(playerId: string): Promise<void> {
+  await query(`DELETE FROM boats WHERE player_id = $1`, [playerId]);
+}
+
+async function deleteSession(sessionId: string): Promise<void> {
+  await query(`DELETE FROM sessions WHERE id = $1`, [sessionId]);
+}
+
+async function checkHasFriend(sessionId: string): Promise<boolean> {
+  const result = await query(`SELECT friend_id FROM sessions WHERE id = $1`, [
+    sessionId,
+  ]);
+  return result.rows.length > 0 && result.rows[0].friend_id != null;
+}
+
+async function updateSessionAndGetRemainingPlayer(
+  sessionId: string,
+  isOwner: boolean,
+): Promise<Player | null> {
+  const setClause = isOwner
+    ? "owner_id = friend_id, friend_id = NULL"
+    : "friend_id = NULL";
+
+  const result = await query(
+    `
+    WITH updated_session AS (
+      UPDATE sessions
+      SET ${setClause},
+          current_turn_id = NULL,
+          winner_id = NULL
+      WHERE id = $1
+      RETURNING *
+    )
+    SELECT
+      p.id AS remaining_id,
+      p.username AS remaining_username,
+      p.wins AS remaining_wins
+    FROM updated_session s
+    JOIN players p ON s.owner_id = p.id
+    `,
+    [sessionId],
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return mapToRemainingPlayer(result.rows[0]);
+}
+
+export async function disconnectPlayerFromSession(
+  payload: DisconnectPlayerPayload,
+): Promise<DisconnectPlayerResult> {
+  const { sessionId, leavingPlayerId, isOwner } = payload;
+
+  await deleteBoatsForPlayer(leavingPlayerId);
+  await query(`DELETE FROM shots WHERE session_id = $1`, [sessionId]);
+
+  if (isOwner) {
+    const hasFriend = await checkHasFriend(sessionId);
+
+    if (!hasFriend) {
+      await deleteSession(sessionId);
+      return { remainingPlayer: null };
+    }
+  }
+
+  const remainingPlayer = await updateSessionAndGetRemainingPlayer(
+    sessionId,
+    isOwner,
+  );
+
+  if (remainingPlayer != null) {
+    await deleteBoatsForPlayer(remainingPlayer.id);
+  }
+
+  return { remainingPlayer };
 }
 
 const SessionDatabaseSchema = z.object({
