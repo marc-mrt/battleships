@@ -19,5 +19,5 @@ export const MIN_BOAT_LENGTH = BOATS_CONFIGURATION.reduce(
 
 export const MAX_BOAT_LENGTH = BOATS_CONFIGURATION.reduce(
   (max, boat) => Math.max(max, boat.length),
-  Infinity,
+  0,
 );
