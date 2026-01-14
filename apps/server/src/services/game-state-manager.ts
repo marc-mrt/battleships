@@ -153,8 +153,8 @@ function broadcastNextTurn(
     lastShot: lastShot ?? null,
   });
 
-  WebSocketBroadcaster.sendNextTurnMessage(nextTurnPlayerId, nextTurnState);
-  WebSocketBroadcaster.sendNextTurnMessage(opponentId, opponentState);
+  WebSocketBroadcaster.sendGameUpdateMessage(nextTurnPlayerId, nextTurnState);
+  WebSocketBroadcaster.sendGameUpdateMessage(opponentId, opponentState);
 }
 
 function broadcastGameOver(
@@ -178,8 +178,8 @@ function broadcastGameOver(
     lastShot,
   });
 
-  WebSocketBroadcaster.sendNextTurnMessage(winnerId, winnerState);
-  WebSocketBroadcaster.sendNextTurnMessage(loserId, loserState);
+  WebSocketBroadcaster.sendGameUpdateMessage(winnerId, winnerState);
+  WebSocketBroadcaster.sendGameUpdateMessage(loserId, loserState);
 }
 
 interface HandleNextTurnPayload {

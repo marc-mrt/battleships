@@ -78,11 +78,11 @@ export const GameStateSchema = z.discriminatedUnion("status", [
 ]);
 export type GameState = z.infer<typeof GameStateSchema>;
 
-export const NextTurnMessageSchema = z.object({
-  type: z.literal("next_turn"),
+export const GameUpdateMessageSchema = z.object({
+  type: z.literal("game_update"),
   data: GameStateSchema,
 });
-export type NextTurnMessage = z.infer<typeof NextTurnMessageSchema>;
+export type GameUpdateMessage = z.infer<typeof GameUpdateMessageSchema>;
 
 export const NewGameStartedMessageSchema = z.object({
   type: z.literal("new_game_started"),
@@ -96,7 +96,7 @@ export type NewGameStartedMessage = z.infer<typeof NewGameStartedMessageSchema>;
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   OpponentJoinedMessageSchema,
-  NextTurnMessageSchema,
+  GameUpdateMessageSchema,
   NewGameStartedMessageSchema,
 ]);
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;

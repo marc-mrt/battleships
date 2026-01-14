@@ -1,6 +1,6 @@
 import {
+  type GameUpdateMessage,
   type NewGameStartedMessage,
-  type NextTurnMessage,
   type OpponentJoinedMessage,
   type ServerMessage,
   ServerMessageSchema,
@@ -41,9 +41,9 @@ function updateWithOpponentJoined(
   });
 }
 
-function updateWithNextTurn(
+function updateWithGameUpdate(
   state: OnlineState,
-  message: NextTurnMessage,
+  message: GameUpdateMessage,
 ): OnlineState {
   return mergeState(state, {
     session: { status: message.data.session.status },
@@ -63,7 +63,7 @@ function updateWithNewGameStarted(
 
 const MESSAGE_HANDLERS: MessageHandlers = {
   opponent_joined: updateWithOpponentJoined,
-  next_turn: updateWithNextTurn,
+  game_update: updateWithGameUpdate,
   new_game_started: updateWithNewGameStarted,
 };
 

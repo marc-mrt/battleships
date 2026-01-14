@@ -1,6 +1,6 @@
 import type {
+  GameUpdateMessage,
   NewGameStartedMessage,
-  NextTurnMessage,
   OpponentJoinedMessage,
   ServerMessage,
 } from "game-messages";
@@ -35,11 +35,11 @@ function sendMessageToPlayer(playerId: string, message: ServerMessage): void {
   webSocket.send(JSON.stringify(message));
 }
 
-export function sendNextTurnMessage(
+export function sendGameUpdateMessage(
   playerId: string,
-  data: NextTurnMessage["data"],
+  data: GameUpdateMessage["data"],
 ): void {
-  const message: NextTurnMessage = { type: "next_turn", data };
+  const message: GameUpdateMessage = { type: "game_update", data };
   sendMessageToPlayer(playerId, message);
 }
 

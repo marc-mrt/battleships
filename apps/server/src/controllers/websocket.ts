@@ -167,7 +167,7 @@ async function sendGameStateOnReconnection(playerId: string): Promise<void> {
       return;
     }
 
-    WebSocketBroadcaster.sendNextTurnMessage(playerId, gameState);
+    WebSocketBroadcaster.sendGameUpdateMessage(playerId, gameState);
   } catch (error) {
     logReconnectionError(playerId, error);
   }
