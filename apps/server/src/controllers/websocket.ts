@@ -2,7 +2,9 @@ import type { IncomingMessage } from "node:http";
 import {
   type ClientMessage,
   ClientMessageSchema,
+  type FireShotMessage,
   type GameState,
+  type PlaceBoatsMessage,
 } from "game-messages";
 import type { WebSocket, WebSocketServer } from "ws";
 import { parseSessionCookie } from "../middlewares/cookies";
@@ -92,32 +94,51 @@ function logReconnectionError(playerId: string, error: unknown): void {
   );
 }
 
+type MessageHandler<T extends ClientMessage> = (
+  playerId: string,
+  message: T,
+) => Promise<void>;
+
+type MessageHandlers = {
+  [K in ClientMessage["type"]]: MessageHandler<
+    Extract<ClientMessage, { type: K }>
+  >;
+};
+
+async function handlePlaceBoats(
+  playerId: string,
+  message: PlaceBoatsMessage,
+): Promise<void> {
+  const { boats } = message.data;
+  await GameStateManager.handlePlaceBoats(playerId, boats);
+}
+
+async function handleFireShot(
+  playerId: string,
+  message: FireShotMessage,
+): Promise<void> {
+  const { x, y } = message.data;
+  await GameStateManager.handleShotFired(playerId, x, y);
+}
+
+async function handleRequestNewGame(playerId: string): Promise<void> {
+  await GameStateManager.handleRequestNewGame(playerId);
+}
+
+const MESSAGE_HANDLERS: MessageHandlers = {
+  place_boats: handlePlaceBoats,
+  fire_shot: handleFireShot,
+  request_new_game: handleRequestNewGame,
+};
+
 async function handleIncomingClientMessage(
   playerId: string,
   message: ClientMessage,
 ): Promise<void> {
-  switch (message.type) {
-    case "place_boats": {
-      const { boats } = message.data;
-      await GameStateManager.handlePlaceBoats(playerId, boats);
-      break;
-    }
-    case "fire_shot": {
-      const { x, y } = message.data;
-      await GameStateManager.handleShotFired(playerId, x, y);
-      break;
-    }
-    case "request_new_game": {
-      await GameStateManager.handleRequestNewGame(playerId);
-      break;
-    }
-    default: {
-      const _exhaustive: never = message;
-      console.error(
-        `Unknown message type: ${(_exhaustive as { type: string }).type}`,
-      );
-    }
-  }
+  const handler = MESSAGE_HANDLERS[message.type] as MessageHandler<
+    typeof message
+  >;
+  await handler(playerId, message);
 }
 
 async function sendGameStateOnReconnection(playerId: string): Promise<void> {
