@@ -30,7 +30,7 @@ import * as SessionService from "./session";
 import * as ShotService from "./shot";
 import * as WebSocketBroadcaster from "./websocket-broadcaster";
 
-const COIN_FLIP_PROBABILITY = 0.5;
+const COIN_FLIP_THRESHOLD = 0.5;
 
 type SessionWithPlayers = SessionPlaying | SessionGameOver;
 
@@ -263,7 +263,7 @@ async function processAfterShotEffects(
 }
 
 function pickRandom([a, b]: [string, string]): string {
-  return Math.random() < COIN_FLIP_PROBABILITY ? a : b;
+  return Math.random() < COIN_FLIP_THRESHOLD ? a : b;
 }
 
 interface StartGamePayload {
