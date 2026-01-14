@@ -11,6 +11,7 @@ export class WebSocketManager {
   private reconnectAttempts = 0;
   private reconnectTimeoutId: number | null = null;
   private isConnecting = false;
+  private isIntentionalDisconnect = false;
 
   constructor(
     private onMessage: (data: string) => void,
@@ -38,7 +39,10 @@ export class WebSocketManager {
       };
 
       this.ws.onclose = () => {
-        this.scheduleReconnect();
+        if (!this.isIntentionalDisconnect) {
+          this.scheduleReconnect();
+        }
+        this.isIntentionalDisconnect = false;
       };
 
       this.ws.onerror = () => {
@@ -56,6 +60,7 @@ export class WebSocketManager {
   }
 
   disconnect(): void {
+    this.isIntentionalDisconnect = true;
     this.clearReconnectTimeout();
     this.reconnectAttempts = 0;
     this.isConnecting = false;
