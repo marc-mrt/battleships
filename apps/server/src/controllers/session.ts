@@ -14,7 +14,10 @@ const CreateSessionRequestBody = z.object({
   username: z.string(),
 });
 
-export async function createSession(request: Request, response: Response) {
+export async function createSession(
+  request: Request,
+  response: Response,
+): Promise<Response> {
   const result = CreateSessionRequestBody.safeParse(request.body);
   if (!result.success) {
     throw new BadRequestError(`Invalid request body: ${result.error.message}`);
@@ -40,7 +43,10 @@ const JoinSessionRequestBody = z.object({
   username: z.string(),
 });
 
-export async function joinSession(request: Request, response: Response) {
+export async function joinSession(
+  request: Request,
+  response: Response,
+): Promise<Response> {
   const result = JoinSessionRequestBody.safeParse(request.body);
   if (!result.success) {
     throw new BadRequestError(`Invalid request body: ${result.error.message}`);
@@ -66,7 +72,10 @@ export async function joinSession(request: Request, response: Response) {
   return response.status(200).send(mapped);
 }
 
-export async function getCurrentSession(request: Request, response: Response) {
+export async function getCurrentSession(
+  request: Request,
+  response: Response,
+): Promise<Response> {
   const cookieHeader = request.headers.cookie;
   const sessionCookie = parseSessionCookie(cookieHeader);
   if (!sessionCookie) {
