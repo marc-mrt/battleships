@@ -1,4 +1,3 @@
-import { sendOpponentJoinedMessage } from "../controllers/websocket";
 import * as PlayerDB from "../database/player";
 import * as SessionDB from "../database/session";
 import type { Player } from "../models/player";
@@ -15,6 +14,7 @@ import {
   UnauthorizedActionError,
 } from "./errors";
 import * as PlayerService from "./player";
+import * as WebSocketBroadcaster from "./websocket-broadcaster";
 
 interface CreateSessionPayload {
   username: string;
@@ -49,7 +49,7 @@ export async function joinSession(
     },
   );
 
-  sendOpponentJoinedMessage(session.owner.id, {
+  WebSocketBroadcaster.sendOpponentJoinedMessage(session.owner.id, {
     session: {
       status: session.status,
     },

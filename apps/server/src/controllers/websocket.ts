@@ -3,22 +3,15 @@ import {
   type ClientMessage,
   ClientMessageSchema,
   type GameState,
-  type NewGameStartedMessage,
-  type NextTurnMessage,
-  type OpponentJoinedMessage,
-  type ServerMessage,
 } from "game-messages";
 import type { WebSocket, WebSocketServer } from "ws";
 import { parseSessionCookie } from "../middlwares/cookies";
 import { isSessionGameOver, isSessionPlaying } from "../models/session";
 import * as GameStateManager from "../services/game-state-manager";
 import * as SessionService from "../services/session";
-import { InternalServerError } from "./errors";
+import * as WebSocketBroadcaster from "../services/websocket-broadcaster";
 
 const WEBSOCKET_CLOSE_CODE_POLICY_VIOLATION = 1008;
-
-type PlayerId = string;
-const connections = new Map<PlayerId, WebSocket>();
 
 export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
   webSocketServer.on(
@@ -36,13 +29,20 @@ export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
       }
 
       const { playerId } = session;
-      connections.set(playerId, webSocket);
+      WebSocketBroadcaster.registerConnection(playerId, webSocket);
 
       await sendGameStateOnReconnection(playerId);
 
       webSocket.on("message", async (data: Buffer) => {
+        let json: unknown;
         try {
-          const json: unknown = JSON.parse(data.toString());
+          json = JSON.parse(data.toString());
+        } catch {
+          logInvalidMessage("Malformed JSON");
+          return;
+        }
+
+        try {
           const parsed = ClientMessageSchema.safeParse(json);
 
           if (!parsed.success) {
@@ -58,12 +58,12 @@ export function setupWebSocketServer(webSocketServer: WebSocketServer): void {
       });
 
       webSocket.on("close", () => {
-        connections.delete(playerId);
+        WebSocketBroadcaster.removeConnection(playerId);
       });
 
       webSocket.on("error", (error) => {
         logWebSocketError(playerId, error);
-        connections.delete(playerId);
+        WebSocketBroadcaster.removeConnection(playerId);
       });
     },
   );
@@ -120,51 +120,6 @@ async function handleIncomingClientMessage(
   }
 }
 
-function getConnectionForPlayer(playerId: string): WebSocket {
-  const webSocket: WebSocket | undefined = connections.get(playerId);
-  if (webSocket == null) {
-    throw new InternalServerError(
-      `Connection for player '${playerId}' not found`,
-    );
-  }
-  return webSocket;
-}
-
-function sendMessageToPlayer(playerId: string, message: ServerMessage): void {
-  const webSocket = getConnectionForPlayer(playerId);
-  webSocket.send(JSON.stringify(message));
-}
-
-export function sendNextTurnMessage(
-  playerId: string,
-  data: NextTurnMessage["data"],
-): void {
-  const message: NextTurnMessage = { type: "next_turn", data };
-  sendMessageToPlayer(playerId, message);
-}
-
-export function sendOpponentJoinedMessage(
-  playerId: string,
-  data: OpponentJoinedMessage["data"],
-): void {
-  const message: OpponentJoinedMessage = {
-    type: "opponent_joined",
-    data,
-  };
-  sendMessageToPlayer(playerId, message);
-}
-
-export function sendNewGameStartedMessage(
-  playerId: string,
-  data: NewGameStartedMessage["data"],
-): void {
-  const message: NewGameStartedMessage = {
-    type: "new_game_started",
-    data,
-  };
-  sendMessageToPlayer(playerId, message);
-}
-
 async function sendGameStateOnReconnection(playerId: string): Promise<void> {
   try {
     const session = await SessionService.getSessionByPlayerId(playerId);
@@ -191,7 +146,7 @@ async function sendGameStateOnReconnection(playerId: string): Promise<void> {
       return;
     }
 
-    sendNextTurnMessage(playerId, gameState);
+    WebSocketBroadcaster.sendNextTurnMessage(playerId, gameState);
   } catch (error) {
     logReconnectionError(playerId, error);
   }

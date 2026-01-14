@@ -6,10 +6,6 @@ import type {
 } from "game-messages";
 import { TOTAL_BOATS_COUNT } from "game-rules";
 import * as R from "ramda";
-import {
-  sendNewGameStartedMessage,
-  sendNextTurnMessage,
-} from "../controllers/websocket";
 import type { Boat } from "../models/boat";
 import type { Coordinates } from "../models/coordinates";
 import {
@@ -32,6 +28,7 @@ import {
 } from "./game-utils";
 import * as SessionService from "./session";
 import * as ShotService from "./shot";
+import * as WebSocketBroadcaster from "./websocket-broadcaster";
 
 const COIN_FLIP_PROBABILITY = 0.5;
 
@@ -156,8 +153,8 @@ function broadcastNextTurn(
     lastShot: lastShot ?? null,
   });
 
-  sendNextTurnMessage(nextTurnPlayerId, nextTurnState);
-  sendNextTurnMessage(opponentId, opponentState);
+  WebSocketBroadcaster.sendNextTurnMessage(nextTurnPlayerId, nextTurnState);
+  WebSocketBroadcaster.sendNextTurnMessage(opponentId, opponentState);
 }
 
 function broadcastGameOver(
@@ -181,8 +178,8 @@ function broadcastGameOver(
     lastShot,
   });
 
-  sendNextTurnMessage(winnerId, winnerState);
-  sendNextTurnMessage(loserId, loserState);
+  WebSocketBroadcaster.sendNextTurnMessage(winnerId, winnerState);
+  WebSocketBroadcaster.sendNextTurnMessage(loserId, loserState);
 }
 
 interface HandleNextTurnPayload {
@@ -322,6 +319,12 @@ export async function handleRequestNewGame(playerId: string): Promise<void> {
     },
   };
 
-  sendNewGameStartedMessage(resetSession.owner.id, messageData);
-  sendNewGameStartedMessage(resetSession.friend.id, messageData);
+  WebSocketBroadcaster.sendNewGameStartedMessage(
+    resetSession.owner.id,
+    messageData,
+  );
+  WebSocketBroadcaster.sendNewGameStartedMessage(
+    resetSession.friend.id,
+    messageData,
+  );
 }
