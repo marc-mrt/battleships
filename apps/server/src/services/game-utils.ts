@@ -26,13 +26,8 @@ export function determineNextTurnPlayer(
   opponentId: string,
   lastShot: LastShot,
 ): string {
-  if (!lastShot.hit) {
-    return opponentId;
-  }
-  if (lastShot.sunkBoat) {
-    return opponentId;
-  }
-  return playerId;
+  if (lastShot.hit || lastShot.sunkBoat) return playerId;
+  return opponentId;
 }
 
 export function getPlayerBoats(playerId: string) {
