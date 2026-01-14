@@ -204,15 +204,20 @@ export async function setWinner(
 export async function resetSessionToBoatPlacement(
   sessionId: string,
 ): Promise<SessionWaitingForBoats> {
-  await query(
-    "DELETE FROM boats WHERE player_id IN (SELECT owner_id FROM sessions WHERE id = $1 UNION SELECT friend_id FROM sessions WHERE id = $1)",
-    [sessionId],
-  );
-  await query("DELETE FROM shots WHERE session_id = $1", [sessionId]);
-
   const result = await query(
     `
-			WITH updated_session AS (
+			WITH delete_boats AS (
+				DELETE FROM boats
+				WHERE player_id IN (
+					SELECT owner_id FROM sessions WHERE id = $1
+					UNION
+					SELECT friend_id FROM sessions WHERE id = $1
+				)
+			),
+			delete_shots AS (
+				DELETE FROM shots WHERE session_id = $1
+			),
+			updated_session AS (
 				UPDATE sessions
 				SET winner_id = NULL, current_turn_id = NULL
 				WHERE id = $1
