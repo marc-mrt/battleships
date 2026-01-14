@@ -43,13 +43,6 @@ function parsePort(portString: string): number {
   return port;
 }
 
-function validateDatabaseConnectionString(connectionString: string): string {
-  if (connectionString.length === 0) {
-    throw new Error("DATABASE_CONNECTION_STRING cannot be empty");
-  }
-  return connectionString;
-}
-
 function initConfig(): Config {
   const allowedOriginsRaw = getRequiredEnvVariable("ALLOWED_ORIGINS");
   const portRaw = getRequiredEnvVariable("PORT");
@@ -61,9 +54,7 @@ function initConfig(): Config {
   return {
     allowedOrigins: parseAllowedOrigins(allowedOriginsRaw),
     port: parsePort(portRaw),
-    databaseConnectionString: validateDatabaseConnectionString(
-      databaseConnectionString,
-    ),
+    databaseConnectionString,
     jwtSecret,
   };
 }
