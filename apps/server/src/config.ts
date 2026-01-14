@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { z } from "zod";
 
 interface Config {
   allowedOrigins: string[];
@@ -7,29 +8,16 @@ interface Config {
   jwtSecret: string;
 }
 
-interface EnvVariable {
-  key: string;
-  value: string | undefined;
-}
-
-function getEnvVariable(key: string): EnvVariable {
-  return {
-    key,
-    value: process.env[key],
-  };
-}
-
-function validateEnvVariable(envVar: EnvVariable): string {
-  if (!envVar.value) {
-    throw new Error(`${envVar.key} environment variable is not set`);
-  }
-  return envVar.value;
-}
-
-function getRequiredEnvVariable(key: string): string {
-  const envVar = getEnvVariable(key);
-  return validateEnvVariable(envVar);
-}
+const EnvironmentSchema = z.object({
+  ALLOWED_ORIGINS: z
+    .string()
+    .min(1, "ALLOWED_ORIGINS environment variable is not set"),
+  PORT: z.string().min(1, "PORT environment variable is not set"),
+  DATABASE_CONNECTION_STRING: z
+    .string()
+    .min(1, "DATABASE_CONNECTION_STRING environment variable is not set"),
+  JWT_SECRET: z.string().min(1, "JWT_SECRET environment variable is not set"),
+});
 
 function parseAllowedOrigins(origins: string): string[] {
   return origins.split(",").map((value) => value.trim());
@@ -44,18 +32,13 @@ function parsePort(portString: string): number {
 }
 
 function initConfig(): Config {
-  const allowedOriginsRaw = getRequiredEnvVariable("ALLOWED_ORIGINS");
-  const portRaw = getRequiredEnvVariable("PORT");
-  const databaseConnectionString = getRequiredEnvVariable(
-    "DATABASE_CONNECTION_STRING",
-  );
-  const jwtSecret = getRequiredEnvVariable("JWT_SECRET");
+  const parsed = EnvironmentSchema.parse(process.env);
 
   return {
-    allowedOrigins: parseAllowedOrigins(allowedOriginsRaw),
-    port: parsePort(portRaw),
-    databaseConnectionString,
-    jwtSecret,
+    allowedOrigins: parseAllowedOrigins(parsed.ALLOWED_ORIGINS),
+    port: parsePort(parsed.PORT),
+    databaseConnectionString: parsed.DATABASE_CONNECTION_STRING,
+    jwtSecret: parsed.JWT_SECRET,
   };
 }
 
