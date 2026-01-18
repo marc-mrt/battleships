@@ -6,6 +6,8 @@
     "moduleResolution": "bundler",
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "erasableSyntaxOnly": true
-  }
+    "erasableSyntaxOnly": true,
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src/**/*.ts"]
 }

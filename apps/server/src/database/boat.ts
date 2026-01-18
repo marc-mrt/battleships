@@ -1,97 +1,130 @@
 import { TOTAL_BOATS_COUNT } from "game-rules";
 import { z } from "zod";
 import type { Boat } from "../models/boat";
-import { query } from "./db";
+import { query, run } from "./db";
 import { InvalidQueryPayloadError } from "./errors";
 import { generateMapperToDomainModel } from "./mapper";
 
-interface SaveBoatsPayload {
-  playerId: string;
-  boats: Array<{
-    id: string;
-    startX: number;
-    startY: number;
-    length: number;
-    orientation: "horizontal" | "vertical";
-  }>;
+interface BoatData {
+  id: string;
+  startX: number;
+  startY: number;
+  length: number;
+  orientation: "horizontal" | "vertical";
 }
 
-function createBoatConfigurationRow(playerId: string) {
-  return function mapBoat(boat: {
-    id: string;
-    startX: number;
-    startY: number;
-    length: number;
-    orientation: "horizontal" | "vertical";
-  }): (string | number)[] {
-    return [
+interface SaveBoatsPayload {
+  db: D1Database;
+  playerId: string;
+  boats: BoatData[];
+}
+
+function createPlaceholders(boatCount: number): string {
+  const rows: string[] = [];
+  for (let i = 0; i < boatCount; i++) {
+    const offset = i * 6;
+    rows.push(
+      `(?${offset + 1}, ?${offset + 2}, ?${offset + 3}, ?${offset + 4}, ?${offset + 5}, ?${offset + 6})`,
+    );
+  }
+  return rows.join(", ");
+}
+
+function flattenBoatsToParams(
+  playerId: string,
+  boats: BoatData[],
+): (string | number)[] {
+  const params: (string | number)[] = [];
+  for (const boat of boats) {
+    params.push(
       boat.id,
       playerId,
       boat.startX,
       boat.startY,
       boat.length,
       boat.orientation,
-    ];
-  };
+    );
+  }
+  return params;
 }
 
-function createPlaceholder(rowLength: number, rowIndex: number) {
-  return function mapToPlaceholder(
-    _: string | number,
-    colIndex: number,
-  ): string {
-    return `$${rowLength * rowIndex + 1 + colIndex}`;
-  };
-}
-
-function createValueRow(row: (string | number)[], rowIndex: number): string {
-  const values = row.map(createPlaceholder(row.length, rowIndex));
-  return `(${values.join(", ")})`;
+async function deleteBoats(db: D1Database, playerId: string): Promise<void> {
+  await run(db, "DELETE FROM boats WHERE player_id = ?1", [playerId]);
 }
 
 export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
-  if (payload.boats.length !== TOTAL_BOATS_COUNT) {
+  const { db, playerId, boats } = payload;
+
+  if (boats.length !== TOTAL_BOATS_COUNT) {
     throw new InvalidQueryPayloadError(
-      `Need ${TOTAL_BOATS_COUNT} boats, got ${payload.boats.length}`,
+      `Need ${TOTAL_BOATS_COUNT} boats, got ${boats.length}`,
     );
   }
 
-  const { playerId } = payload;
+  await deleteBoats(db, playerId);
 
-  await deleteBoats(playerId);
-
-  const { boats } = payload;
-  const boatsConfiguration = boats.map(createBoatConfigurationRow(playerId));
-
-  const valueRows = boatsConfiguration.map(createValueRow);
+  const placeholders = createPlaceholders(boats.length);
+  const params = flattenBoatsToParams(playerId, boats);
 
   const insertQuery = `
-		INSERT INTO boats (id, player_id, start_x, start_y, length, orientation)
-		VALUES ${valueRows.join(", ")}
-	`;
+    INSERT INTO boats (id, player_id, start_x, start_y, length, orientation)
+    VALUES ${placeholders}
+  `;
 
-  await query(insertQuery, boatsConfiguration.flat());
+  await run(db, insertQuery, params);
 }
 
-async function deleteBoats(playerId: string): Promise<void> {
-  await query("DELETE FROM boats WHERE player_id = $1", [playerId]);
+interface MarkBoatAsSunkPayload {
+  db: D1Database;
+  boatId: string;
 }
 
-export async function markBoatAsSunk(boatId: string): Promise<Boat> {
+export async function markBoatAsSunk(
+  payload: MarkBoatAsSunkPayload,
+): Promise<Boat> {
+  const { db, boatId } = payload;
   const result = await query(
-    "UPDATE boats SET sunk = TRUE WHERE id = $1 RETURNING *",
+    db,
+    "UPDATE boats SET sunk = 1 WHERE id = ?1 RETURNING *",
     [boatId],
   );
   return mapToBoat(result.rows[0]);
 }
 
+interface GetBoatsByPlayerIdPayload {
+  db: D1Database;
+  playerId: string;
+}
+
+export async function getBoatsByPlayerId(
+  payload: GetBoatsByPlayerIdPayload,
+): Promise<Boat[]> {
+  const { db, playerId } = payload;
+  const result = await query(db, "SELECT * FROM boats WHERE player_id = ?1", [
+    playerId,
+  ]);
+  return result.rows.map(mapToBoat);
+}
+
+interface DeleteBoatsByPlayerIdPayload {
+  db: D1Database;
+  playerId: string;
+}
+
+export async function deleteBoatsByPlayerId(
+  payload: DeleteBoatsByPlayerIdPayload,
+): Promise<void> {
+  const { db, playerId } = payload;
+  await deleteBoats(db, playerId);
+}
+
 export const BoatDatabaseSchema = z.object({
   id: z.string(),
-  start_x: z.number(),
-  start_y: z.number(),
-  length: z.number(),
+  start_x: z.coerce.number(),
+  start_y: z.coerce.number(),
+  length: z.coerce.number(),
   orientation: z.enum(["horizontal", "vertical"]),
-  sunk: z.boolean(),
+  sunk: z.coerce.boolean(),
 });
 
 function mapper(parsed: z.infer<typeof BoatDatabaseSchema>): Boat {

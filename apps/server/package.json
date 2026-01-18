@@ -3,37 +3,27 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "main": "dist/index.mjs",
   "scripts": {
-    "start": "node dist/index.mjs",
-    "dev": "tsx watch --conditions=development --tsconfig=tsconfig.json src/index.ts",
-    "build": "tsdown",
+    "dev": "wrangler dev",
+    "db:create": "wrangler d1 create battleships",
+    "db:migrate": "wrangler d1 execute battleships --remote --file=./db/schema.sql",
+    "db:migrate:local": "wrangler d1 execute battleships --local --file=./db/schema.sql",
     "check": "biome check --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.2.1",
     "game-messages": "workspace:",
     "game-rules": "workspace:",
-    "pg": "^8.16.3",
+    "hono": "^4.7.11",
     "ramda": "catalog:",
-    "ws": "^8.19.0",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
-    "@types/cookie-parser": "^1.4.10",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
+    "@cloudflare/workers-types": "^4.20250620.0",
     "@types/node": "catalog:",
-    "@types/pg": "^8.16.0",
     "@types/ramda": "catalog:",
-    "@types/ws": "^8.18.1",
-    "tsdown": "^0.16.8",
-    "tsx": "^4.21.0",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "wrangler": "^4.23.0"
   }
 }

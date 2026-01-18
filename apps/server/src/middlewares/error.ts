@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from "express";
+import type { Context } from "hono";
 import { HttpError, InternalServerError } from "../controllers/errors";
 import { DatabaseError } from "../database/errors";
 import { DomainServiceError } from "../services/errors";
@@ -15,48 +15,37 @@ function isHttpError(error: unknown): error is HttpError {
   return error instanceof HttpError;
 }
 
-function handleHttpError(error: HttpError, response: Response): void {
+function handleHttpError(error: HttpError): Response {
   console.error(error);
-  error.respond(response);
+  return error.toResponse();
 }
 
-function handleDatabaseError(error: DatabaseError, response: Response): void {
-  handleHttpError(error.toHttpError(), response);
+function handleDatabaseError(error: DatabaseError): Response {
+  return handleHttpError(error.toHttpError());
 }
 
-function handleDomainServiceError(
-  error: DomainServiceError,
-  response: Response,
-): void {
-  handleHttpError(error.toHttpError(), response);
+function handleDomainServiceError(error: DomainServiceError): Response {
+  return handleHttpError(error.toHttpError());
 }
 
-function handleUnexpectedError(error: unknown, response: Response): void {
+function handleUnexpectedError(error: unknown): Response {
   console.error("Unexpected error:", error);
   const unexpectedInternalError = new InternalServerError("Unexpected error");
-  unexpectedInternalError.respond(response);
+  return unexpectedInternalError.toResponse();
 }
 
-export function errorHandler(
-  error: unknown,
-  _request: Request,
-  response: Response,
-  _next: NextFunction,
-): void {
+export function errorHandler(error: unknown, _c: Context): Response {
   if (isDatabaseError(error)) {
-    handleDatabaseError(error, response);
-    return;
+    return handleDatabaseError(error);
   }
 
   if (isDomainServiceError(error)) {
-    handleDomainServiceError(error, response);
-    return;
+    return handleDomainServiceError(error);
   }
 
   if (isHttpError(error)) {
-    handleHttpError(error, response);
-    return;
+    return handleHttpError(error);
   }
 
-  handleUnexpectedError(error, response);
+  return handleUnexpectedError(error);
 }

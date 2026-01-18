@@ -1,5 +1,3 @@
-import type { Response } from "express";
-
 export abstract class HttpError extends Error {
   public statusCode: number;
 
@@ -8,8 +6,11 @@ export abstract class HttpError extends Error {
     this.statusCode = statusCode;
   }
 
-  public respond(response: Response) {
-    response.status(this.statusCode).send({ error: this.message });
+  public toResponse(): Response {
+    return new Response(JSON.stringify({ error: this.message }), {
+      status: this.statusCode,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 

@@ -85,12 +85,19 @@ function checkShotResult(
   return { hit: true, sunk, boatId: hitBoat.id };
 }
 
+interface RegisterShotPayload {
+  db: D1Database;
+  sessionId: string;
+  playerId: string;
+  coordinates: Coordinates;
+}
+
 export async function registerShot(
-  sessionId: string,
-  playerId: string,
-  coordinates: Coordinates,
+  payload: RegisterShotPayload,
 ): Promise<LastShot> {
-  const session = await SessionService.getSessionByPlayerId(playerId);
+  const { db, sessionId, playerId, coordinates } = payload;
+
+  const session = await SessionService.getSessionByPlayerId({ db, playerId });
   if (!isSessionPlaying(session)) {
     throw new InvalidGameStateError();
   }
@@ -103,6 +110,7 @@ export async function registerShot(
   const result: ShotResult = checkShotResult(session, opponentId, coordinates);
 
   const shot = await ShotDB.recordShot({
+    db,
     sessionId,
     shooterId: playerId,
     targetId: opponentId,
@@ -112,7 +120,7 @@ export async function registerShot(
   });
 
   if (result.hit && result.sunk) {
-    await BoatService.markBoatAsSunk(result.boatId);
+    await BoatService.markBoatAsSunk({ db, boatId: result.boatId });
   }
 
   const lastShot: LastShot = {

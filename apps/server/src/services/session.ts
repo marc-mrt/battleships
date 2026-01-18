@@ -14,24 +14,29 @@ import {
   UnauthorizedActionError,
 } from "./errors";
 import * as PlayerService from "./player";
-import * as WebSocketBroadcaster from "./websocket-broadcaster";
 
 interface CreateSessionPayload {
+  db: D1Database;
   username: string;
 }
 
 export async function createSession(
   payload: CreateSessionPayload,
 ): Promise<Session> {
-  const { username } = payload;
-  const playerOwner: Player = await PlayerService.createPlayer({ username });
+  const { db, username } = payload;
+  const playerOwner: Player = await PlayerService.createPlayer({
+    db,
+    username,
+  });
   const session: Session = await SessionDB.createSession({
+    db,
     owner: { playerId: playerOwner.id },
   });
   return session;
 }
 
 interface JoinSessionPayload {
+  db: D1Database;
   slug: string;
   username: string;
 }
@@ -39,34 +44,33 @@ interface JoinSessionPayload {
 export async function joinSession(
   payload: JoinSessionPayload,
 ): Promise<SessionWaitingForBoats> {
-  const { slug, username } = payload;
+  const { db, slug, username } = payload;
 
-  const player: Player = await PlayerService.createPlayer({ username });
+  const player: Player = await PlayerService.createPlayer({ db, username });
   const session: SessionWaitingForBoats = await SessionDB.assignFriendToSession(
     {
+      db,
       slug,
       friend: { playerId: player.id },
     },
   );
 
-  WebSocketBroadcaster.sendOpponentJoinedMessage(session.owner.id, {
-    session: {
-      status: session.status,
-    },
-    opponent: {
-      id: player.id,
-      username: player.username,
-      isOwner: false,
-      wins: player.wins,
-    },
-  });
-
   return session;
 }
 
-export async function getSessionByPlayerId(playerId: string): Promise<Session> {
-  const session: Session | null =
-    await SessionDB.getSessionByPlayerId(playerId);
+interface GetSessionByPlayerIdPayload {
+  db: D1Database;
+  playerId: string;
+}
+
+export async function getSessionByPlayerId(
+  payload: GetSessionByPlayerIdPayload,
+): Promise<Session> {
+  const { db, playerId } = payload;
+  const session: Session | null = await SessionDB.getSessionByPlayerId({
+    db,
+    playerId,
+  });
   if (!session) {
     throw new SessionNotFoundError(playerId);
   }
@@ -74,11 +78,18 @@ export async function getSessionByPlayerId(playerId: string): Promise<Session> {
   return session;
 }
 
+interface SetCurrentTurnPayload {
+  db: D1Database;
+  sessionId: string;
+  playerId: string;
+}
+
 export async function setCurrentTurn(
-  sessionId: string,
-  playerId: string,
+  payload: SetCurrentTurnPayload,
 ): Promise<SessionPlaying> {
+  const { db, sessionId, playerId } = payload;
   const session: SessionPlaying = await SessionDB.setCurrentTurn({
+    db,
     sessionId,
     playerId,
   });
@@ -86,13 +97,20 @@ export async function setCurrentTurn(
   return session;
 }
 
+interface SetWinnerPayload {
+  db: D1Database;
+  sessionId: string;
+  winnerId: string;
+}
+
 export async function setWinner(
-  sessionId: string,
-  winnerId: string,
+  payload: SetWinnerPayload,
 ): Promise<SessionGameOver> {
-  await PlayerDB.incrementWins(winnerId);
+  const { db, sessionId, winnerId } = payload;
+  await PlayerDB.incrementWins({ db, playerId: winnerId });
 
   const session: SessionGameOver = await SessionDB.setWinner({
+    db,
     sessionId,
     winnerId,
   });
@@ -100,10 +118,16 @@ export async function setWinner(
   return session;
 }
 
+interface ResetSessionForPlayerPayload {
+  db: D1Database;
+  playerId: string;
+}
+
 export async function resetSessionForPlayer(
-  playerId: string,
+  payload: ResetSessionForPlayerPayload,
 ): Promise<SessionWaitingForBoats> {
-  const session: Session = await getSessionByPlayerId(playerId);
+  const { db, playerId } = payload;
+  const session: Session = await getSessionByPlayerId({ db, playerId });
 
   if (session.owner.id !== playerId) {
     throw new UnauthorizedActionError();
@@ -114,23 +138,32 @@ export async function resetSessionForPlayer(
   }
 
   const updatedSession: SessionWaitingForBoats =
-    await SessionDB.resetSessionToBoatPlacement(session.id);
+    await SessionDB.resetSessionToBoatPlacement({ db, sessionId: session.id });
   return updatedSession;
 }
 
-export async function disconnectFromSession(playerId: string): Promise<void> {
-  const session: Session = await getSessionByPlayerId(playerId);
+interface DisconnectFromSessionPayload {
+  db: D1Database;
+  playerId: string;
+}
+
+interface DisconnectFromSessionResult {
+  remainingPlayer: Player | null;
+}
+
+export async function disconnectFromSession(
+  payload: DisconnectFromSessionPayload,
+): Promise<DisconnectFromSessionResult> {
+  const { db, playerId } = payload;
+  const session: Session = await getSessionByPlayerId({ db, playerId });
   const isOwner = session.owner.id === playerId;
 
   const { remainingPlayer } = await SessionDB.disconnectPlayerFromSession({
+    db,
     sessionId: session.id,
     leavingPlayerId: playerId,
     isOwner,
   });
 
-  if (remainingPlayer != null) {
-    WebSocketBroadcaster.sendOpponentDisconnectedMessage(remainingPlayer.id, {
-      session: { status: "waiting_for_opponent" },
-    });
-  }
+  return { remainingPlayer };
 }

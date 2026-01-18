@@ -28,7 +28,6 @@ import {
 } from "./game-utils";
 import * as SessionService from "./session";
 import * as ShotService from "./shot";
-import * as WebSocketBroadcaster from "./websocket-broadcaster";
 
 const COIN_FLIP_THRESHOLD = 0.5;
 
@@ -132,11 +131,18 @@ function checkForWinner(
   return null;
 }
 
-function broadcastNextTurn(
+interface BroadcastNextTurnResult {
+  nextTurnPlayerId: string;
+  opponentId: string;
+  nextTurnState: GameInProgressState;
+  opponentState: GameInProgressState;
+}
+
+export function buildNextTurnStates(
   session: SessionPlaying,
   nextTurnPlayerId: string,
   lastShot?: LastShot,
-): void {
+): BroadcastNextTurnResult {
   const opponentId = getOpponentId(session, nextTurnPlayerId);
 
   const nextTurnState = createInGameState({
@@ -153,15 +159,26 @@ function broadcastNextTurn(
     lastShot: lastShot ?? null,
   });
 
-  WebSocketBroadcaster.sendGameUpdateMessage(nextTurnPlayerId, nextTurnState);
-  WebSocketBroadcaster.sendGameUpdateMessage(opponentId, opponentState);
+  return {
+    nextTurnPlayerId,
+    opponentId,
+    nextTurnState,
+    opponentState,
+  };
 }
 
-function broadcastGameOver(
+interface GameOverStatesResult {
+  winnerId: string;
+  loserId: string;
+  winnerState: GameOverState;
+  loserState: GameOverState;
+}
+
+export function buildGameOverStates(
   session: SessionGameOver,
   winnerId: string,
   lastShot: LastShot,
-): void {
+): GameOverStatesResult {
   const loserId = getOpponentId(session, winnerId);
 
   const winnerState = createGameOverState({
@@ -178,19 +195,27 @@ function broadcastGameOver(
     lastShot,
   });
 
-  WebSocketBroadcaster.sendGameUpdateMessage(winnerId, winnerState);
-  WebSocketBroadcaster.sendGameUpdateMessage(loserId, loserState);
+  return { winnerId, loserId, winnerState, loserState };
 }
 
 interface HandleNextTurnPayload {
+  db: D1Database;
   sessionId: string;
   playerId: string;
   opponentId: string;
   lastShot: LastShot;
 }
 
-async function handleNextTurn(payload: HandleNextTurnPayload): Promise<void> {
-  const { sessionId, playerId, opponentId, lastShot } = payload;
+interface HandleNextTurnResult {
+  session: SessionPlaying;
+  nextTurnPlayerId: string;
+  states: BroadcastNextTurnResult;
+}
+
+export async function handleNextTurn(
+  payload: HandleNextTurnPayload,
+): Promise<HandleNextTurnResult> {
+  const { db, sessionId, playerId, opponentId, lastShot } = payload;
 
   const nextTurnPlayerId = determineNextTurnPlayer(
     playerId,
@@ -198,51 +223,95 @@ async function handleNextTurn(payload: HandleNextTurnPayload): Promise<void> {
     lastShot,
   );
 
-  const updatedSession: SessionPlaying = await SessionService.setCurrentTurn(
+  const updatedSession: SessionPlaying = await SessionService.setCurrentTurn({
+    db,
     sessionId,
+    playerId: nextTurnPlayerId,
+  });
+
+  const states = buildNextTurnStates(
+    updatedSession,
     nextTurnPlayerId,
+    lastShot,
   );
 
-  broadcastNextTurn(updatedSession, nextTurnPlayerId, lastShot);
+  return { session: updatedSession, nextTurnPlayerId, states };
 }
 
-async function handleGameOver(
-  sessionId: string,
-  winnerId: string,
-  lastShot: LastShot,
-): Promise<void> {
-  const gameOverSession = await SessionService.setWinner(sessionId, winnerId);
-  broadcastGameOver(gameOverSession, winnerId, lastShot);
+interface HandleGameOverPayload {
+  db: D1Database;
+  sessionId: string;
+  winnerId: string;
+  lastShot: LastShot;
 }
+
+interface HandleGameOverResult {
+  session: SessionGameOver;
+  states: GameOverStatesResult;
+}
+
+export async function handleGameOver(
+  payload: HandleGameOverPayload,
+): Promise<HandleGameOverResult> {
+  const { db, sessionId, winnerId, lastShot } = payload;
+
+  const gameOverSession = await SessionService.setWinner({
+    db,
+    sessionId,
+    winnerId,
+  });
+
+  const states = buildGameOverStates(gameOverSession, winnerId, lastShot);
+
+  return { session: gameOverSession, states };
+}
+
+interface HandleShotFiredPayload {
+  db: D1Database;
+  playerId: string;
+  x: number;
+  y: number;
+}
+
+type ShotFiredResult =
+  | { type: "next_turn"; result: HandleNextTurnResult }
+  | { type: "game_over"; result: HandleGameOverResult };
 
 export async function handleShotFired(
-  playerId: string,
-  x: number,
-  y: number,
-): Promise<void> {
+  payload: HandleShotFiredPayload,
+): Promise<ShotFiredResult> {
+  const { db, playerId, x, y } = payload;
   const coordinates: Coordinates = { x, y };
 
-  const session = await SessionService.getSessionByPlayerId(playerId);
+  const session = await SessionService.getSessionByPlayerId({ db, playerId });
   if (!isSessionPlaying(session)) {
     throw new InvalidGameStateError();
   }
 
   validatePlayerTurn(session, playerId);
 
-  const shot: LastShot = await ShotService.registerShot(
-    session.id,
+  const shot: LastShot = await ShotService.registerShot({
+    db,
+    sessionId: session.id,
     playerId,
     coordinates,
-  );
+  });
 
-  await processAfterShotEffects(playerId, shot);
+  return processAfterShotEffects({ db, playerId, shot });
+}
+
+interface ProcessAfterShotEffectsPayload {
+  db: D1Database;
+  playerId: string;
+  shot: LastShot;
 }
 
 async function processAfterShotEffects(
-  playerId: string,
-  shot: LastShot,
-): Promise<void> {
-  const session = await SessionService.getSessionByPlayerId(playerId);
+  payload: ProcessAfterShotEffectsPayload,
+): Promise<ShotFiredResult> {
+  const { db, playerId, shot } = payload;
+
+  const session = await SessionService.getSessionByPlayerId({ db, playerId });
   if (!isSessionPlaying(session)) {
     throw new InvalidGameStateError();
   }
@@ -251,15 +320,23 @@ async function processAfterShotEffects(
   const winnerId = checkForWinner(session, opponentId);
 
   if (winnerId) {
-    await handleGameOver(session.id, winnerId, shot);
-  } else {
-    await handleNextTurn({
+    const result = await handleGameOver({
+      db,
       sessionId: session.id,
-      playerId,
-      opponentId,
+      winnerId,
       lastShot: shot,
     });
+    return { type: "game_over", result };
   }
+
+  const result = await handleNextTurn({
+    db,
+    sessionId: session.id,
+    playerId,
+    opponentId,
+    lastShot: shot,
+  });
+  return { type: "next_turn", result };
 }
 
 function pickRandom([a, b]: [string, string]): string {
@@ -267,51 +344,96 @@ function pickRandom([a, b]: [string, string]): string {
 }
 
 interface StartGamePayload {
+  db: D1Database;
   sessionId: string;
   ownerId: string;
   friendId: string;
 }
 
-async function startGame(payload: StartGamePayload): Promise<void> {
-  const { sessionId, ownerId, friendId } = payload;
-  const firstPlayerId: string = pickRandom([ownerId, friendId]);
-
-  const updatedSession: SessionPlaying = await SessionService.setCurrentTurn(
-    sessionId,
-    firstPlayerId,
-  );
-
-  broadcastNextTurn(updatedSession, firstPlayerId);
+interface StartGameResult {
+  session: SessionPlaying;
+  states: BroadcastNextTurnResult;
 }
 
-export async function handlePlaceBoats(
-  playerId: string,
+export async function startGame(
+  payload: StartGamePayload,
+): Promise<StartGameResult> {
+  const { db, sessionId, ownerId, friendId } = payload;
+  const firstPlayerId: string = pickRandom([ownerId, friendId]);
+
+  const updatedSession: SessionPlaying = await SessionService.setCurrentTurn({
+    db,
+    sessionId,
+    playerId: firstPlayerId,
+  });
+
+  const states = buildNextTurnStates(updatedSession, firstPlayerId);
+
+  return { session: updatedSession, states };
+}
+
+interface HandlePlaceBoatsPayload {
+  db: D1Database;
+  playerId: string;
   boats: Array<{
     id: string;
     startX: number;
     startY: number;
     length: number;
     orientation: "horizontal" | "vertical";
-  }>,
-): Promise<void> {
+  }>;
+}
+
+type PlaceBoatsResult =
+  | { type: "waiting"; session: Session }
+  | { type: "game_started"; result: StartGameResult };
+
+export async function handlePlaceBoats(
+  payload: HandlePlaceBoatsPayload,
+): Promise<PlaceBoatsResult> {
+  const { db, playerId, boats } = payload;
+
   await BoatService.saveBoats({
+    db,
     playerId,
     boats,
   });
 
-  const session: Session = await SessionService.getSessionByPlayerId(playerId);
+  const session: Session = await SessionService.getSessionByPlayerId({
+    db,
+    playerId,
+  });
+
   if (session.status === "ready_to_start") {
-    await startGame({
+    const result = await startGame({
+      db,
       sessionId: session.id,
       ownerId: session.owner.id,
       friendId: session.friend.id,
     });
+    return { type: "game_started", result };
   }
+
+  return { type: "waiting", session };
 }
 
-export async function handleRequestNewGame(playerId: string): Promise<void> {
+interface HandleRequestNewGamePayload {
+  db: D1Database;
+  playerId: string;
+}
+
+interface HandleRequestNewGameResult {
+  session: SessionWaitingForBoats;
+  messageData: NewGameStartedMessage["data"];
+}
+
+export async function handleRequestNewGame(
+  payload: HandleRequestNewGamePayload,
+): Promise<HandleRequestNewGameResult> {
+  const { db, playerId } = payload;
+
   const resetSession: SessionWaitingForBoats =
-    await SessionService.resetSessionForPlayer(playerId);
+    await SessionService.resetSessionForPlayer({ db, playerId });
 
   const messageData: NewGameStartedMessage["data"] = {
     session: {
@@ -319,12 +441,5 @@ export async function handleRequestNewGame(playerId: string): Promise<void> {
     },
   };
 
-  WebSocketBroadcaster.sendNewGameStartedMessage(
-    resetSession.owner.id,
-    messageData,
-  );
-  WebSocketBroadcaster.sendNewGameStartedMessage(
-    resetSession.friend.id,
-    messageData,
-  );
+  return { session: resetSession, messageData };
 }

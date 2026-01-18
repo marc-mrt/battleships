@@ -84,7 +84,7 @@ server/src/
 
 - Environment variables loaded via `dotenv/config`
 - Config validation at startup (fails fast if missing)
-- Required vars: `ALLOWED_ORIGINS`, `PORT`, `DATABASE_CONNECTION_STRING`, `JWT_SECRET`
+- Required vars: `ALLOWED_ORIGINS`, `JWT_SECRET`
 
 **6. JWT-Based Session Cookies**
 
@@ -328,7 +328,6 @@ cd apps/server && pnpm build
 
 - `PORT`: Server port
 - `ALLOWED_ORIGINS`: Comma-separated CORS origins
-- `DATABASE_CONNECTION_STRING`: PostgreSQL connection string
 - `JWT_SECRET`: Secret key for signing session JWTs (min 32 characters recommended)
 
 ---

@@ -1,10 +1,8 @@
-import type { Response } from "express";
 import { z } from "zod";
-import { config } from "../config";
 import { signJwt, verifyJwt } from "../utils/jwt";
 
 const COOKIE_NAME = "session";
-const MAX_AGE = 24 * 60 * 60 * 1000;
+const MAX_AGE_SECONDS = 24 * 60 * 60;
 
 const SessionCookieSchema = z.object({
   sessionId: z.string(),
@@ -12,22 +10,6 @@ const SessionCookieSchema = z.object({
 });
 
 type SessionCookie = z.infer<typeof SessionCookieSchema>;
-
-interface CookieOptions {
-  httpOnly: boolean;
-  secure: boolean;
-  sameSite: "strict" | "lax" | "none";
-  maxAge: number;
-}
-
-function getCookieOptions(): CookieOptions {
-  return {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: MAX_AGE,
-  };
-}
 
 function isValidCookiePair(parts: string[]): parts is [string, string] {
   return parts.length === 2 && parts[0] !== "";
@@ -57,9 +39,16 @@ function logParseError(error: unknown): void {
   console.error("Failed to parse session cookie:", error);
 }
 
-export function parseSessionCookie(
-  cookieHeader: string | undefined,
-): SessionCookie | null {
+interface ParseSessionCookiePayload {
+  cookieHeader: string | null | undefined;
+  jwtSecret: string;
+}
+
+export async function parseSessionCookie(
+  payload: ParseSessionCookiePayload,
+): Promise<SessionCookie | null> {
+  const { cookieHeader, jwtSecret } = payload;
+
   if (!cookieHeader) {
     return null;
   }
@@ -72,7 +61,7 @@ export function parseSessionCookie(
   }
 
   try {
-    const result = verifyJwt({ token, secret: config.jwtSecret });
+    const result = await verifyJwt({ token, secret: jwtSecret });
 
     if (!result.valid || !result.payload) {
       return null;
@@ -85,27 +74,58 @@ export function parseSessionCookie(
   }
 }
 
-interface SetSessionCookiePayload {
-  response: Response;
-  payload: SessionCookie;
+interface CreateSessionCookiePayload {
+  sessionId: string;
+  playerId: string;
+  jwtSecret: string;
+  isProduction: boolean;
 }
 
-export function setSessionCookie(payload: SetSessionCookiePayload): void {
-  const { response, payload: cookiePayload } = payload;
-  const options = getCookieOptions();
+export async function createSessionCookie(
+  payload: CreateSessionCookiePayload,
+): Promise<string> {
+  const { sessionId, playerId, jwtSecret, isProduction } = payload;
 
-  const token = signJwt({
-    payload: cookiePayload,
-    secret: config.jwtSecret,
+  const token = await signJwt({
+    payload: { sessionId, playerId },
+    secret: jwtSecret,
   });
 
-  response.cookie(COOKIE_NAME, token, options);
+  const parts = [
+    `${COOKIE_NAME}=${encodeURIComponent(token)}`,
+    `Max-Age=${MAX_AGE_SECONDS}`,
+    "HttpOnly",
+    "SameSite=Strict",
+    "Path=/",
+  ];
+
+  if (isProduction) {
+    parts.push("Secure");
+  }
+
+  return parts.join("; ");
 }
 
-export function clearSessionCookie(response: Response): void {
-  response.clearCookie(COOKIE_NAME, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  });
+interface ClearSessionCookiePayload {
+  isProduction: boolean;
+}
+
+export function createClearSessionCookie(
+  payload: ClearSessionCookiePayload,
+): string {
+  const { isProduction } = payload;
+
+  const parts = [
+    `${COOKIE_NAME}=`,
+    "Max-Age=0",
+    "HttpOnly",
+    "SameSite=Strict",
+    "Path=/",
+  ];
+
+  if (isProduction) {
+    parts.push("Secure");
+  }
+
+  return parts.join("; ");
 }

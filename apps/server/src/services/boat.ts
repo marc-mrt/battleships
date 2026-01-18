@@ -3,6 +3,7 @@ import type { Boat } from "../models/boat";
 import type { Coordinates } from "../models/coordinates";
 
 interface SaveBoatsPayload {
+  db: D1Database;
   playerId: string;
   boats: Array<{
     id: string;
@@ -14,15 +15,24 @@ interface SaveBoatsPayload {
 }
 
 export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
-  const { playerId, boats } = payload;
+  const { db, playerId, boats } = payload;
   await BoatDB.saveBoats({
+    db,
     playerId,
     boats,
   });
 }
 
-export async function markBoatAsSunk(boatId: string): Promise<void> {
-  await BoatDB.markBoatAsSunk(boatId);
+interface MarkBoatAsSunkPayload {
+  db: D1Database;
+  boatId: string;
+}
+
+export async function markBoatAsSunk(
+  payload: MarkBoatAsSunkPayload,
+): Promise<void> {
+  const { db, boatId } = payload;
+  await BoatDB.markBoatAsSunk({ db, boatId });
 }
 
 export function isCoordinateOnBoat(coordinates: Coordinates) {
