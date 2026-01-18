@@ -2,7 +2,6 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "battleships-client",
   "assets": {
-    "directory": "./dist",
     "not_found_handling": "single-page-application"
   },
   "compatibility_date": "2024-12-01"
