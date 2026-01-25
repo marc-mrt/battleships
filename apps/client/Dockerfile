@@ -16,6 +16,8 @@ COPY --from=deps /app/apps/client/node_modules ./apps/client/node_modules
 COPY --from=deps /app/packages/game-messages/node_modules ./packages/game-messages/node_modules
 COPY --from=deps /app/packages/game-rules/node_modules ./packages/game-rules/node_modules
 COPY . .
+ARG VITE_SERVER_BASE_URL
+ENV VITE_SERVER_BASE_URL=${VITE_SERVER_BASE_URL}
 RUN pnpm --filter ./apps/client build
 
 FROM nginx:alpine AS runner
