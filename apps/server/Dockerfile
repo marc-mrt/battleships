@@ -20,7 +20,13 @@ COPY packages/game-messages ./packages/game-messages
 COPY packages/game-rules ./packages/game-rules
 COPY tsconfig.base.json ./
 EXPOSE 3000
+
 ARG ALLOWED_ORIGINS
 ENV ALLOWED_ORIGINS=$ALLOWED_ORIGINS
+ARG DATABASE_CONNECTION_STRING
+ENV DATABASE_CONNECTION_STRING=$DATABASE_CONNECTION_STRING
+ARG JWT_SECRET
+ENV JWT_SECRET=$JWT_SECRET
+
 WORKDIR /app/apps/server
 CMD ["npx", "tsx", "src/index.ts"]
