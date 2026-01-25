@@ -323,7 +323,7 @@ async function main() {
       port: PORT,
     },
     (info) => {
-      console.log(`Server is running on http://localhost:${info.port}`);
+      console.log(`[Server] Running on http://localhost:${info.port}`);
     },
   );
 
@@ -331,7 +331,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Failed to start server:", error);
+  console.error("[Server] Failed to start server:", error);
   process.exit(1);
 });
 
