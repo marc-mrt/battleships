@@ -33,11 +33,11 @@ const env: Env = {
 };
 
 if (!env.DATABASE_CONNECTION_STRING) {
-  console.error("DATABASE_CONNECTION_STRING environment variable is required");
+  console.error("[Env] DATABASE_CONNECTION_STRING environment variable is required");
   process.exit(1);
 }
 if (!env.JWT_SECRET) {
-  console.error("JWT_SECRET environment variable is required");
+  console.error("[Env] JWT_SECRET environment variable is required");
   process.exit(1);
 }
 
