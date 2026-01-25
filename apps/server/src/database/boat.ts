@@ -1,7 +1,7 @@
 import { TOTAL_BOATS_COUNT } from "game-rules";
 import { z } from "zod";
 import type { Boat } from "../models/boat";
-import { query, run } from "./db";
+import { type Database, query, run } from "./db";
 import { InvalidQueryPayloadError } from "./errors";
 import { generateMapperToDomainModel } from "./mapper";
 
@@ -14,7 +14,7 @@ interface BoatData {
 }
 
 interface SaveBoatsPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
   boats: BoatData[];
 }
@@ -24,7 +24,7 @@ function createPlaceholders(boatCount: number): string {
   for (let i = 0; i < boatCount; i++) {
     const offset = i * 6;
     rows.push(
-      `(?${offset + 1}, ?${offset + 2}, ?${offset + 3}, ?${offset + 4}, ?${offset + 5}, ?${offset + 6})`,
+      `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`,
     );
   }
   return rows.join(", ");
@@ -48,8 +48,8 @@ function flattenBoatsToParams(
   return params;
 }
 
-async function deleteBoats(db: D1Database, playerId: string): Promise<void> {
-  await run(db, "DELETE FROM boats WHERE player_id = ?1", [playerId]);
+async function deleteBoats(db: Database, playerId: string): Promise<void> {
+  await run(db, "DELETE FROM boats WHERE player_id = $1", [playerId]);
 }
 
 export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
@@ -75,7 +75,7 @@ export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
 }
 
 interface MarkBoatAsSunkPayload {
-  db: D1Database;
+  db: Database;
   boatId: string;
 }
 
@@ -85,14 +85,14 @@ export async function markBoatAsSunk(
   const { db, boatId } = payload;
   const result = await query(
     db,
-    "UPDATE boats SET sunk = 1 WHERE id = ?1 RETURNING *",
+    "UPDATE boats SET sunk = true WHERE id = $1 RETURNING *",
     [boatId],
   );
   return mapToBoat(result.rows[0]);
 }
 
 interface GetBoatsByPlayerIdPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
 }
 
@@ -100,14 +100,14 @@ export async function getBoatsByPlayerId(
   payload: GetBoatsByPlayerIdPayload,
 ): Promise<Boat[]> {
   const { db, playerId } = payload;
-  const result = await query(db, "SELECT * FROM boats WHERE player_id = ?1", [
+  const result = await query(db, "SELECT * FROM boats WHERE player_id = $1", [
     playerId,
   ]);
   return result.rows.map(mapToBoat);
 }
 
 interface DeleteBoatsByPlayerIdPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
 }
 

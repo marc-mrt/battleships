@@ -1,11 +1,11 @@
 import { z } from "zod";
 import type { Shot } from "../models/shot";
 import { generateUUID } from "../utils/uuid";
-import { query, run } from "./db";
+import { type Database, query, run } from "./db";
 import { generateMapperToDomainModel } from "./mapper";
 
 interface CreateShotPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
   shooterId: string;
   targetId: string;
@@ -21,14 +21,14 @@ export async function recordShot(payload: CreateShotPayload): Promise<Shot> {
   const result = await query(
     db,
     `INSERT INTO shots (id, session_id, shooter_id, target_id, x, y, hit)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) RETURNING *`,
-    [id, sessionId, shooterId, targetId, x, y, hit ? 1 : 0],
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [id, sessionId, shooterId, targetId, x, y, hit],
   );
   return mapToShot(result.rows[0]);
 }
 
 interface GetShotsBySessionIdPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
 }
 
@@ -38,14 +38,14 @@ export async function getShotsBySessionId(
   const { db, sessionId } = payload;
   const result = await query(
     db,
-    "SELECT * FROM shots WHERE session_id = ?1 ORDER BY created_at ASC",
+    "SELECT * FROM shots WHERE session_id = $1 ORDER BY created_at ASC",
     [sessionId],
   );
   return result.rows.map(mapToShot);
 }
 
 interface DeleteShotsBySessionIdPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
 }
 
@@ -53,7 +53,7 @@ export async function deleteShotsBySessionId(
   payload: DeleteShotsBySessionIdPayload,
 ): Promise<void> {
   const { db, sessionId } = payload;
-  await run(db, "DELETE FROM shots WHERE session_id = ?1", [sessionId]);
+  await run(db, "DELETE FROM shots WHERE session_id = $1", [sessionId]);
 }
 
 export const ShotDatabaseSchema = z.object({

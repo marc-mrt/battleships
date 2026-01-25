@@ -1,3 +1,4 @@
+import type { Database } from "../database";
 import * as PlayerDB from "../database/player";
 import * as SessionDB from "../database/session";
 import type { Player } from "../models/player";
@@ -16,7 +17,7 @@ import {
 import * as PlayerService from "./player";
 
 interface CreateSessionPayload {
-  db: D1Database;
+  db: Database;
   username: string;
 }
 
@@ -36,7 +37,7 @@ export async function createSession(
 }
 
 interface JoinSessionPayload {
-  db: D1Database;
+  db: Database;
   slug: string;
   username: string;
 }
@@ -59,7 +60,7 @@ export async function joinSession(
 }
 
 interface GetSessionByPlayerIdPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
 }
 
@@ -79,7 +80,7 @@ export async function getSessionByPlayerId(
 }
 
 interface SetCurrentTurnPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
   playerId: string;
 }
@@ -98,7 +99,7 @@ export async function setCurrentTurn(
 }
 
 interface SetWinnerPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
   winnerId: string;
 }
@@ -119,7 +120,7 @@ export async function setWinner(
 }
 
 interface ResetSessionForPlayerPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
 }
 
@@ -143,7 +144,7 @@ export async function resetSessionForPlayer(
 }
 
 interface DisconnectFromSessionPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
 }
 

@@ -1,9 +1,10 @@
+import type { Database } from "../database";
 import * as BoatDB from "../database/boat";
 import type { Boat } from "../models/boat";
 import type { Coordinates } from "../models/coordinates";
 
 interface SaveBoatsPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
   boats: Array<{
     id: string;
@@ -24,7 +25,7 @@ export async function saveBoats(payload: SaveBoatsPayload): Promise<void> {
 }
 
 interface MarkBoatAsSunkPayload {
-  db: D1Database;
+  db: Database;
   boatId: string;
 }
 

@@ -1,3 +1,4 @@
+import type { Database } from "../database";
 import type { LastShot } from "game-messages";
 import * as ShotDB from "../database/shot";
 import type { Boat } from "../models/boat";
@@ -86,7 +87,7 @@ function checkShotResult(
 }
 
 interface RegisterShotPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
   playerId: string;
   coordinates: Coordinates;

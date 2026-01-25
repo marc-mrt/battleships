@@ -1,18 +1,24 @@
+import type { Pool } from "pg";
 import { UnexpectedDatabaseError } from "./errors";
+
+/**
+ * Abstract database type that hides the underlying implementation.
+ * Services should use this type instead of importing Pool directly.
+ */
+export type Database = Pool;
 
 export interface QueryResult {
   rows: Record<string, unknown>[];
 }
 
 export async function query(
-  db: D1Database,
+  db: Database,
   text: string,
   params: Array<string | number | boolean> = [],
 ): Promise<QueryResult> {
   try {
-    const statement = db.prepare(text).bind(...params);
-    const result = await statement.all();
-    return { rows: (result.results ?? []) as Record<string, unknown>[] };
+    const result = await db.query(text, params);
+    return { rows: result.rows as Record<string, unknown>[] };
   } catch (error) {
     console.error("Error executing query:", error);
     throw new UnexpectedDatabaseError(
@@ -23,13 +29,12 @@ export async function query(
 }
 
 export async function run(
-  db: D1Database,
+  db: Database,
   text: string,
   params: Array<string | number | boolean> = [],
 ): Promise<void> {
   try {
-    const statement = db.prepare(text).bind(...params);
-    await statement.run();
+    await db.query(text, params);
   } catch (error) {
     console.error("Error executing run:", error);
     throw new UnexpectedDatabaseError(

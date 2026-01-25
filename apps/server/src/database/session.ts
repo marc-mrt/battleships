@@ -11,13 +11,13 @@ import {
 } from "../models/session";
 import { generateUUID } from "../utils/uuid";
 import { BoatDatabaseSchema, mapToBoat } from "./boat";
-import { query, run } from "./db";
+import { type Database, query, run } from "./db";
 import { RecordNotFoundError, UnexpectedDatabaseError } from "./errors";
 import { generateMapperToDomainModel } from "./mapper";
 import { mapToShot, ShotDatabaseSchema } from "./shot";
 
 interface CreateSessionPayload {
-  db: D1Database;
+  db: Database;
   owner: { playerId: string };
 }
 
@@ -43,7 +43,7 @@ export async function createSession(
 
   await run(
     db,
-    `INSERT INTO sessions (id, slug, owner_id) VALUES (?1, ?2, ?3)`,
+    `INSERT INTO sessions (id, slug, owner_id) VALUES ($1, $2, $3)`,
     [id, slug, playerId],
   );
 
@@ -56,7 +56,7 @@ export async function createSession(
            p.wins AS owner_wins
     FROM sessions s
     JOIN players p ON s.owner_id = p.id
-    WHERE s.id = ?1
+    WHERE s.id = $1
     `,
     [id],
   );
@@ -65,7 +65,7 @@ export async function createSession(
 }
 
 interface JoinSessionPayload {
-  db: D1Database;
+  db: Database;
   slug: string;
   friend: { playerId: string };
 }
@@ -76,7 +76,7 @@ export async function assignFriendToSession(
   const { db, slug, friend } = payload;
   const { playerId } = friend;
 
-  await run(db, `UPDATE sessions SET friend_id = ?1 WHERE slug = ?2`, [
+  await run(db, `UPDATE sessions SET friend_id = $1 WHERE slug = $2`, [
     playerId,
     slug,
   ]);
@@ -94,7 +94,7 @@ export async function assignFriendToSession(
     FROM sessions s
     JOIN players o ON s.owner_id = o.id
     JOIN players f ON s.friend_id = f.id
-    WHERE s.slug = ?1
+    WHERE s.slug = $1
     `,
     [slug],
   );
@@ -109,7 +109,7 @@ export async function assignFriendToSession(
 }
 
 interface SetCurrentTurnPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
   playerId: string;
 }
@@ -119,7 +119,7 @@ export async function setCurrentTurn(
 ): Promise<SessionPlaying> {
   const { db, sessionId, playerId } = payload;
 
-  await run(db, `UPDATE sessions SET current_turn_id = ?1 WHERE id = ?2`, [
+  await run(db, `UPDATE sessions SET current_turn_id = $1 WHERE id = $2`, [
     playerId,
     sessionId,
   ]);
@@ -139,7 +139,7 @@ export async function setCurrentTurn(
 }
 
 interface SetWinnerPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
   winnerId: string;
 }
@@ -151,7 +151,7 @@ export async function setWinner(
 
   await run(
     db,
-    `UPDATE sessions SET winner_id = ?1, current_turn_id = NULL WHERE id = ?2`,
+    `UPDATE sessions SET winner_id = $1, current_turn_id = NULL WHERE id = $2`,
     [winnerId, sessionId],
   );
 
@@ -164,7 +164,7 @@ export async function setWinner(
 }
 
 interface ResetSessionPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
 }
 
@@ -175,7 +175,7 @@ export async function resetSessionToBoatPlacement(
 
   const sessionResult = await query(
     db,
-    `SELECT owner_id, friend_id FROM sessions WHERE id = ?1`,
+    `SELECT owner_id, friend_id FROM sessions WHERE id = $1`,
     [sessionId],
   );
 
@@ -188,16 +188,16 @@ export async function resetSessionToBoatPlacement(
     friend_id: string | null;
   };
 
-  await run(db, `DELETE FROM boats WHERE player_id = ?1`, [owner_id]);
+  await run(db, `DELETE FROM boats WHERE player_id = $1`, [owner_id]);
   if (friend_id) {
-    await run(db, `DELETE FROM boats WHERE player_id = ?1`, [friend_id]);
+    await run(db, `DELETE FROM boats WHERE player_id = $1`, [friend_id]);
   }
 
-  await run(db, `DELETE FROM shots WHERE session_id = ?1`, [sessionId]);
+  await run(db, `DELETE FROM shots WHERE session_id = $1`, [sessionId]);
 
   await run(
     db,
-    `UPDATE sessions SET winner_id = NULL, current_turn_id = NULL WHERE id = ?1`,
+    `UPDATE sessions SET winner_id = NULL, current_turn_id = NULL WHERE id = $1`,
     [sessionId],
   );
 
@@ -216,7 +216,7 @@ export async function resetSessionToBoatPlacement(
 }
 
 interface GetSessionByPlayerIdPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
 }
 
@@ -228,7 +228,7 @@ export async function getSessionByPlayerId(
 }
 
 async function getSessionByPlayerIdInternal(
-  db: D1Database,
+  db: Database,
   playerId: string,
 ): Promise<Session | null> {
   const result = await query(
@@ -244,7 +244,7 @@ async function getSessionByPlayerIdInternal(
     FROM sessions s
     JOIN players o ON s.owner_id = o.id
     LEFT JOIN players f ON s.friend_id = f.id
-    WHERE s.owner_id = ?1 OR s.friend_id = ?1
+    WHERE s.owner_id = $1 OR s.friend_id = $1
     `,
     [playerId],
   );
@@ -258,7 +258,7 @@ async function getSessionByPlayerIdInternal(
 }
 
 async function getSessionById(
-  db: D1Database,
+  db: Database,
   sessionId: string,
 ): Promise<Session | null> {
   const result = await query(
@@ -274,7 +274,7 @@ async function getSessionById(
     FROM sessions s
     JOIN players o ON s.owner_id = o.id
     LEFT JOIN players f ON s.friend_id = f.id
-    WHERE s.id = ?1
+    WHERE s.id = $1
     `,
     [sessionId],
   );
@@ -288,7 +288,7 @@ async function getSessionById(
 }
 
 async function buildFullSession(
-  db: D1Database,
+  db: Database,
   sessionRow: Record<string, unknown>,
 ): Promise<Session> {
   const sessionId = sessionRow.id as string;
@@ -297,7 +297,7 @@ async function buildFullSession(
 
   const ownerBoatsResult = await query(
     db,
-    `SELECT * FROM boats WHERE player_id = ?1`,
+    `SELECT * FROM boats WHERE player_id = $1`,
     [ownerId],
   );
   const ownerBoats = ownerBoatsResult.rows;
@@ -306,7 +306,7 @@ async function buildFullSession(
   if (friendId) {
     const friendBoatsResult = await query(
       db,
-      `SELECT * FROM boats WHERE player_id = ?1`,
+      `SELECT * FROM boats WHERE player_id = $1`,
       [friendId],
     );
     friendBoats = friendBoatsResult.rows;
@@ -314,7 +314,7 @@ async function buildFullSession(
 
   const shotsResult = await query(
     db,
-    `SELECT * FROM shots WHERE session_id = ?1 ORDER BY created_at ASC`,
+    `SELECT * FROM shots WHERE session_id = $1 ORDER BY created_at ASC`,
     [sessionId],
   );
 
@@ -331,7 +331,7 @@ interface DisconnectPlayerResult {
 }
 
 interface DisconnectPlayerPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
   leavingPlayerId: string;
   isOwner: boolean;
@@ -353,30 +353,30 @@ const mapToRemainingPlayer = generateMapperToDomainModel({
 });
 
 async function deleteBoatsForPlayer(
-  db: D1Database,
+  db: Database,
   playerId: string,
 ): Promise<void> {
-  await run(db, `DELETE FROM boats WHERE player_id = ?1`, [playerId]);
+  await run(db, `DELETE FROM boats WHERE player_id = $1`, [playerId]);
 }
 
-async function deleteSession(db: D1Database, sessionId: string): Promise<void> {
-  await run(db, `DELETE FROM sessions WHERE id = ?1`, [sessionId]);
+async function deleteSession(db: Database, sessionId: string): Promise<void> {
+  await run(db, `DELETE FROM sessions WHERE id = $1`, [sessionId]);
 }
 
 async function checkHasFriend(
-  db: D1Database,
+  db: Database,
   sessionId: string,
 ): Promise<boolean> {
   const result = await query(
     db,
-    `SELECT friend_id FROM sessions WHERE id = ?1`,
+    `SELECT friend_id FROM sessions WHERE id = $1`,
     [sessionId],
   );
   return result.rows.length > 0 && result.rows[0].friend_id != null;
 }
 
 async function updateSessionAndGetRemainingPlayer(
-  db: D1Database,
+  db: Database,
   sessionId: string,
   isOwner: boolean,
 ): Promise<Player | null> {
@@ -385,7 +385,7 @@ async function updateSessionAndGetRemainingPlayer(
       db,
       `UPDATE sessions
        SET owner_id = friend_id, friend_id = NULL, current_turn_id = NULL, winner_id = NULL
-       WHERE id = ?1`,
+       WHERE id = $1`,
       [sessionId],
     );
   } else {
@@ -393,7 +393,7 @@ async function updateSessionAndGetRemainingPlayer(
       db,
       `UPDATE sessions
        SET friend_id = NULL, current_turn_id = NULL, winner_id = NULL
-       WHERE id = ?1`,
+       WHERE id = $1`,
       [sessionId],
     );
   }
@@ -407,7 +407,7 @@ async function updateSessionAndGetRemainingPlayer(
       p.wins AS remaining_wins
     FROM sessions s
     JOIN players p ON s.owner_id = p.id
-    WHERE s.id = ?1
+    WHERE s.id = $1
     `,
     [sessionId],
   );
@@ -425,7 +425,7 @@ export async function disconnectPlayerFromSession(
   const { db, sessionId, leavingPlayerId, isOwner } = payload;
 
   await deleteBoatsForPlayer(db, leavingPlayerId);
-  await run(db, `DELETE FROM shots WHERE session_id = ?1`, [sessionId]);
+  await run(db, `DELETE FROM shots WHERE session_id = $1`, [sessionId]);
 
   if (isOwner) {
     const hasFriend = await checkHasFriend(db, sessionId);

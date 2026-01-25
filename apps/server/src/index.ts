@@ -1,7 +1,12 @@
-import { Hono } from "hono";
+import { serve } from "@hono/node-server";
+import { createNodeWebSocket } from "@hono/node-ws";
+import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
+import type { WSContext, WSMessageReceive } from "hono/ws";
+import pg from "pg";
 import { z } from "zod";
 import { BadRequestError } from "./controllers/errors";
+import { runMigrations } from "./database";
 import { getSessionByPlayerId } from "./database/session";
 import type { Env } from "./env";
 import {
@@ -17,15 +22,44 @@ import type {
   SessionWaitingForBoats,
 } from "./models/session";
 import * as SessionService from "./services/session";
+import { GameSessionManager } from "./websocket";
 
-export { GameSession } from "./durable-objects/game-session";
+const { Pool } = pg;
 
-type HonoEnv = { Bindings: Env };
+const env: Env = {
+  DATABASE_CONNECTION_STRING: process.env.DATABASE_CONNECTION_STRING || "",
+  JWT_SECRET: process.env.JWT_SECRET || "",
+  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS || "",
+};
+
+if (!env.DATABASE_CONNECTION_STRING) {
+  console.error("DATABASE_CONNECTION_STRING environment variable is required");
+  process.exit(1);
+}
+if (!env.JWT_SECRET) {
+  console.error("JWT_SECRET environment variable is required");
+  process.exit(1);
+}
+
+const db = new Pool({
+  connectionString: env.DATABASE_CONNECTION_STRING,
+});
+
+const wsManager = new GameSessionManager(db);
+
+type HonoEnv = { Variables: { db: typeof db; env: Env } };
 
 const app = new Hono<HonoEnv>();
+const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 
 app.use("*", async (c, next) => {
-  const origins = c.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim());
+  c.set("db", db);
+  c.set("env", env);
+  await next();
+});
+
+app.use("*", async (c, next) => {
+  const origins = env.ALLOWED_ORIGINS.split(",").map((s) => s.trim());
   const corsMiddleware = cors({ origin: origins, credentials: true });
   return corsMiddleware(c, next);
 });
@@ -108,7 +142,7 @@ function mapToSessionResponse(
   };
 }
 
-function isProduction(env: Env): boolean {
+function isProduction(): boolean {
   return env.ALLOWED_ORIGINS.includes("https://");
 }
 
@@ -121,7 +155,7 @@ app.post("/sessions", async (c) => {
 
   const { username } = result.data;
   const session = await SessionService.createSession({
-    db: c.env.DB,
+    db,
     username,
   });
   const playerId = session.owner.id;
@@ -129,8 +163,8 @@ app.post("/sessions", async (c) => {
   const cookie = await createSessionCookie({
     sessionId: session.id,
     playerId,
-    jwtSecret: c.env.JWT_SECRET,
-    isProduction: isProduction(c.env),
+    jwtSecret: env.JWT_SECRET,
+    isProduction: isProduction(),
   });
 
   const mapped = mapToSessionResponse(session, playerId);
@@ -151,7 +185,7 @@ app.post("/sessions/:slug/join", async (c) => {
   const slug = c.req.param("slug");
   const { username } = result.data;
   const session: SessionWaitingForBoats = await SessionService.joinSession({
-    db: c.env.DB,
+    db,
     slug,
     username,
   });
@@ -160,30 +194,19 @@ app.post("/sessions/:slug/join", async (c) => {
   const cookie = await createSessionCookie({
     sessionId: session.id,
     playerId,
-    jwtSecret: c.env.JWT_SECRET,
-    isProduction: isProduction(c.env),
+    jwtSecret: env.JWT_SECRET,
+    isProduction: isProduction(),
   });
 
-  const id = c.env.GAME_SESSION.idFromName(session.id);
-  const stub = c.env.GAME_SESSION.get(id);
-  await stub.fetch(
-    new Request("http://internal/notify", {
-      method: "POST",
-      body: JSON.stringify({
-        type: "opponent_joined",
-        targetPlayerId: session.owner.id,
-        data: {
-          session: { status: session.status },
-          opponent: {
-            id: session.friend.id,
-            username: session.friend.username,
-            isOwner: false,
-            wins: session.friend.wins,
-          },
-        },
-      }),
-    }),
-  );
+  wsManager.notifyOpponentJoined(session.id, session.owner.id, {
+    session: { status: session.status },
+    opponent: {
+      id: session.friend.id,
+      username: session.friend.username,
+      isOwner: false,
+      wins: session.friend.wins,
+    },
+  });
 
   const mapped = mapToSessionResponse(session, playerId);
   return c.json(mapped, 200, { "Set-Cookie": cookie });
@@ -193,7 +216,7 @@ app.get("/sessions", async (c) => {
   const cookieHeader = c.req.header("Cookie");
   const sessionCookie = await parseSessionCookie({
     cookieHeader,
-    jwtSecret: c.env.JWT_SECRET,
+    jwtSecret: env.JWT_SECRET,
   });
 
   if (!sessionCookie) {
@@ -201,7 +224,7 @@ app.get("/sessions", async (c) => {
   }
 
   const session = await getSessionByPlayerId({
-    db: c.env.DB,
+    db,
     playerId: sessionCookie.playerId,
   });
 
@@ -217,7 +240,7 @@ app.post("/sessions/disconnect", async (c) => {
   const cookieHeader = c.req.header("Cookie");
   const sessionCookie = await parseSessionCookie({
     cookieHeader,
-    jwtSecret: c.env.JWT_SECRET,
+    jwtSecret: env.JWT_SECRET,
   });
 
   if (!sessionCookie) {
@@ -225,53 +248,101 @@ app.post("/sessions/disconnect", async (c) => {
   }
 
   const session = await SessionService.getSessionByPlayerId({
-    db: c.env.DB,
+    db,
     playerId: sessionCookie.playerId,
   });
 
   const { remainingPlayer } = await SessionService.disconnectFromSession({
-    db: c.env.DB,
+    db,
     playerId: sessionCookie.playerId,
   });
 
   if (remainingPlayer != null) {
-    const id = c.env.GAME_SESSION.idFromName(session.id);
-    const stub = c.env.GAME_SESSION.get(id);
-    await stub.fetch(
-      new Request("http://internal/notify", {
-        method: "POST",
-        body: JSON.stringify({
-          type: "opponent_disconnected",
-          targetPlayerId: remainingPlayer.id,
-          data: {
-            session: { status: "waiting_for_opponent" },
-          },
-        }),
-      }),
-    );
+    wsManager.notifyOpponentDisconnected(session.id, remainingPlayer.id, {
+      session: { status: "waiting_for_opponent" },
+    });
   }
 
   const clearCookie = createClearSessionCookie({
-    isProduction: isProduction(c.env),
+    isProduction: isProduction(),
   });
 
   return c.body(null, 204, { "Set-Cookie": clearCookie });
 });
 
-app.get("/ws", async (c) => {
-  const cookieHeader = c.req.header("Cookie");
-  const sessionCookie = await parseSessionCookie({
-    cookieHeader,
-    jwtSecret: c.env.JWT_SECRET,
-  });
+app.get(
+  "/ws",
+  upgradeWebSocket(async (c: Context) => {
+    const cookieHeader = c.req.header("Cookie");
+    const sessionCookie = await parseSessionCookie({
+      cookieHeader,
+      jwtSecret: env.JWT_SECRET,
+    });
 
-  if (!sessionCookie) {
-    return c.text("Unauthorized", 401);
-  }
+    if (!sessionCookie) {
+      console.log("[WebSocket] Unauthorized connection attempt - no valid cookie");
+      return {
+        onOpen: (_event: Event, ws: WSContext) => {
+          ws.close(1008, "Unauthorized");
+        },
+      };
+    }
 
-  const id = c.env.GAME_SESSION.idFromName(sessionCookie.sessionId);
-  const stub = c.env.GAME_SESSION.get(id);
-  return stub.fetch(c.req.raw);
+    const { sessionId, playerId } = sessionCookie;
+
+    return {
+      onOpen: (_event: Event, ws: WSContext) => {
+        console.log(
+          `[WebSocket] New connection for player ${playerId} in session ${sessionId}`,
+        );
+        wsManager.registerConnection(ws, playerId, sessionId);
+      },
+      onMessage: async (event: MessageEvent<WSMessageReceive>, ws: WSContext) => {
+        const message =
+          typeof event.data === "string" ? event.data : event.data.toString();
+        await wsManager.handleMessage(ws, message);
+      },
+      onClose: (_event: CloseEvent, ws: WSContext) => {
+        wsManager.handleClose(ws);
+      },
+      onError: (event: Event, ws: WSContext) => {
+        wsManager.handleError(ws, event);
+      },
+    };
+  }),
+);
+
+const PORT = parseInt(process.env.PORT || "3000", 10);
+
+async function main() {
+  await runMigrations(db);
+
+  const server = serve(
+    {
+      fetch: app.fetch,
+      port: PORT,
+    },
+    (info) => {
+      console.log(`Server is running on http://localhost:${info.port}`);
+    },
+  );
+
+  injectWebSocket(server);
+}
+
+main().catch((error) => {
+  console.error("Failed to start server:", error);
+  process.exit(1);
 });
 
-export default app;
+process.on("SIGTERM", async () => {
+  console.log("SIGTERM received, shutting down gracefully...");
+  await db.end();
+  process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+  console.log("SIGINT received, shutting down gracefully...");
+  await db.end();
+  process.exit(0);
+});

@@ -1,8 +1,9 @@
+import type { Database } from "../database";
 import * as PlayerDB from "../database/player";
 import type { Player } from "../models/player";
 
 interface CreatePlayerPayload {
-  db: D1Database;
+  db: Database;
   username: string;
 }
 

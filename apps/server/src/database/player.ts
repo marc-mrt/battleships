@@ -1,11 +1,11 @@
 import { z } from "zod";
 import type { Player } from "../models/player";
 import { generateUUID } from "../utils/uuid";
-import { query } from "./db";
+import { type Database, query } from "./db";
 import { generateMapperToDomainModel } from "./mapper";
 
 interface CreatePlayerPayload {
-  db: D1Database;
+  db: Database;
   username: string;
 }
 
@@ -17,7 +17,7 @@ export async function createPlayer(
 
   const result = await query(
     db,
-    "INSERT INTO players (id, username) VALUES (?1, ?2) RETURNING *",
+    "INSERT INTO players (id, username) VALUES ($1, $2) RETURNING *",
     [id, username],
   );
 
@@ -25,7 +25,7 @@ export async function createPlayer(
 }
 
 interface IncrementWinsPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
 }
 
@@ -33,7 +33,7 @@ export async function incrementWins(
   payload: IncrementWinsPayload,
 ): Promise<void> {
   const { db, playerId } = payload;
-  await query(db, "UPDATE players SET wins = wins + 1 WHERE id = ?1", [
+  await query(db, "UPDATE players SET wins = wins + 1 WHERE id = $1", [
     playerId,
   ]);
 }

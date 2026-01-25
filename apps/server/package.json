@@ -4,26 +4,27 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "db:create": "wrangler d1 create battleships",
-    "db:migrate": "wrangler d1 execute battleships --remote --file=./db/schema.sql",
-    "db:migrate:local": "wrangler d1 execute battleships --local --file=./db/schema.sql",
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "db:migrate": "psql $DATABASE_URL -f ./db/schema.sql",
     "check": "biome check --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@hono/node-server": "^1.13.8",
+    "@hono/node-ws": "^1.0.4",
     "game-messages": "workspace:",
     "game-rules": "workspace:",
     "hono": "^4.7.11",
+    "pg": "^8.13.1",
     "ramda": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
-    "@cloudflare/workers-types": "^4.20250620.0",
     "@types/node": "catalog:",
+    "@types/pg": "^8.11.10",
     "@types/ramda": "catalog:",
-    "typescript": "catalog:",
-    "wrangler": "^4.23.0"
+    "tsx": "^4.19.2",
+    "typescript": "catalog:"
   }
 }

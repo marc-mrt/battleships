@@ -1,3 +1,4 @@
+import type { Database } from "../database";
 import type {
   GameInProgressState,
   GameOverState,
@@ -199,7 +200,7 @@ export function buildGameOverStates(
 }
 
 interface HandleNextTurnPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
   playerId: string;
   opponentId: string;
@@ -239,7 +240,7 @@ export async function handleNextTurn(
 }
 
 interface HandleGameOverPayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
   winnerId: string;
   lastShot: LastShot;
@@ -267,7 +268,7 @@ export async function handleGameOver(
 }
 
 interface HandleShotFiredPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
   x: number;
   y: number;
@@ -301,7 +302,7 @@ export async function handleShotFired(
 }
 
 interface ProcessAfterShotEffectsPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
   shot: LastShot;
 }
@@ -344,7 +345,7 @@ function pickRandom([a, b]: [string, string]): string {
 }
 
 interface StartGamePayload {
-  db: D1Database;
+  db: Database;
   sessionId: string;
   ownerId: string;
   friendId: string;
@@ -373,7 +374,7 @@ export async function startGame(
 }
 
 interface HandlePlaceBoatsPayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
   boats: Array<{
     id: string;
@@ -418,7 +419,7 @@ export async function handlePlaceBoats(
 }
 
 interface HandleRequestNewGamePayload {
-  db: D1Database;
+  db: Database;
   playerId: string;
 }
 

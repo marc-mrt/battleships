@@ -5,9 +5,8 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "noEmit": true,
-    "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
-    "types": ["@cloudflare/workers-types"]
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }
