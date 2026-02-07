@@ -14,7 +14,7 @@
     "@hono/node-ws": "^1.0.4",
     "game-messages": "workspace:",
     "game-rules": "workspace:",
-    "hono": "^4.7.11",
+    "hono": "^4.11.7",
     "pg": "^8.13.1",
     "ramda": "catalog:",
     "zod": "catalog:"
