@@ -2,11 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
 
 jobs:
-  typecheck:
-    name: Typecheck
+  static-checks:
+    name: Run static checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
