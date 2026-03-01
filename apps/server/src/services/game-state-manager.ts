@@ -1,4 +1,3 @@
-import type { Database } from "../database";
 import type {
   GameInProgressState,
   GameOverState,
@@ -7,6 +6,7 @@ import type {
 } from "game-messages";
 import { TOTAL_BOATS_COUNT } from "game-rules";
 import * as R from "ramda";
+import type { Database } from "../database";
 import type { Boat } from "../models/boat";
 import type { Coordinates } from "../models/coordinates";
 import {

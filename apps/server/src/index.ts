@@ -1,6 +1,6 @@
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
-import { Hono, type Context } from "hono";
+import { type Context, Hono } from "hono";
 import { cors } from "hono/cors";
 import type { WSContext, WSMessageReceive } from "hono/ws";
 import pg from "pg";
@@ -33,7 +33,9 @@ const env: Env = {
 };
 
 if (!env.DATABASE_CONNECTION_STRING) {
-  console.error("[Env] DATABASE_CONNECTION_STRING environment variable is required");
+  console.error(
+    "[Env] DATABASE_CONNECTION_STRING environment variable is required",
+  );
   process.exit(1);
 }
 if (!env.JWT_SECRET) {
@@ -280,7 +282,9 @@ app.get(
     });
 
     if (!sessionCookie) {
-      console.log("[WebSocket] Unauthorized connection attempt - no valid cookie");
+      console.log(
+        "[WebSocket] Unauthorized connection attempt - no valid cookie",
+      );
       return {
         onOpen: (_event: Event, ws: WSContext) => {
           ws.close(1008, "Unauthorized");
@@ -297,7 +301,10 @@ app.get(
         );
         wsManager.registerConnection(ws, playerId, sessionId);
       },
-      onMessage: async (event: MessageEvent<WSMessageReceive>, ws: WSContext) => {
+      onMessage: async (
+        event: MessageEvent<WSMessageReceive>,
+        ws: WSContext,
+      ) => {
         const message =
           typeof event.data === "string" ? event.data : event.data.toString();
         await wsManager.handleMessage(ws, message);

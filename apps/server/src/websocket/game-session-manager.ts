@@ -1,5 +1,3 @@
-import type { WSContext } from "hono/ws";
-import type { Database } from "../database";
 import {
   type ClientMessage,
   ClientMessageSchema,
@@ -11,6 +9,8 @@ import {
   type PlaceBoatsMessage,
   type ServerMessage,
 } from "game-messages";
+import type { WSContext } from "hono/ws";
+import type { Database } from "../database";
 import { isSessionGameOver, isSessionPlaying } from "../models/session";
 import * as GameStateManager from "../services/game-state-manager";
 import * as SessionService from "../services/session";

@@ -1,5 +1,5 @@
-import type { Database } from "../database";
 import type { LastShot } from "game-messages";
+import type { Database } from "../database";
 import * as ShotDB from "../database/shot";
 import type { Boat } from "../models/boat";
 import type { Coordinates } from "../models/coordinates";
