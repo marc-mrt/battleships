@@ -30,6 +30,5 @@ jobs:
           context: .
           file: ./apps/server/Dockerfile
           push: true
-          tags: |
-            marcmrt/battleships-server:latest
+          tags: marcmrt/battleships-server:latest
           platforms: linux/amd64

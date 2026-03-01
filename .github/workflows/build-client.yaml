@@ -30,6 +30,7 @@ jobs:
           context: .
           file: ./apps/client/Dockerfile
           push: true
-          tags: |
-            marcmrt/battleships-client:latest
+          tags: marcmrt/battleships-client:latest
           platforms: linux/amd64
+          build-args:
+            VITE_SERVER_BASE_URL: ${{ vars.VITE_SERVER_BASE_URL }}
