@@ -1,6 +1,7 @@
 name: Build client docker image
 
 on:
+  workflow_dispatch:
   push:
     branches: ["main"]
     paths:
