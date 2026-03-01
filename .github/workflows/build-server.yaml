@@ -3,7 +3,8 @@ name: Build server docker image
 on:
   workflow_dispatch:
   push:
-    branches: ["main"]
+    branches:
+     - 'master'
     paths:
       - 'packages/**'
       - 'apps/server/**'
