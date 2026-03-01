@@ -3,16 +3,17 @@ packages:
   - packages/*
 
 catalog:
-  '@biomejs/biome': 2.3.8
-  '@types/node': 24.10.1
+  '@biomejs/biome': 2.4.4
+  '@types/node': 25.3.3
   '@types/ramda': 0.31.1
   ramda: 0.32.0
   typescript: 5.9.3
-  zod: 4.1.13
+  zod: 4.3.6
 
 injectWorkspacePackages: true
 
 onlyBuiltDependencies:
+  - '@swc/core'
   - esbuild
 
 syncInjectedDepsAfterScripts:

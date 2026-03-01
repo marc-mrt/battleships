@@ -11,27 +11,26 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.18",
+    "@tailwindcss/vite": "^4.2.1",
     "game-messages": "workspace:",
     "game-rules": "workspace:",
     "qrcode.react": "^4.2.0",
     "ramda": "catalog:",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "tailwind-variants": "^3.2.2",
-    "tailwindcss": "^4.1.18",
+    "tailwindcss": "^4.2.1",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
-    "@cloudflare/vite-plugin": "^1.21.0",
     "@types/node": "catalog:",
     "@types/ramda": "catalog:",
-    "@types/react": "^18.3.27",
-    "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react-swc": "^3.11.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react-swc": "^4.2.3",
     "typescript": "catalog:",
     "vite": "^7.3.1",
-    "vite-tsconfig-paths": "^6.0.3"
+    "vite-tsconfig-paths": "^6.1.1"
   }
 }
